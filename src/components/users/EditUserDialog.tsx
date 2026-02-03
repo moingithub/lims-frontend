@@ -1,4 +1,11 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "../ui/dialog";
 import { Button } from "../ui/button";
 import { UserForm, UserFormData } from "./UserForm";
 
@@ -26,7 +33,11 @@ export function EditUserDialog({
             Update the details for this record. Click save when you're done.
           </DialogDescription>
         </DialogHeader>
-        <UserForm formData={formData} onChange={onFormChange} />
+        <UserForm
+          formData={formData}
+          onChange={onFormChange}
+          requirePassword={false}
+        />
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel

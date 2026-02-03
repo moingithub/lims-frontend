@@ -144,7 +144,7 @@ export function EditLineItemsDialog({
                       <TableCell>
                         <Select
                           value={item.analysis_type}
-                          onValueChange={(value) =>
+                          onValueChange={(value: string) =>
                             onLineItemChange(
                               item.id.toString(),
                               "analysis_type",
@@ -171,7 +171,9 @@ export function EditLineItemsDialog({
                         <div className="flex items-center justify-center">
                           <Checkbox
                             checked={item.rushed}
-                            onCheckedChange={(checked) =>
+                            onCheckedChange={(
+                              checked: boolean | "indeterminate",
+                            ) =>
                               onLineItemChange(
                                 item.id.toString(),
                                 "rushed",

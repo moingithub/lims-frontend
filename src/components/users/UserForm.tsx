@@ -23,9 +23,14 @@ export interface UserFormData {
 interface UserFormProps {
   formData: UserFormData;
   onChange: (data: UserFormData) => void;
+  requirePassword?: boolean;
 }
 
-export function UserForm({ formData, onChange }: UserFormProps) {
+export function UserForm({
+  formData,
+  onChange,
+  requirePassword = true,
+}: UserFormProps) {
   const [roles, setRoles] = useState(rolesService.getActiveRoles());
 
   useEffect(() => {
@@ -69,10 +74,14 @@ export function UserForm({ formData, onChange }: UserFormProps) {
         />
       </div>
       <div className="space-y-2">
-        <Label>Password *</Label>
+        <Label>{requirePassword ? "Password *" : "Password"}</Label>
         <Input
           type="password"
-          placeholder="Enter password (min 6 characters)"
+          placeholder={
+            requirePassword
+              ? "Enter password (min 6 characters)"
+              : "Leave blank to keep current password"
+          }
           value={formData.password}
           onChange={(e) => onChange({ ...formData, password: e.target.value })}
         />

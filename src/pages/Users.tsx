@@ -83,7 +83,7 @@ export function Users() {
       id: user.id,
       name: user.name,
       email: user.email,
-      password: user.password,
+      password: "",
       role_id: user.role_id,
       active: user.active,
       created_by: user.created_by,
@@ -102,7 +102,9 @@ export function Users() {
   };
 
   const confirmAdd = async () => {
-    const validation = usersService.validateUser(formData);
+    const validation = usersService.validateUser(formData, {
+      requirePassword: false,
+    });
     if (!validation.valid) {
       toast.error(validation.error || "Please fill in all fields");
       return;
@@ -130,7 +132,9 @@ export function Users() {
   const confirmEdit = async () => {
     if (!selectedUser) return;
 
-    const validation = usersService.validateUser(formData);
+    const validation = usersService.validateUser(formData, {
+      requirePassword: false,
+    });
     if (!validation.valid) {
       toast.error(validation.error || "Please fill in all fields");
       return;

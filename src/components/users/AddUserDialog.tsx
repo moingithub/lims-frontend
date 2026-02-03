@@ -1,4 +1,11 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "../ui/dialog";
 import { Button } from "../ui/button";
 import { UserForm, UserFormData } from "./UserForm";
 
@@ -24,7 +31,7 @@ export function AddUserDialog({
           <DialogTitle>Add New Record</DialogTitle>
           <DialogDescription>Add a new user to the system</DialogDescription>
         </DialogHeader>
-        <UserForm formData={formData} onChange={onFormChange} />
+        <UserForm formData={formData} onChange={onFormChange} requirePassword />
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel

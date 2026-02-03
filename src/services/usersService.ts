@@ -114,16 +114,28 @@ export const usersService = {
     id: number,
     updatedUser: Omit<User, "created_by" | "company_id">,
   ): Promise<User> => {
+    const payload: {
+      name: string;
+      email: string;
+      role_id: number;
+      active: boolean;
+      password?: string;
+    } = {
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role_id: updatedUser.role_id,
+      active: updatedUser.active,
+    };
+
+    const trimmedPassword = updatedUser.password?.trim();
+    if (trimmedPassword) {
+      payload.password = trimmedPassword;
+    }
+
     const response = await fetch(`${API_BASE_URL}/Users/${id}`, {
       method: "PUT",
       headers: buildAuthHeaders(),
-      body: JSON.stringify({
-        name: updatedUser.name,
-        email: updatedUser.email,
-        password: updatedUser.password,
-        role_id: updatedUser.role_id,
-        active: updatedUser.active,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -217,7 +229,11 @@ export const usersService = {
   },
 
   // Validate user data
-  validateUser: (user: Partial<User>): { valid: boolean; error?: string } => {
+  validateUser: (
+    user: Partial<User>,
+    options?: { requirePassword?: boolean },
+  ): { valid: boolean; error?: string } => {
+    const requirePassword = options?.requirePassword ?? true;
     if (!user.name || user.name.trim() === "") {
       return { valid: false, error: "Name is required" };
     }
@@ -229,10 +245,14 @@ export const usersService = {
     if (!emailRegex.test(user.email)) {
       return { valid: false, error: "Invalid email format" };
     }
-    if (!user.password || user.password.trim() === "") {
+    if (requirePassword && (!user.password || user.password.trim() === "")) {
       return { valid: false, error: "Password is required" };
     }
-    if (user.password && user.password.length < 6) {
+    if (
+      user.password &&
+      user.password.trim() !== "" &&
+      user.password.length < 6
+    ) {
       return { valid: false, error: "Password must be at least 6 characters" };
     }
     if (!user.role_id) {

@@ -1,15 +1,3 @@
-export interface WorkOrder {
-  id: number;
-  customer: string;
-  date: string;
-  cylinders: number;
-  amount: number;
-  status: "Pending" | "In Progress" | "Completed" | "Invoiced";
-  well_name?: string;
-  meter_number?: string;
-  created_by: number;
-}
-
 export interface WorkOrderWithId {
   id: string;
   customer: string;
@@ -192,97 +180,6 @@ const normalizeLineItem = (
   };
 };
 
-const initialOrders: WorkOrder[] = [
-  {
-    id: 1,
-    customer: "ChemLab Ltd",
-    date: "2025-10-28",
-    cylinders: 6,
-    amount: 990.0,
-    status: "Invoiced",
-    well_name: "Well F-6",
-    meter_number: "MTR-606",
-    created_by: 1,
-  },
-  {
-    id: 2,
-    customer: "TechGas Inc",
-    date: "2025-11-05",
-    cylinders: 7,
-    amount: 1155.0,
-    status: "In Progress",
-    well_name: "Well G-7",
-    meter_number: "MTR-707",
-    created_by: 1,
-  },
-  {
-    id: 3,
-    customer: "Acme Corporation",
-    date: "2025-11-09",
-    cylinders: 5,
-    amount: 825.0,
-    status: "Completed",
-    well_name: "Well A-1",
-    meter_number: "MTR-101",
-    created_by: 1,
-  },
-  {
-    id: 4,
-    customer: "Gas Solutions",
-    date: "2025-11-11",
-    cylinders: 4,
-    amount: 680.0,
-    status: "In Progress",
-    well_name: "Well H-8",
-    meter_number: "MTR-808",
-    created_by: 1,
-  },
-  {
-    id: 5,
-    customer: "Industrial Co",
-    date: "2025-11-13",
-    cylinders: 3,
-    amount: 495.0,
-    status: "Pending",
-    well_name: "Well I-9",
-    meter_number: "MTR-909",
-    created_by: 1,
-  },
-  {
-    id: 6,
-    customer: "TechGas Inc",
-    date: "2025-11-15",
-    cylinders: 3,
-    amount: 495.0,
-    status: "Invoiced",
-    well_name: "Well B-2",
-    meter_number: "MTR-202",
-    created_by: 1,
-  },
-  {
-    id: 7,
-    customer: "Industrial Co",
-    date: "2025-11-16",
-    cylinders: 8,
-    amount: 1320.0,
-    status: "In Progress",
-    well_name: "Well C-3",
-    meter_number: "MTR-303",
-    created_by: 1,
-  },
-  {
-    id: 8,
-    customer: "Gas Solutions",
-    date: "2025-11-16",
-    cylinders: 2,
-    amount: 330.0,
-    status: "Completed",
-    well_name: "Well D-4",
-    meter_number: "MTR-404",
-    created_by: 1,
-  },
-];
-
 // In-memory storage for Work Order Headers and Lines with initial mock data
 let workOrderHeaders: WorkOrderHeader[] = [
   {
@@ -333,7 +230,6 @@ let workOrderHeaders: WorkOrderHeader[] = [
     status: "Invoiced",
     created_by: 1,
   },
-  // Pending Work Orders for Dashboard
   {
     id: 1005,
     work_order_number: "WO-001238",
@@ -377,7 +273,7 @@ let workOrderHeaders: WorkOrderHeader[] = [
     mileage_fee: 0,
     miscellaneous_charges: 0,
     hourly_fee: 0,
-    company_id: 1, // Acme Corporation
+    company_id: 1, // ACME Corporation
     contact_id: 1,
     status: "Pending",
     created_by: 5,
@@ -389,7 +285,7 @@ let workOrderHeaders: WorkOrderHeader[] = [
     mileage_fee: 0,
     miscellaneous_charges: 0,
     hourly_fee: 0,
-    company_id: 1, // Acme Corporation
+    company_id: 1, // ACME Corporation
     contact_id: 2,
     status: "In Progress",
     created_by: 6,
@@ -1847,49 +1743,6 @@ export const workOrdersService = {
       throw new Error(message);
     }
   },
-  getOrders: (): WorkOrder[] => {
-    return initialOrders;
-  },
-
-  getOrderById: (id: number): WorkOrder | undefined => {
-    return initialOrders.find((order) => order.id === id);
-  },
-
-  updateOrder: (id: number, updatedOrder: WorkOrder): WorkOrder => {
-    return updatedOrder;
-  },
-
-  deleteOrder: (id: string): boolean => {
-    return true;
-  },
-
-  searchOrders: (orders: WorkOrder[], searchTerm: string): WorkOrder[] => {
-    return orders.filter((order) =>
-      Object.values(order).some((value) =>
-        String(value).toLowerCase().includes(searchTerm.toLowerCase()),
-      ),
-    );
-  },
-
-  filterByStatus: (orders: WorkOrder[], status: string): WorkOrder[] => {
-    if (status === "all") return orders;
-    return orders.filter((order) => order.status === status);
-  },
-
-  getStatusBadgeVariant: (status: string): string => {
-    switch (status) {
-      case "Completed":
-        return "bg-green-100 text-green-800";
-      case "In Progress":
-        return "bg-blue-100 text-blue-800";
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "Invoiced":
-        return "bg-purple-100 text-purple-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  },
 
   calculateOrderTotal: (
     lineItems: LineItem[],
@@ -1915,56 +1768,6 @@ export const workOrdersService = {
 
   formatCurrency: (amount: number): string => {
     return `$${amount.toFixed(2)}`;
-  },
-
-  generateMockLineItems: (orderId: string): LineItem[] => {
-    return [
-      {
-        id: "1",
-        cylinder_number: "BTL-001",
-        analysis_number: "AN-001",
-        cc_number: "CC-001",
-        analysis_type: "GPA2261",
-        rushed: false,
-        well_name: "Well A-1",
-        meter_number: "MTR-101",
-        rate: 150.0,
-        sample_fee: 50.0,
-        h2_pop_fee: 0,
-        spot_composite_fee: 0,
-        amount: 200.0,
-      },
-    ];
-  },
-
-  exportToCSV: (orders: WorkOrder[]): string => {
-    const headers = [
-      "Work Order #",
-      "Customer",
-      "Date",
-      "Cylinders",
-      "Amount",
-      "Status",
-      "Well Name",
-      "Meter Number",
-    ];
-    const rows = orders.map((order) => [
-      order.id,
-      order.customer,
-      order.date,
-      order.cylinders.toString(),
-      order.amount.toFixed(2),
-      order.status,
-      order.well_name || "",
-      order.meter_number || "",
-    ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-    ].join("\n");
-
-    return csvContent;
   },
 
   calculateDaysSince: (
@@ -1999,7 +1802,6 @@ export const workOrdersService = {
       border: "border-l-red-500",
     };
   },
-
   getStatusColor: (status: string): string => {
     switch (status) {
       case "Completed":
@@ -2023,10 +1825,16 @@ export const workOrdersService = {
         return 55.0;
       case "Composite":
         return 65.0;
-      case "Extended Analysis":
-        return 75.0;
+      case "GPA2261":
+        return 150.0;
+      case "D1945":
+        return 125.0;
+      case "D1070":
+        return 100.0;
+      case "H2S":
+        return 50.0;
       default:
-        return 45.0;
+        return 0;
     }
   },
 
@@ -2037,207 +1845,87 @@ export const workOrdersService = {
     value: string | number | boolean,
   ): LineItem[] => {
     return items.map((item) => {
-      if (item.id.toString() === id) {
-        const updatedItem = { ...item, [field]: value };
+      if (item.id.toString() !== id) return item;
 
-        // Auto-populate rate and sample fee when analysis type changes
-        if (field === "analysis_type") {
-          // Get pricing from Analysis Pricing Master
-          const analysisPrice = analysisPricingService.getAnalysisPriceByCode(
+      const updatedItem = { ...item, [field]: value } as LineItem;
+
+      if (field === "analysis_type") {
+        const analysisPrice = analysisPricingService.getAnalysisPriceByCode(
+          value as string,
+        );
+
+        if (analysisPrice) {
+          updatedItem.standard_rate = analysisPrice.standard_rate;
+          updatedItem.sample_fee = analysisPrice.sample_fee || 0;
+          updatedItem.rate = item.rushed
+            ? analysisPrice.rushed_rate
+            : analysisPrice.standard_rate;
+        } else {
+          const newRate = workOrdersService.getRateByAnalysisType(
             value as string,
           );
-
-          if (analysisPrice) {
-            // Set standard rate and sample fee from Analysis Pricing Master
-            updatedItem.standard_rate = analysisPrice.standard_rate;
-            updatedItem.sample_fee = analysisPrice.sample_fee || 0;
-
-            // If rushed, use rushed rate; otherwise use standard rate
-            if (item.rushed) {
-              updatedItem.rate = analysisPrice.rushed_rate;
-            } else {
-              updatedItem.rate = analysisPrice.standard_rate;
-            }
-          } else {
-            // Fallback to old logic if analysis type not found
-            const newRate = workOrdersService.getRateByAnalysisType(
-              value as string,
-            );
-            updatedItem.rate = newRate;
-            updatedItem.standard_rate = newRate;
-            if (item.rushed) {
-              updatedItem.rate = newRate * 1.5;
-            }
-          }
-
-          // Recalculate amount
-          updatedItem.amount =
-            updatedItem.rate +
-            updatedItem.sample_fee +
-            item.h2_pop_fee +
-            item.spot_composite_fee;
+          updatedItem.rate = item.rushed ? newRate * 1.5 : newRate;
+          updatedItem.standard_rate = newRate;
         }
 
-        // Handle rushed checkbox toggle
-        if (field === "rushed") {
-          const isRushed = value as boolean;
-
-          // Get pricing from Analysis Pricing Master
-          const analysisPrice = analysisPricingService.getAnalysisPriceByCode(
-            item.analysis_type,
-          );
-
-          if (analysisPrice) {
-            if (isRushed) {
-              // When checked: use rushed rate from Analysis Pricing Master
-              updatedItem.rate = analysisPrice.rushed_rate;
-            } else {
-              // When unchecked: use standard rate from Analysis Pricing Master
-              updatedItem.rate = analysisPrice.standard_rate;
-            }
-          } else {
-            // Fallback logic
-            if (isRushed) {
-              updatedItem.rate = item.standard_rate * 1.5;
-            } else {
-              updatedItem.rate = item.standard_rate;
-            }
-          }
-
-          // Recalculate amount with new rate
-          updatedItem.amount =
-            updatedItem.rate +
-            item.sample_fee +
-            item.h2_pop_fee +
-            item.spot_composite_fee;
-        }
-
-        // Handle manual rate changes
-        if (field === "rate") {
-          const newRate = Number(value);
-          updatedItem.rate = newRate;
-          // If not rushed, update standard_rate to match
-          if (!item.rushed) {
-            updatedItem.standard_rate = newRate;
-          } else {
-            // If rushed, calculate and store standard rate (rate / 1.5)
-            updatedItem.standard_rate = newRate / 1.5;
-          }
-          updatedItem.amount =
-            newRate +
-            item.sample_fee +
-            item.h2_pop_fee +
-            item.spot_composite_fee;
-        }
-
-        // Recalculate amount if fees change
-        if (
-          field === "sample_fee" ||
-          field === "h2_pop_fee" ||
-          field === "spot_composite_fee"
-        ) {
-          const rate = item.rate;
-          const sample_fee =
-            field === "sample_fee" ? Number(value) : item.sample_fee;
-          const h2_pop_fee =
-            field === "h2_pop_fee" ? Number(value) : item.h2_pop_fee;
-          const spot_composite_fee =
-            field === "spot_composite_fee"
-              ? Number(value)
-              : item.spot_composite_fee;
-          updatedItem.amount =
-            rate + sample_fee + h2_pop_fee + spot_composite_fee;
-        }
-
-        return updatedItem;
+        updatedItem.amount =
+          updatedItem.rate +
+          updatedItem.sample_fee +
+          item.h2_pop_fee +
+          item.spot_composite_fee;
       }
-      return item;
-    });
-  },
 
-  getMockLineItems: (orderId: string): LineItem[] => {
-    return [
-      {
-        id: 1,
-        cylinder_number: "BTL-001",
-        analysis_number: "AN-001",
-        cc_number: "CC-001",
-        analysis_type: "GPA2261",
-        rushed: true,
-        well_name: "Well A",
-        meter_number: "MTR-001",
-        rate: 225.0, // Rushed rate (150 * 1.5)
-        standard_rate: 150.0,
-        sample_fee: 25.0,
-        h2_pop_fee: 5.0,
-        spot_composite_fee: 0.0,
-        amount: 255.0, // 225 + 25 + 5 + 0
-      },
-      {
-        id: 2,
-        cylinder_number: "BTL-002",
-        analysis_number: "AN-002",
-        cc_number: "CC-002",
-        analysis_type: "D1945",
-        rushed: false,
-        well_name: "Well B",
-        meter_number: "MTR-002",
-        rate: 125.0, // Standard rate
-        standard_rate: 125.0,
-        sample_fee: 20.0,
-        h2_pop_fee: 5.0,
-        spot_composite_fee: 0.0,
-        amount: 150.0, // 125 + 20 + 5 + 0
-      },
-      {
-        id: 3,
-        cylinder_number: "BTL-003",
-        analysis_number: "AN-003",
-        cc_number: "CC-003",
-        analysis_type: "GPA2261",
-        rushed: false,
-        well_name: "Well C",
-        meter_number: "MTR-003",
-        rate: 150.0, // Standard rate
-        standard_rate: 150.0,
-        sample_fee: 25.0,
-        h2_pop_fee: 5.0,
-        spot_composite_fee: 0.0,
-        amount: 180.0, // 150 + 25 + 5 + 0
-      },
-      {
-        id: 4,
-        cylinder_number: "BTL-004",
-        analysis_number: "AN-004",
-        cc_number: "CC-004",
-        analysis_type: "D1070",
-        rushed: false,
-        well_name: "Well D",
-        meter_number: "MTR-004",
-        rate: 100.0, // Standard rate
-        standard_rate: 100.0,
-        sample_fee: 15.0,
-        h2_pop_fee: 5.0,
-        spot_composite_fee: 20.0,
-        amount: 140.0, // 100 + 15 + 5 + 20
-      },
-      {
-        id: 5,
-        cylinder_number: "BTL-005",
-        analysis_number: "AN-005",
-        cc_number: "CC-005",
-        analysis_type: "H2S",
-        rushed: true,
-        well_name: "Well E",
-        meter_number: "MTR-005",
-        rate: 262.5, // Rushed rate (175 * 1.5)
-        standard_rate: 175.0,
-        sample_fee: 30.0,
-        h2_pop_fee: 5.0,
-        spot_composite_fee: 0.0,
-        amount: 297.5, // 262.5 + 30 + 5 + 0
-      },
-    ];
+      if (field === "rushed") {
+        const isRushed = value as boolean;
+        const analysisPrice = analysisPricingService.getAnalysisPriceByCode(
+          item.analysis_type,
+        );
+
+        if (analysisPrice) {
+          updatedItem.rate = isRushed
+            ? analysisPrice.rushed_rate
+            : analysisPrice.standard_rate;
+        } else {
+          updatedItem.rate = isRushed
+            ? item.standard_rate * 1.5
+            : item.standard_rate;
+        }
+
+        updatedItem.amount =
+          updatedItem.rate +
+          item.sample_fee +
+          item.h2_pop_fee +
+          item.spot_composite_fee;
+      }
+
+      if (field === "rate") {
+        const newRate = Number(value);
+        updatedItem.rate = newRate;
+        updatedItem.standard_rate = item.rushed ? newRate / 1.5 : newRate;
+        updatedItem.amount =
+          newRate + item.sample_fee + item.h2_pop_fee + item.spot_composite_fee;
+      }
+
+      if (
+        field === "sample_fee" ||
+        field === "h2_pop_fee" ||
+        field === "spot_composite_fee"
+      ) {
+        const rate = item.rate;
+        const sample_fee =
+          field === "sample_fee" ? Number(value) : item.sample_fee;
+        const h2_pop_fee =
+          field === "h2_pop_fee" ? Number(value) : item.h2_pop_fee;
+        const spot_composite_fee =
+          field === "spot_composite_fee"
+            ? Number(value)
+            : item.spot_composite_fee;
+        updatedItem.amount =
+          rate + sample_fee + h2_pop_fee + spot_composite_fee;
+      }
+
+      return updatedItem;
+    });
   },
 
   getMockLineItemsForView: (orderId: string): LineItem[] => {
