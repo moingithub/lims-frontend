@@ -1,4 +1,5 @@
-import { LogIn, LogOut, User, Shield } from "lucide-react";
+import { useState } from "react";
+import { KeyRound, LogIn, LogOut, Shield, User } from "lucide-react";
 import { Button } from "./ui/button";
 import {
   DropdownMenu,
@@ -10,6 +11,8 @@ import {
 } from "./ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { useAuth } from "../contexts/AuthContext";
+import { ChangePasswordDialog } from "./users/ChangePasswordDialog";
+import { usersService } from "../services/usersService";
 import nattyGasLogo from "figma:asset/509bd1171d6cdbf113bf0bb7c8be00f47c2fdad0.png";
 
 interface HeaderProps {
@@ -26,6 +29,7 @@ export function Header({
   onLogout,
 }: HeaderProps) {
   const { user } = useAuth();
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   const userName = userNameProp || user?.name || user?.email || "Guest User";
   const userRole = user?.role_name || "No Role";
@@ -89,6 +93,11 @@ export function Header({
                   )}
                 </div>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setIsChangePasswordOpen(true)}>
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  Change Password
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onLogout}>
                   <LogOut className="w-4 h-4 mr-2" />
                   Log Out
@@ -103,6 +112,29 @@ export function Header({
           )}
         </div>
       </div>
+      <ChangePasswordDialog
+        open={isChangePasswordOpen}
+        onOpenChange={setIsChangePasswordOpen}
+        onSubmit={async (currentPassword, newPassword) => {
+          if (!user?.id) {
+            return { success: false, message: "User is not available" };
+          }
+          try {
+            const message = await usersService.changeOwnPassword(
+              user.id,
+              currentPassword,
+              newPassword,
+            );
+            return { success: true, message };
+          } catch (error) {
+            const message =
+              error instanceof Error
+                ? error.message
+                : "Failed to change password";
+            return { success: false, message };
+          }
+        }}
+      />
     </header>
   );
 }

@@ -1,8 +1,18 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Eye, Pencil, Trash2, FileText, ClipboardCheck } from "lucide-react";
-import { WorkOrderWithId, workOrdersService } from "../../services/workOrdersService";
+import {
+  WorkOrderWithId,
+  workOrdersService,
+} from "../../services/workOrdersService";
 import { isoToUSDate } from "../../utils/dateUtils";
 
 interface WorkOrdersTableProps {
@@ -42,14 +52,20 @@ export function WorkOrdersTable({
         <TableBody>
           {orders.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+              <TableCell
+                colSpan={10}
+                className="text-center text-muted-foreground py-8"
+              >
                 No records found
               </TableCell>
             </TableRow>
           ) : (
             orders.map((order) => {
-              const daysPending = workOrdersService.calculateDaysSince(order.date);
-              const pendingColor = workOrdersService.getPendingColor(daysPending);
+              const daysPending =
+                order.pending_since ??
+                workOrdersService.calculateDaysSince(order.date);
+              const pendingColor =
+                workOrdersService.getPendingColor(daysPending);
               return (
                 <TableRow
                   key={order.id}
@@ -57,15 +73,15 @@ export function WorkOrdersTable({
                 >
                   <TableCell>{order.id}</TableCell>
                   <TableCell>{order.customer}</TableCell>
-                  <TableCell>{order.well_name}</TableCell>
-                  <TableCell>{order.meter_number}</TableCell>
+                  <TableCell>{order.well_name || "-"}</TableCell>
+                  <TableCell>{order.meter_number || "-"}</TableCell>
                   <TableCell>{isoToUSDate(order.date)}</TableCell>
                   <TableCell>
                     <span className={`font-semibold ${pendingColor.text}`}>
                       {daysPending} days
                     </span>
                   </TableCell>
-                  <TableCell>{order.cylinders}</TableCell>
+                  <TableCell>{order.cylinders ?? "-"}</TableCell>
                   <TableCell>${order.amount.toFixed(2)}</TableCell>
                   <TableCell>
                     <Badge
@@ -92,12 +108,14 @@ export function WorkOrdersTable({
                         title="Edit Line Items"
                         onClick={() => onEdit(order)}
                         disabled={
-                          order.status === "Invoiced" || order.status === "Completed"
+                          order.status === "Invoiced" ||
+                          order.status === "Completed"
                         }
                       >
                         <Pencil
                           className={`w-4 h-4 ${
-                            order.status === "Invoiced" || order.status === "Completed"
+                            order.status === "Invoiced" ||
+                            order.status === "Completed"
                               ? "text-gray-400"
                               : "text-purple-600"
                           }`}
@@ -112,7 +130,9 @@ export function WorkOrdersTable({
                       >
                         <Trash2
                           className={`w-4 h-4 ${
-                            order.status !== "Pending" ? "text-gray-400" : "text-red-600"
+                            order.status !== "Pending"
+                              ? "text-gray-400"
+                              : "text-red-600"
                           }`}
                         />
                       </Button>
@@ -129,13 +149,15 @@ export function WorkOrdersTable({
                         size="sm"
                         title="Create Invoice"
                         disabled={
-                          order.status === "Invoiced" || order.status === "Completed"
+                          order.status === "Invoiced" ||
+                          order.status === "Completed"
                         }
                         onClick={() => onCreateInvoice(order)}
                       >
                         <FileText
                           className={`w-4 h-4 ${
-                            order.status === "Invoiced" || order.status === "Completed"
+                            order.status === "Invoiced" ||
+                            order.status === "Completed"
                               ? "text-gray-400"
                               : "text-emerald-600"
                           }`}

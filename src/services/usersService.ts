@@ -156,6 +156,55 @@ export const usersService = {
     usersLoaded = true;
   },
 
+  // Reset a user's password (admin only)
+  resetUserPassword: async (
+    id: number,
+    newPassword: string,
+  ): Promise<string> => {
+    const response = await fetch(`${API_BASE_URL}/users/${id}/reset-password`, {
+      method: "POST",
+      headers: buildAuthHeaders(),
+      body: JSON.stringify({ new_password: newPassword }),
+    });
+
+    if (!response.ok) {
+      const message =
+        response.status === 401 ? "Unauthorized" : "Failed to reset password";
+      throw new Error(message);
+    }
+
+    const data: { message?: string } = await response.json();
+    return data.message || "Password reset";
+  },
+
+  // Change own password (self-service)
+  changeOwnPassword: async (
+    id: number,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<string> => {
+    const response = await fetch(
+      `${API_BASE_URL}/users/${id}/change-password`,
+      {
+        method: "POST",
+        headers: buildAuthHeaders(),
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      const message =
+        response.status === 401 ? "Unauthorized" : "Failed to change password";
+      throw new Error(message);
+    }
+
+    const data: { message?: string } = await response.json();
+    return data.message || "Password changed";
+  },
+
   // Search users by any field
   searchUsers: (users: User[], searchTerm: string): User[] => {
     return users.filter(

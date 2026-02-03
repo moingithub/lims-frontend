@@ -1,5 +1,10 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { useCallback, useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { toast } from "sonner";
 import {
   WorkOrderWithId,
@@ -19,161 +24,117 @@ import { useAuth } from "../contexts/AuthContext";
 
 export function WorkOrders() {
   const { filterDataByAccess, hasOwnDataRestriction } = useAuth();
+  const moduleId = 4;
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<WorkOrderWithId | null>(null);
-  const [orderToDelete, setOrderToDelete] = useState<WorkOrderWithId | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<WorkOrderWithId | null>(
+    null,
+  );
+  const [orderToDelete, setOrderToDelete] = useState<WorkOrderWithId | null>(
+    null,
+  );
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
   const [mileageFee, setMileageFee] = useState<number>(0);
   const [miscellaneousCharges, setMiscellaneousCharges] = useState<number>(0);
   const [hourlyFee, setHourlyFee] = useState<number>(0);
 
-  // Initialize orders with string IDs
-  const [allOrders] = useState<WorkOrderWithId[]>([
-    {
-      id: "WO-001239",
-      customer: "ChemLab Ltd",
-      date: "2025-10-28",
-      cylinders: 6,
-      amount: 990.0,
-      status: "Invoiced",
-      well_name: "Well F-6",
-      meter_number: "MTR-606",
-      created_by: 1,
-    },
-    {
-      id: "WO-001240",
-      customer: "EnergyFlow Inc",
-      date: "2025-11-05",
-      cylinders: 3,
-      amount: 495.0,
-      status: "Invoiced",
-      well_name: "Well G-2",
-      meter_number: "MTR-707",
-      created_by: 1,
-    },
-    {
-      id: "WO-001241",
-      customer: "Acme Corporation",
-      date: "2025-11-09",
-      cylinders: 5,
-      amount: 825.0,
-      status: "Invoiced",
-      well_name: "Well H-8",
-      meter_number: "MTR-101",
-      created_by: 1,
-    },
-    {
-      id: "WO-001242",
-      customer: "TechGas Inc",
-      date: "2025-11-11",
-      cylinders: 4,
-      amount: 660.0,
-      status: "Invoiced",
-      well_name: "Well I-3",
-      meter_number: "MTR-808",
-      created_by: 1,
-    },
-    {
-      id: "WO-001243",
-      customer: "Westfield Resources",
-      date: "2025-11-13",
-      cylinders: 7,
-      amount: 1155.0,
-      status: "Pending",
-      well_name: "Well J-5",
-      meter_number: "MTR-909",
-      created_by: 1,
-    },
-    {
-      id: "WO-001244",
-      customer: "Acme Corporation",
-      date: "2025-11-15",
-      cylinders: 2,
-      amount: 330.0,
-      status: "Pending",
-      well_name: "Well K-1",
-      meter_number: "MTR-202",
-      created_by: 1,
-    },
-    {
-      id: "WO-001245",
-      customer: "TechGas Inc",
-      date: "2025-11-16",
-      cylinders: 8,
-      amount: 1320.0,
-      status: "Pending",
-      well_name: "Well L-9",
-      meter_number: "MTR-303",
-      created_by: 1,
-    },
-    {
-      id: "WO-001246",
-      customer: "Industrial Co",
-      date: "2025-11-16",
-      cylinders: 3,
-      amount: 495.0,
-      status: "Pending",
-      well_name: "Well M-4",
-      meter_number: "MTR-404",
-      created_by: 1,
-    },
-    {
-      id: "WO-001247",
-      customer: "Acme Corporation",
-      date: "2025-11-17",
-      cylinders: 6,
-      amount: 990.0,
-      status: "Pending",
-      well_name: "Well N-7",
-      meter_number: "MTR-505",
-      created_by: 1,
-    },
-  ]);
+  const [orders, setOrders] = useState<WorkOrderWithId[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [orders, setOrders] = useState<WorkOrderWithId[]>(allOrders);
+  const loadOrders = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await workOrdersService.fetchWorkOrders();
+      const uniqueOrders = Array.from(
+        new Map(
+          data.map((order) => [order.api_id ?? order.id, order]),
+        ).values(),
+      );
+
+      let visibleOrders = uniqueOrders;
+      const canFilterByAccess = uniqueOrders.some(
+        (order) => order.created_by !== undefined && order.created_by !== 0,
+      );
+
+      if (hasOwnDataRestriction(moduleId) && canFilterByAccess) {
+        visibleOrders = filterDataByAccess(uniqueOrders, moduleId);
+      }
+
+      setOrders(visibleOrders);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to load work orders";
+      toast.error(message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filterDataByAccess, hasOwnDataRestriction, moduleId]);
 
   useEffect(() => {
-    if (hasOwnDataRestriction) {
-      setOrders(filterDataByAccess(allOrders));
-    } else {
-      setOrders(allOrders);
-    }
-  }, [hasOwnDataRestriction, filterDataByAccess]);
+    let isMounted = true;
+    const runLoad = async () => {
+      if (!isMounted) return;
+      await loadOrders();
+    };
+
+    runLoad();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loadOrders]);
 
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customer.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || order.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all" || order.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const handleEditOrder = (order: WorkOrderWithId) => {
+  const handleEditOrder = async (order: WorkOrderWithId) => {
     setSelectedOrder(order);
-    const mockLineItems = workOrdersService.getMockLineItems(order.id);
-    setLineItems(mockLineItems);
-    setMileageFee(0);
-    setMiscellaneousCharges(0);
-    setHourlyFee(0);
-    setIsEditDialogOpen(true);
+    try {
+      const details = await workOrdersService.fetchWorkOrderDetailsByNumber(
+        order.id,
+      );
+      setLineItems(details.lineItems);
+      setMileageFee(details.mileageFee);
+      setMiscellaneousCharges(details.miscCharges);
+      setHourlyFee(details.hourlyFee);
+      setIsEditDialogOpen(true);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to load work order details";
+      toast.error(message);
+    }
   };
 
   const handleLineItemChange = (
     id: string,
     field: keyof LineItem,
-    value: string | number | boolean
+    value: string | number | boolean,
   ) => {
-    const updatedItems = workOrdersService.updateLineItem(lineItems, id, field, value);
+    const updatedItems = workOrdersService.updateLineItem(
+      lineItems,
+      id,
+      field,
+      value,
+    );
     setLineItems(updatedItems);
   };
 
   const handleSaveLineItems = () => {
-    toast.success(`Work Order ${selectedOrder?.id} line items updated successfully`);
+    toast.success(
+      `Work Order ${selectedOrder?.id} line items updated successfully`,
+    );
     setIsEditDialogOpen(false);
   };
 
@@ -192,9 +153,23 @@ export function WorkOrders() {
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDeleteOrder = () => {
-    if (orderToDelete) {
+  const confirmDeleteOrder = async () => {
+    if (!orderToDelete) return;
+
+    if (!orderToDelete.api_id) {
+      toast.error("Unable to delete this work order");
+      return;
+    }
+
+    try {
+      await workOrdersService.deleteWorkOrder(orderToDelete.api_id);
+      await loadOrders();
       toast.success(`Work Order ${orderToDelete.id} deleted successfully`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to delete work order";
+      toast.error(message);
+    } finally {
       setIsDeleteDialogOpen(false);
       setOrderToDelete(null);
     }
@@ -203,7 +178,7 @@ export function WorkOrders() {
   const handleCreateInvoice = (order: WorkOrderWithId) => {
     const invoiceNumber = workOrdersService.generateInvoiceNumber();
     toast.success(
-      `Invoice ${invoiceNumber} generated successfully for ${order.customer} with 1 work order(s)`
+      `Invoice ${invoiceNumber} generated successfully for ${order.customer} with 1 work order(s)`,
     );
   };
 
@@ -230,7 +205,7 @@ export function WorkOrders() {
           </div>
 
           <WorkOrdersTable
-            orders={filteredOrders}
+            orders={isLoading ? [] : filteredOrders}
             onView={handleViewOrder}
             onEdit={handleEditOrder}
             onDelete={handleDeleteOrder}
@@ -245,7 +220,11 @@ export function WorkOrders() {
               </p>
               <PendingLegend />
             </div>
-            <Pagination currentPage={1} totalPages={1} onPageChange={() => {}} />
+            <Pagination
+              currentPage={1}
+              totalPages={1}
+              onPageChange={() => {}}
+            />
           </div>
         </CardContent>
       </Card>

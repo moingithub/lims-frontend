@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { Button } from "../ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, KeyRound, Trash2 } from "lucide-react";
 import { User } from "../../services/usersService";
 import { rolesService } from "../../services/rolesService";
 
@@ -16,9 +16,15 @@ interface UsersTableProps {
   users: User[];
   onEdit: (user: User) => void;
   onDelete: (user: User) => void;
+  onResetPassword: (user: User) => void;
 }
 
-export function UsersTable({ users, onEdit, onDelete }: UsersTableProps) {
+export function UsersTable({
+  users,
+  onEdit,
+  onDelete,
+  onResetPassword,
+}: UsersTableProps) {
   const [roles, setRoles] = useState(rolesService.getRoles());
 
   useEffect(() => {
@@ -93,6 +99,14 @@ export function UsersTable({ users, onEdit, onDelete }: UsersTableProps) {
                       onClick={() => onEdit(user)}
                     >
                       <Edit className="w-4 h-4 text-green-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onResetPassword(user)}
+                      title="Reset password"
+                    >
+                      <KeyRound className="w-4 h-4 text-blue-600" />
                     </Button>
                     <Button
                       variant="ghost"

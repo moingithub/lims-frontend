@@ -10,6 +10,20 @@ export interface WorkOrder {
   created_by: number;
 }
 
+export interface WorkOrderWithId {
+  id: string;
+  customer: string;
+  date: string;
+  cylinders: string | number | null;
+  amount: number;
+  status: "Pending" | "In Progress" | "Completed" | "Invoiced";
+  well_name?: string | null;
+  meter_number?: string | null;
+  created_by: number;
+  pending_since?: number | null;
+  api_id?: number;
+}
+
 // New interface for Work Order Header table
 export interface WorkOrderHeader {
   id: number;
@@ -72,94 +86,198 @@ export interface LineItem {
 }
 
 // Import analysisPricingService for price calculations
-import { analysisPricingService } from './analysisPricingService';
+import { analysisPricingService } from "./analysisPricingService";
+import { API_BASE_URL } from "../config/api";
+import { authService } from "./authService";
+
+type ApiWorkOrder = {
+  id: number;
+  work_order_number: string;
+  company: string;
+  well_name: string | null;
+  meter_number: string | null;
+  date: string;
+  pending_since: number | null;
+  cylinders: string | number | null;
+  amount: number;
+  status: "Pending" | "In Progress" | "Completed" | "Invoiced" | string;
+};
+
+type ApiWorkOrderLineItem = {
+  id?: number;
+  cylinder_number?: string;
+  analysis_number?: string;
+  cc_number?: string;
+  analysis_type?: string;
+  rushed?: boolean;
+  well_name?: string;
+  meter_number?: string;
+  rate?: number | string | null;
+  standard_rate?: number | string | null;
+  sample_fee?: number | string | null;
+  h2_pop_fee?: number | string | null;
+  spot_composite_fee?: number | string | null;
+  amount?: number | string | null;
+};
+
+type ApiWorkOrderDetails = {
+  work_order_number?: string;
+  work_order?: {
+    work_order_number?: string;
+    mileage_fee?: number | string | null;
+    miscellaneous_charges?: number | string | null;
+    misc_fee?: number | string | null;
+    hourly_fee?: number | string | null;
+  };
+  line_items?: ApiWorkOrderLineItem[];
+  mileage_fee?: number | string | null;
+  miscellaneous_charges?: number | string | null;
+  misc_fee?: number | string | null;
+  hourly_fee?: number | string | null;
+};
+
+const buildAuthHeaders = (): HeadersInit => {
+  const token = authService.getAuthState().token;
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
+const mapApiWorkOrder = (order: ApiWorkOrder): WorkOrderWithId => ({
+  id: order.work_order_number,
+  customer: order.company,
+  date: order.date,
+  cylinders: order.cylinders ?? null,
+  amount: typeof order.amount === "number" ? order.amount : 0,
+  status: (order.status || "Pending") as WorkOrderWithId["status"],
+  well_name: order.well_name ?? null,
+  meter_number: order.meter_number ?? null,
+  created_by: 0,
+  pending_since: order.pending_since ?? null,
+  api_id: order.id,
+});
+
+const toNumber = (value: unknown, fallback = 0): number => {
+  const num = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(num) ? num : fallback;
+};
+
+const normalizeLineItem = (
+  item: ApiWorkOrderLineItem,
+  index: number,
+): LineItem => {
+  const rate = toNumber(item.rate);
+  const sampleFee = toNumber(item.sample_fee);
+  const h2PopFee = toNumber(item.h2_pop_fee);
+  const spotCompositeFee = toNumber(item.spot_composite_fee);
+
+  return {
+    id: item.id ?? index + 1,
+    cylinder_number: item.cylinder_number ?? "",
+    analysis_number: item.analysis_number ?? "",
+    cc_number: item.cc_number ?? "",
+    analysis_type: item.analysis_type ?? "",
+    rushed: Boolean(item.rushed),
+    well_name: item.well_name ?? "",
+    meter_number: item.meter_number ?? "",
+    rate,
+    standard_rate: toNumber(item.standard_rate ?? item.rate),
+    sample_fee: sampleFee,
+    h2_pop_fee: h2PopFee,
+    spot_composite_fee: spotCompositeFee,
+    amount: toNumber(
+      item.amount ?? rate + sampleFee + h2PopFee + spotCompositeFee,
+    ),
+  };
+};
 
 const initialOrders: WorkOrder[] = [
-  { 
-    id: 1, 
-    customer: "ChemLab Ltd", 
-    date: "2025-10-28", 
-    cylinders: 6, 
-    amount: 990.0, 
-    status: "Invoiced", 
-    well_name: "Well F-6", 
+  {
+    id: 1,
+    customer: "ChemLab Ltd",
+    date: "2025-10-28",
+    cylinders: 6,
+    amount: 990.0,
+    status: "Invoiced",
+    well_name: "Well F-6",
     meter_number: "MTR-606",
     created_by: 1,
   },
-  { 
-    id: 2, 
-    customer: "TechGas Inc", 
-    date: "2025-11-05", 
-    cylinders: 7, 
-    amount: 1155.0, 
-    status: "In Progress", 
-    well_name: "Well G-7", 
+  {
+    id: 2,
+    customer: "TechGas Inc",
+    date: "2025-11-05",
+    cylinders: 7,
+    amount: 1155.0,
+    status: "In Progress",
+    well_name: "Well G-7",
     meter_number: "MTR-707",
     created_by: 1,
   },
-  { 
-    id: 3, 
-    customer: "Acme Corporation", 
-    date: "2025-11-09", 
-    cylinders: 5, 
-    amount: 825.0, 
-    status: "Completed", 
-    well_name: "Well A-1", 
+  {
+    id: 3,
+    customer: "Acme Corporation",
+    date: "2025-11-09",
+    cylinders: 5,
+    amount: 825.0,
+    status: "Completed",
+    well_name: "Well A-1",
     meter_number: "MTR-101",
     created_by: 1,
   },
-  { 
-    id: 4, 
-    customer: "Gas Solutions", 
-    date: "2025-11-11", 
-    cylinders: 4, 
-    amount: 680.0, 
-    status: "In Progress", 
-    well_name: "Well H-8", 
+  {
+    id: 4,
+    customer: "Gas Solutions",
+    date: "2025-11-11",
+    cylinders: 4,
+    amount: 680.0,
+    status: "In Progress",
+    well_name: "Well H-8",
     meter_number: "MTR-808",
     created_by: 1,
   },
-  { 
-    id: 5, 
-    customer: "Industrial Co", 
-    date: "2025-11-13", 
-    cylinders: 3, 
-    amount: 495.0, 
-    status: "Pending", 
-    well_name: "Well I-9", 
+  {
+    id: 5,
+    customer: "Industrial Co",
+    date: "2025-11-13",
+    cylinders: 3,
+    amount: 495.0,
+    status: "Pending",
+    well_name: "Well I-9",
     meter_number: "MTR-909",
     created_by: 1,
   },
-  { 
-    id: 6, 
-    customer: "TechGas Inc", 
-    date: "2025-11-15", 
-    cylinders: 3, 
-    amount: 495.0, 
-    status: "Invoiced", 
-    well_name: "Well B-2", 
+  {
+    id: 6,
+    customer: "TechGas Inc",
+    date: "2025-11-15",
+    cylinders: 3,
+    amount: 495.0,
+    status: "Invoiced",
+    well_name: "Well B-2",
     meter_number: "MTR-202",
     created_by: 1,
   },
-  { 
-    id: 7, 
-    customer: "Industrial Co", 
-    date: "2025-11-16", 
-    cylinders: 8, 
-    amount: 1320.0, 
-    status: "In Progress", 
-    well_name: "Well C-3", 
+  {
+    id: 7,
+    customer: "Industrial Co",
+    date: "2025-11-16",
+    cylinders: 8,
+    amount: 1320.0,
+    status: "In Progress",
+    well_name: "Well C-3",
     meter_number: "MTR-303",
     created_by: 1,
   },
-  { 
-    id: 8, 
-    customer: "Gas Solutions", 
-    date: "2025-11-16", 
-    cylinders: 2, 
-    amount: 330.0, 
-    status: "Completed", 
-    well_name: "Well D-4", 
+  {
+    id: 8,
+    customer: "Gas Solutions",
+    date: "2025-11-16",
+    cylinders: 2,
+    amount: 330.0,
+    status: "Completed",
+    well_name: "Well D-4",
     meter_number: "MTR-404",
     created_by: 1,
   },
@@ -1643,12 +1761,98 @@ let workOrderLines: WorkOrderLine[] = [
 ];
 
 export const workOrdersService = {
+  fetchWorkOrders: async (): Promise<WorkOrderWithId[]> => {
+    const response = await fetch(`${API_BASE_URL}/sample_checkin/workorders`, {
+      method: "GET",
+      headers: buildAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const message =
+        response.status === 401 ? "Unauthorized" : "Failed to load work orders";
+      throw new Error(message);
+    }
+
+    const data: ApiWorkOrder[] = await response.json();
+    return Array.isArray(data) ? data.map(mapApiWorkOrder) : [];
+  },
+  fetchWorkOrderDetailsByNumber: async (
+    workOrderNumber: string,
+  ): Promise<{
+    workOrderNumber: string;
+    lineItems: LineItem[];
+    mileageFee: number;
+    miscCharges: number;
+    hourlyFee: number;
+  }> => {
+    const response = await fetch(
+      `${API_BASE_URL}/sample_checkin/workorders/by-number/${encodeURIComponent(
+        workOrderNumber,
+      )}`,
+      {
+        method: "GET",
+        headers: buildAuthHeaders(),
+      },
+    );
+
+    if (!response.ok) {
+      const message =
+        response.status === 401
+          ? "Unauthorized"
+          : "Failed to load work order details";
+      throw new Error(message);
+    }
+
+    const data: ApiWorkOrderDetails = await response.json();
+
+    const resolvedNumber =
+      data.work_order_number ||
+      data.work_order?.work_order_number ||
+      workOrderNumber;
+
+    const lineItems = Array.isArray(data.line_items)
+      ? data.line_items.map(normalizeLineItem)
+      : [];
+
+    const mileageFee = toNumber(
+      data.mileage_fee ?? data.work_order?.mileage_fee,
+    );
+    const miscCharges = toNumber(
+      data.miscellaneous_charges ??
+        data.misc_fee ??
+        data.work_order?.miscellaneous_charges ??
+        data.work_order?.misc_fee,
+    );
+    const hourlyFee = toNumber(data.hourly_fee ?? data.work_order?.hourly_fee);
+
+    return {
+      workOrderNumber: resolvedNumber,
+      lineItems,
+      mileageFee,
+      miscCharges,
+      hourlyFee,
+    };
+  },
+  deleteWorkOrder: async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/sample_checkin/${id}`, {
+      method: "DELETE",
+      headers: buildAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const message =
+        response.status === 401
+          ? "Unauthorized"
+          : "Failed to delete work order";
+      throw new Error(message);
+    }
+  },
   getOrders: (): WorkOrder[] => {
     return initialOrders;
   },
 
   getOrderById: (id: number): WorkOrder | undefined => {
-    return initialOrders.find(order => order.id === id);
+    return initialOrders.find((order) => order.id === id);
   },
 
   updateOrder: (id: number, updatedOrder: WorkOrder): WorkOrder => {
@@ -1660,16 +1864,16 @@ export const workOrdersService = {
   },
 
   searchOrders: (orders: WorkOrder[], searchTerm: string): WorkOrder[] => {
-    return orders.filter(order =>
-      Object.values(order).some(value =>
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      )
+    return orders.filter((order) =>
+      Object.values(order).some((value) =>
+        String(value).toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
     );
   },
 
   filterByStatus: (orders: WorkOrder[], status: string): WorkOrder[] => {
     if (status === "all") return orders;
-    return orders.filter(order => order.status === status);
+    return orders.filter((order) => order.status === status);
   },
 
   getStatusBadgeVariant: (status: string): string => {
@@ -1687,13 +1891,26 @@ export const workOrdersService = {
     }
   },
 
-  calculateOrderTotal: (lineItems: LineItem[], mileageFee: number = 0, miscCharges: number = 0, hourlyFee: number = 0): number => {
-    const lineItemsTotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+  calculateOrderTotal: (
+    lineItems: LineItem[],
+    mileageFee: number = 0,
+    miscCharges: number = 0,
+    hourlyFee: number = 0,
+  ): number => {
+    const lineItemsTotal = lineItems.reduce(
+      (sum, item) => sum + item.amount,
+      0,
+    );
     return lineItemsTotal + mileageFee + miscCharges + hourlyFee;
   },
 
   calculateLineItemAmount: (item: Partial<LineItem>): number => {
-    return (item.rate || 0) + (item.sample_fee || 0) + (item.h2_pop_fee || 0) + (item.spot_composite_fee || 0);
+    return (
+      (item.rate || 0) +
+      (item.sample_fee || 0) +
+      (item.h2_pop_fee || 0) +
+      (item.spot_composite_fee || 0)
+    );
   },
 
   formatCurrency: (amount: number): string => {
@@ -1721,8 +1938,17 @@ export const workOrdersService = {
   },
 
   exportToCSV: (orders: WorkOrder[]): string => {
-    const headers = ["Work Order #", "Customer", "Date", "Cylinders", "Amount", "Status", "Well Name", "Meter Number"];
-    const rows = orders.map(order => [
+    const headers = [
+      "Work Order #",
+      "Customer",
+      "Date",
+      "Cylinders",
+      "Amount",
+      "Status",
+      "Well Name",
+      "Meter Number",
+    ];
+    const rows = orders.map((order) => [
       order.id,
       order.customer,
       order.date,
@@ -1732,16 +1958,19 @@ export const workOrdersService = {
       order.well_name || "",
       order.meter_number || "",
     ]);
-    
+
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(",")),
+      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
     ].join("\n");
-    
+
     return csvContent;
   },
 
-  calculateDaysSince: (dateString: string, currentDate: string = "2025-11-17"): number => {
+  calculateDaysSince: (
+    dateString: string,
+    currentDate: string = "2025-11-17",
+  ): number => {
     const orderDate = new Date(dateString);
     const today = new Date(currentDate);
     const diffTime = Math.abs(today.getTime() - orderDate.getTime());
@@ -1805,7 +2034,7 @@ export const workOrdersService = {
     items: LineItem[],
     id: string,
     field: keyof LineItem,
-    value: string | number | boolean
+    value: string | number | boolean,
   ): LineItem[] => {
     return items.map((item) => {
       if (item.id.toString() === id) {
@@ -1814,13 +2043,15 @@ export const workOrdersService = {
         // Auto-populate rate and sample fee when analysis type changes
         if (field === "analysis_type") {
           // Get pricing from Analysis Pricing Master
-          const analysisPrice = analysisPricingService.getAnalysisPriceByCode(value as string);
-          
+          const analysisPrice = analysisPricingService.getAnalysisPriceByCode(
+            value as string,
+          );
+
           if (analysisPrice) {
             // Set standard rate and sample fee from Analysis Pricing Master
             updatedItem.standard_rate = analysisPrice.standard_rate;
             updatedItem.sample_fee = analysisPrice.sample_fee || 0;
-            
+
             // If rushed, use rushed rate; otherwise use standard rate
             if (item.rushed) {
               updatedItem.rate = analysisPrice.rushed_rate;
@@ -1829,26 +2060,33 @@ export const workOrdersService = {
             }
           } else {
             // Fallback to old logic if analysis type not found
-            const newRate = workOrdersService.getRateByAnalysisType(value as string);
+            const newRate = workOrdersService.getRateByAnalysisType(
+              value as string,
+            );
             updatedItem.rate = newRate;
             updatedItem.standard_rate = newRate;
             if (item.rushed) {
               updatedItem.rate = newRate * 1.5;
             }
           }
-          
+
           // Recalculate amount
           updatedItem.amount =
-            updatedItem.rate + updatedItem.sample_fee + item.h2_pop_fee + item.spot_composite_fee;
+            updatedItem.rate +
+            updatedItem.sample_fee +
+            item.h2_pop_fee +
+            item.spot_composite_fee;
         }
 
         // Handle rushed checkbox toggle
         if (field === "rushed") {
           const isRushed = value as boolean;
-          
+
           // Get pricing from Analysis Pricing Master
-          const analysisPrice = analysisPricingService.getAnalysisPriceByCode(item.analysis_type);
-          
+          const analysisPrice = analysisPricingService.getAnalysisPriceByCode(
+            item.analysis_type,
+          );
+
           if (analysisPrice) {
             if (isRushed) {
               // When checked: use rushed rate from Analysis Pricing Master
@@ -1865,10 +2103,13 @@ export const workOrdersService = {
               updatedItem.rate = item.standard_rate;
             }
           }
-          
+
           // Recalculate amount with new rate
           updatedItem.amount =
-            updatedItem.rate + item.sample_fee + item.h2_pop_fee + item.spot_composite_fee;
+            updatedItem.rate +
+            item.sample_fee +
+            item.h2_pop_fee +
+            item.spot_composite_fee;
         }
 
         // Handle manual rate changes
@@ -1883,7 +2124,10 @@ export const workOrdersService = {
             updatedItem.standard_rate = newRate / 1.5;
           }
           updatedItem.amount =
-            newRate + item.sample_fee + item.h2_pop_fee + item.spot_composite_fee;
+            newRate +
+            item.sample_fee +
+            item.h2_pop_fee +
+            item.spot_composite_fee;
         }
 
         // Recalculate amount if fees change
@@ -1893,11 +2137,16 @@ export const workOrdersService = {
           field === "spot_composite_fee"
         ) {
           const rate = item.rate;
-          const sample_fee = field === "sample_fee" ? Number(value) : item.sample_fee;
-          const h2_pop_fee = field === "h2_pop_fee" ? Number(value) : item.h2_pop_fee;
+          const sample_fee =
+            field === "sample_fee" ? Number(value) : item.sample_fee;
+          const h2_pop_fee =
+            field === "h2_pop_fee" ? Number(value) : item.h2_pop_fee;
           const spot_composite_fee =
-            field === "spot_composite_fee" ? Number(value) : item.spot_composite_fee;
-          updatedItem.amount = rate + sample_fee + h2_pop_fee + spot_composite_fee;
+            field === "spot_composite_fee"
+              ? Number(value)
+              : item.spot_composite_fee;
+          updatedItem.amount =
+            rate + sample_fee + h2_pop_fee + spot_composite_fee;
         }
 
         return updatedItem;
@@ -2090,11 +2339,11 @@ export const workOrdersService = {
     companyId: number,
     contactId: number,
     cylinders: any[],
-    userId: number
+    userId: number,
   ): { header: WorkOrderHeader; lines: WorkOrderLine[] } => {
     const workOrderNumber = workOrdersService.generateWorkOrderNumber();
     const now = new Date().toISOString();
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
 
     // Create Work Order Header
     const header: WorkOrderHeader = {
@@ -2116,42 +2365,44 @@ export const workOrdersService = {
     // Create Work Order Lines for each cylinder
     const lines: WorkOrderLine[] = cylinders.map((cylinder, index) => {
       // ✅ Calculate price based on analysis type and pricing rules
-      const analysisPrice = analysisPricingService.getAnalysisPriceByCode(cylinder.analysis_type);
+      const analysisPrice = analysisPricingService.getAnalysisPriceByCode(
+        cylinder.analysis_type,
+      );
       const basePrice = analysisPrice?.price || 150.0; // Default to $150 if not found
-      
+
       let calculatedPrice = basePrice;
-      
+
       // Apply rushed pricing (1.5x) if rushed
       if (cylinder.rushed) {
         calculatedPrice = basePrice * 1.5;
       }
-      
+
       const line: WorkOrderLine = {
         id: Date.now() + index,
         work_order_id: header.id,
         analysis_number: cylinder.analysis_number,
         date: cylinder.date || today,
-        producer: cylinder.producer || '',
+        producer: cylinder.producer || "",
         sampled_by_natty: cylinder.sampled_by_natty || false,
-        company: cylinder.company || '',
-        area: cylinder.area || '',
-        well_name: cylinder.well_name || '',
-        meter_number: cylinder.meter_number || '',
-        flow_rate: cylinder.flow_rate || '',
-        pressure: cylinder.pressure || '',
-        temperature: cylinder.temperature || '',
-        field_h2s: cylinder.field_h2s || '',
-        cost_code: cylinder.cost_code || '',
+        company: cylinder.company || "",
+        area: cylinder.area || "",
+        well_name: cylinder.well_name || "",
+        meter_number: cylinder.meter_number || "",
+        flow_rate: cylinder.flow_rate || "",
+        pressure: cylinder.pressure || "",
+        temperature: cylinder.temperature || "",
+        field_h2s: cylinder.field_h2s || "",
+        cost_code: cylinder.cost_code || "",
         cylinder_number: cylinder.cylinder_number, // ✅ Now reads cylinder_number
-        remarks: cylinder.remarks || '',
+        remarks: cylinder.remarks || "",
         check_in_time: cylinder.check_in_time,
         analysis_type: cylinder.analysis_type,
         check_in_type: cylinder.check_in_type,
         rushed: cylinder.rushed,
         price: calculatedPrice, // ✅ Use calculated price from Analysis Pricing Master
-        tag_image: cylinder.tag_image || '',
-        billing_reference_type: cylinder.billing_reference_type || '',
-        billing_reference_number: cylinder.billing_reference_number || '',
+        tag_image: cylinder.tag_image || "",
+        billing_reference_type: cylinder.billing_reference_type || "",
+        billing_reference_number: cylinder.billing_reference_number || "",
         created_by: userId,
       };
       return line;
@@ -2160,10 +2411,10 @@ export const workOrdersService = {
     // Store lines
     workOrderLines.push(...lines);
 
-    console.log('Work Order Created:', {
+    console.log("Work Order Created:", {
       header,
       linesCount: lines.length,
-      workOrderNumber
+      workOrderNumber,
     });
 
     return { header, lines };
@@ -2174,19 +2425,26 @@ export const workOrdersService = {
   },
 
   getWorkOrderHeaderById: (id: number): WorkOrderHeader | undefined => {
-    return workOrderHeaders.find(header => header.id === id);
+    return workOrderHeaders.find((header) => header.id === id);
   },
 
-  getWorkOrderHeaderByNumber: (workOrderNumber: string): WorkOrderHeader | undefined => {
-    return workOrderHeaders.find(header => header.work_order_number === workOrderNumber);
+  getWorkOrderHeaderByNumber: (
+    workOrderNumber: string,
+  ): WorkOrderHeader | undefined => {
+    return workOrderHeaders.find(
+      (header) => header.work_order_number === workOrderNumber,
+    );
   },
 
   getWorkOrderLinesByHeaderId: (headerId: number): WorkOrderLine[] => {
-    return workOrderLines.filter(line => line.work_order_id === headerId);
+    return workOrderLines.filter((line) => line.work_order_id === headerId);
   },
 
-  getWorkOrderLinesByWorkOrderNumber: (workOrderNumber: string): WorkOrderLine[] => {
-    const header = workOrdersService.getWorkOrderHeaderByNumber(workOrderNumber);
+  getWorkOrderLinesByWorkOrderNumber: (
+    workOrderNumber: string,
+  ): WorkOrderLine[] => {
+    const header =
+      workOrdersService.getWorkOrderHeaderByNumber(workOrderNumber);
     if (!header) return [];
     return workOrdersService.getWorkOrderLinesByHeaderId(header.id);
   },

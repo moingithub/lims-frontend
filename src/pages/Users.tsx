@@ -14,6 +14,7 @@ import { UsersTable } from "../components/users/UsersTable";
 import { AddUserDialog } from "../components/users/AddUserDialog";
 import { EditUserDialog } from "../components/users/EditUserDialog";
 import { DeleteUserDialog } from "../components/users/DeleteUserDialog";
+import { ResetPasswordDialog } from "../components/users/ResetPasswordDialog";
 import { UserFormData } from "../components/users/UserForm";
 
 export function Users() {
@@ -21,7 +22,9 @@ export function Users() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   const [formData, setFormData] = useState<UserFormData>({
     id: 0,
@@ -91,6 +94,11 @@ export function Users() {
   const handleDelete = (user: User) => {
     setSelectedUser(user);
     setIsDeleteDialogOpen(true);
+  };
+
+  const handleResetPassword = (user: User) => {
+    setSelectedUser(user);
+    setIsResetDialogOpen(true);
   };
 
   const confirmAdd = async () => {
@@ -168,6 +176,36 @@ export function Users() {
     }
   };
 
+  const confirmResetPassword = async (newPassword: string) => {
+    if (!selectedUser) return;
+
+    if (!newPassword || newPassword.trim() === "") {
+      toast.error("New password is required");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    try {
+      setIsResetting(true);
+      const message = await usersService.resetUserPassword(
+        selectedUser.id,
+        newPassword,
+      );
+      toast.success(message);
+      setIsResetDialogOpen(false);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to reset password";
+      toast.error(message);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -191,6 +229,7 @@ export function Users() {
             users={isLoading ? [] : filteredData}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onResetPassword={handleResetPassword}
           />
         </CardContent>
       </Card>
@@ -216,6 +255,14 @@ export function Users() {
         onOpenChange={setIsDeleteDialogOpen}
         userName={selectedUser?.name || ""}
         onConfirm={confirmDelete}
+      />
+
+      <ResetPasswordDialog
+        open={isResetDialogOpen}
+        onOpenChange={setIsResetDialogOpen}
+        user={selectedUser}
+        onConfirm={confirmResetPassword}
+        isLoading={isResetting}
       />
     </div>
   );

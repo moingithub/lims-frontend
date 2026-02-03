@@ -131,7 +131,7 @@ export function WorkOrderReportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[98vw] max-w-[98vw] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[110vw] max-w-[110vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Work Order Report</DialogTitle>
           <DialogDescription>
@@ -183,11 +183,11 @@ export function WorkOrderReportDialog({
               <Table className="w-full table-fixed">
                 <TableHeader>
                   <TableRow className="bg-gray-100">
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead className="w-40">Analysis #</TableHead>
-                    <TableHead className="w-28">Cylinder #</TableHead>
-                    <TableHead className="w-40">Type</TableHead>
-                    <TableHead className="w-40">Producer</TableHead>
+                    <TableHead className="w-14">#</TableHead>
+                    <TableHead className="w-44">Analysis #</TableHead>
+                    <TableHead className="w-32">Cylinder #</TableHead>
+                    <TableHead className="w-44">Type</TableHead>
+                    <TableHead className="w-44">Producer</TableHead>
                     <TableHead>Well</TableHead>
                   </TableRow>
                 </TableHeader>
