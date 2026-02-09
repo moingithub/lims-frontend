@@ -21,6 +21,7 @@ import { PendingLegend } from "../components/workOrders/PendingLegend";
 import { Pagination } from "../components/workOrders/Pagination";
 import { WorkOrderReportDialog } from "../components/sampleCheckIn/WorkOrderReportDialog";
 import { useAuth } from "../contexts/AuthContext";
+import { analysisPricingService } from "../services/analysisPricingService";
 
 export function WorkOrders() {
   const { filterDataByAccess, hasOwnDataRestriction } = useAuth();
@@ -100,6 +101,8 @@ export function WorkOrders() {
   const handleEditOrder = async (order: WorkOrderWithId) => {
     setSelectedOrder(order);
     try {
+      // Ensure analysis prices are loaded before opening dialog
+      await analysisPricingService.fetchAnalysisPrices();
       const details = await workOrdersService.fetchWorkOrderDetailsByNumber(
         order.id,
       );

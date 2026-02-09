@@ -32,6 +32,24 @@ export function WorkOrdersTable({
   onCreateInvoice,
   onViewReport,
 }: WorkOrdersTableProps) {
+  // Group orders by work order id and count records for cylinders
+  const groupedOrders = Object.values(
+    orders.reduce(
+      (acc, order) => {
+        if (!acc[order.id]) {
+          acc[order.id] = {
+            ...order,
+            cylinders: 1,
+          };
+        } else {
+          acc[order.id].cylinders += 1;
+        }
+        return acc;
+      },
+      {} as Record<string, WorkOrderWithId & { cylinders: number }>,
+    ),
+  );
+
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
@@ -39,18 +57,15 @@ export function WorkOrdersTable({
           <TableRow>
             <TableHead>Work Order #</TableHead>
             <TableHead>Company</TableHead>
-            <TableHead>Well Name</TableHead>
-            <TableHead>Meter #</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Pending Since</TableHead>
             <TableHead>Cylinders</TableHead>
-            <TableHead>Amount</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {orders.length === 0 ? (
+          {groupedOrders.length === 0 ? (
             <TableRow>
               <TableCell
                 colSpan={10}
@@ -60,7 +75,7 @@ export function WorkOrdersTable({
               </TableCell>
             </TableRow>
           ) : (
-            orders.map((order) => {
+            groupedOrders.map((order) => {
               const daysPending =
                 order.pending_since ??
                 workOrdersService.calculateDaysSince(order.date);
@@ -73,8 +88,6 @@ export function WorkOrdersTable({
                 >
                   <TableCell>{order.id}</TableCell>
                   <TableCell>{order.customer}</TableCell>
-                  <TableCell>{order.well_name || "-"}</TableCell>
-                  <TableCell>{order.meter_number || "-"}</TableCell>
                   <TableCell>{isoToUSDate(order.date)}</TableCell>
                   <TableCell>
                     <span className={`font-semibold ${pendingColor.text}`}>
@@ -82,7 +95,6 @@ export function WorkOrdersTable({
                     </span>
                   </TableCell>
                   <TableCell>{order.cylinders ?? "-"}</TableCell>
-                  <TableCell>${order.amount.toFixed(2)}</TableCell>
                   <TableCell>
                     <Badge
                       className={workOrdersService.getStatusColor(order.status)}
