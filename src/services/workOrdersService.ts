@@ -175,9 +175,7 @@ const normalizeLineItem = (
     sample_fee: sampleFee,
     h2_pop_fee: h2PopFee,
     spot_composite_fee: spotCompositeFee,
-    amount: toNumber(
-      item.amount ?? applied_rate + sampleFee + h2PopFee + spotCompositeFee,
-    ),
+    amount: applied_rate + sampleFee + h2PopFee + spotCompositeFee,
   };
 };
 
@@ -1848,21 +1846,14 @@ export const workOrdersService = {
     return items.map((item) => {
       if (item.id.toString() !== id) return item;
 
-      // Only allow sample_fee to be changed by user input (field === 'sample_fee')
       let updatedItem: LineItem;
       if (field === "sample_fee") {
         updatedItem = { ...item, sample_fee: Number(value) };
-        updatedItem.amount =
-          item.applied_rate +
-          updatedItem.sample_fee +
-          item.h2_pop_fee +
-          item.spot_composite_fee;
-        return updatedItem;
+      } else {
+        updatedItem = { ...item, [field]: value } as LineItem;
       }
 
-      // For all other fields, do NOT change sample_fee
-      updatedItem = { ...item, [field]: value } as LineItem;
-
+      // If analysis_type or rushed changed, recalculate rates
       if (field === "analysis_type") {
         const analysisPrice = analysisPricingService.getAnalysisPriceByCode(
           value as string,
@@ -1879,11 +1870,6 @@ export const workOrdersService = {
           updatedItem.standard_rate = newRate;
           updatedItem.applied_rate = item.rushed ? newRate * 1.5 : newRate;
         }
-        updatedItem.amount =
-          updatedItem.applied_rate +
-          item.sample_fee +
-          item.h2_pop_fee +
-          item.spot_composite_fee;
       }
 
       if (field === "rushed") {
@@ -1897,34 +1883,20 @@ export const workOrdersService = {
             ? analysisPrice.rushed_rate
             : analysisPrice.standard_rate;
         } else {
-          // item.standard_rate may be outdated if analysis_type changed, so recalc
           const newRate = workOrdersService.getRateByAnalysisType(
             item.analysis_type,
           );
           updatedItem.standard_rate = newRate;
           updatedItem.applied_rate = isRushed ? newRate * 1.5 : newRate;
         }
-        updatedItem.amount =
-          updatedItem.applied_rate +
-          item.sample_fee +
-          item.h2_pop_fee +
-          item.spot_composite_fee;
       }
 
-      // Removed 'rate' field update, replaced by 'applied_rate'.
-
-      if (field === "h2_pop_fee") {
-        updatedItem.amount =
-          item.applied_rate +
-          item.sample_fee +
-          Number(value) +
-          item.spot_composite_fee;
-      }
-
-      if (field === "spot_composite_fee") {
-        updatedItem.amount =
-          item.applied_rate + item.sample_fee + item.h2_pop_fee + Number(value);
-      }
+      // Always recalculate amount using all four fields from updatedItem only
+      updatedItem.amount =
+        (updatedItem.applied_rate ?? 0) +
+        (updatedItem.sample_fee ?? 0) +
+        (updatedItem.h2_pop_fee ?? 0) +
+        (updatedItem.spot_composite_fee ?? 0);
 
       return updatedItem;
     });

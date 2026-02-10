@@ -67,7 +67,7 @@ export function EditLineItemsDialog({
   // Load active analysis types from Analysis Pricing service
   const analysisOptions = analysisPricingService.getActiveAnalysisOptions();
 
-  const subtotal = lineItems.reduce((sum, item) => sum + item.applied_rate, 0);
+  const subtotal = lineItems.reduce((sum, item) => sum + (item.amount || 0), 0);
   const totalOrderAmount =
     subtotal + mileageFee + miscellaneousCharges + hourlyFee;
 
@@ -276,8 +276,12 @@ export function EditLineItemsDialog({
           <div className="flex justify-end pt-4 border-t">
             <div className="space-y-2 min-w-64">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Subtotal:</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span className="text-muted-foreground font-bold">
+                  Subtotal:
+                </span>
+                <span className="font-bold text-right w-32 block">
+                  ${subtotal.toFixed(2)}
+                </span>
               </div>
               <div className="flex justify-between items-center">
                 <Label className="text-muted-foreground">Mileage Fee:</Label>
@@ -287,7 +291,7 @@ export function EditLineItemsDialog({
                   onChange={(e) =>
                     onMileageFeeChange(parseFloat(e.target.value) || 0)
                   }
-                  className="w-32 h-9"
+                  className="w-32 h-9 text-right"
                   step="0.01"
                   min="0"
                   placeholder="0.00"
@@ -305,7 +309,7 @@ export function EditLineItemsDialog({
                       parseFloat(e.target.value) || 0,
                     )
                   }
-                  className="w-32 h-9"
+                  className="w-32 h-9 text-right"
                   step="0.01"
                   min="0"
                   placeholder="0.00"
@@ -319,7 +323,7 @@ export function EditLineItemsDialog({
                   onChange={(e) =>
                     onHourlyFeeChange(parseFloat(e.target.value) || 0)
                   }
-                  className="w-32 h-9"
+                  className="w-32 h-9 text-right"
                   step="0.01"
                   min="0"
                   placeholder="0.00"
