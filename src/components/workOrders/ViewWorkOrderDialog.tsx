@@ -9,9 +9,20 @@ import {
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 import { Printer } from "lucide-react";
-import { WorkOrderWithId, LineItem, workOrdersService } from "../../services/workOrdersService";
+import {
+  WorkOrderWithId,
+  LineItem,
+  workOrdersService,
+} from "../../services/workOrdersService";
 import { analysisPricingService } from "../../services/analysisPricingService";
 import { isoToUSDate } from "../../utils/dateUtils";
 
@@ -36,13 +47,19 @@ export function ViewWorkOrderDialog({
 }: ViewWorkOrderDialogProps) {
   if (!order) return null;
 
-  const subtotal = lineItems.reduce((sum, item) => sum + item.rate, 0);
+  const subtotal = lineItems.reduce(
+    (sum, item) => sum + (item.applied_rate ?? 0),
+    0,
+  );
   const totalAmount = subtotal + mileageFee + miscellaneousCharges + hourlyFee;
 
   // Helper function to get full analysis description
   const getAnalysisDescription = (analysisCode: string): string => {
-    const analysis = analysisPricingService.getAnalysisPriceByCode(analysisCode);
-    return analysis ? `${analysis.analysis_code} - ${analysis.description}` : analysisCode;
+    const analysis =
+      analysisPricingService.getAnalysisPriceByCode(analysisCode);
+    return analysis
+      ? `${analysis.analysis_code} - ${analysis.description}`
+      : analysisCode;
   };
 
   return (
@@ -58,7 +75,7 @@ export function ViewWorkOrderDialog({
             View and print the complete work order report
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="print:p-8" id="work-order-report">
           {/* Header */}
           <div className="text-center mb-6 pb-4 border-b-2 border-gray-800">
@@ -83,7 +100,9 @@ export function ViewWorkOrderDialog({
               <p className="text-sm text-muted-foreground">Status</p>
               <p className="text-xl">
                 <Badge
-                  className={workOrdersService.getStatusColor(order.status || "Pending")}
+                  className={workOrdersService.getStatusColor(
+                    order.status || "Pending",
+                  )}
                   variant="outline"
                 >
                   {order.status}
@@ -111,7 +130,9 @@ export function ViewWorkOrderDialog({
                       <TableHead className="text-right">Rate</TableHead>
                       <TableHead className="text-right">Sample Fee</TableHead>
                       <TableHead className="text-right">H2 Pop Fee</TableHead>
-                      <TableHead className="text-right">Spot Composite Fee</TableHead>
+                      <TableHead className="text-right">
+                        Spot Composite Fee
+                      </TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -119,10 +140,18 @@ export function ViewWorkOrderDialog({
                     {lineItems.map((item, index) => (
                       <TableRow key={item.id}>
                         <TableCell>{index + 1}</TableCell>
-                        <TableCell className="text-sm">{item.bottle_number}</TableCell>
-                        <TableCell className="text-sm">{item.analysis_number}</TableCell>
-                        <TableCell className="text-sm">{item.cc_number}</TableCell>
-                        <TableCell className="text-sm">{getAnalysisDescription(item.analysis_type)}</TableCell>
+                        <TableCell className="text-sm">
+                          {item.bottle_number}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {item.analysis_number}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {item.cc_number}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {getAnalysisDescription(item.analysis_type)}
+                        </TableCell>
                         <TableCell>
                           <Badge
                             variant="outline"
@@ -135,10 +164,17 @@ export function ViewWorkOrderDialog({
                             {item.rushed ? "High" : "Normal"}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm">{item.well_name}</TableCell>
-                        <TableCell className="text-sm">{item.meter_number}</TableCell>
+                        <TableCell className="text-sm">
+                          {item.well_name}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {item.meter_number}
+                        </TableCell>
                         <TableCell className="text-right text-sm">
-                          ${item.rate.toFixed(2)}
+                          $
+                          {typeof item.applied_rate === "number"
+                            ? item.applied_rate.toFixed(2)
+                            : "0.00"}
                         </TableCell>
                         <TableCell className="text-right text-sm">
                           ${item.sample_fee.toFixed(2)}
@@ -170,16 +206,16 @@ export function ViewWorkOrderDialog({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal:</span>
-                <span>
-                  ${subtotal.toFixed(2)}
-                </span>
+                <span>${subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Mileage Fee:</span>
                 <span>${mileageFee.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Miscellaneous Charges:</span>
+                <span className="text-muted-foreground">
+                  Miscellaneous Charges:
+                </span>
                 <span>${miscellaneousCharges.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
@@ -189,9 +225,7 @@ export function ViewWorkOrderDialog({
               <Separator />
               <div className="flex justify-between text-lg">
                 <span>Total Amount:</span>
-                <span>
-                  ${totalAmount.toFixed(2)}
-                </span>
+                <span>${totalAmount.toFixed(2)}</span>
               </div>
             </div>
           </div>

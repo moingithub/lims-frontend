@@ -22,6 +22,7 @@ import { Pagination } from "../components/workOrders/Pagination";
 import { WorkOrderReportDialog } from "../components/sampleCheckIn/WorkOrderReportDialog";
 import { useAuth } from "../contexts/AuthContext";
 import { analysisPricingService } from "../services/analysisPricingService";
+import { workorderHeadersService } from "../services/workorderHeadersService";
 
 export function WorkOrders() {
   const { filterDataByAccess, hasOwnDataRestriction } = useAuth();
@@ -134,11 +135,90 @@ export function WorkOrders() {
     setLineItems(updatedItems);
   };
 
-  const handleSaveLineItems = () => {
-    toast.success(
-      `Work Order ${selectedOrder?.id} line items updated successfully`,
-    );
-    setIsEditDialogOpen(false);
+  const handleSaveLineItems = async () => {
+    if (!selectedOrder) return;
+    let allSucceeded = true;
+    let errorMessages: string[] = [];
+    try {
+      // Save header (fees)
+      const header = await workorderHeadersService.getByNumber(
+        selectedOrder.id,
+      );
+      const payload = {
+        work_order_number: selectedOrder.id,
+        mileage_fee: mileageFee,
+        miscellaneous_charges: miscellaneousCharges,
+        hourly_fee: hourlyFee,
+        created_by_id: selectedOrder.created_by || 1,
+      };
+      if (!header) {
+        await workorderHeadersService.create(payload);
+      } else {
+        await workorderHeadersService.updateByNumber(selectedOrder.id, {
+          mileage_fee: mileageFee,
+          miscellaneous_charges: miscellaneousCharges,
+          hourly_fee: hourlyFee,
+          created_by_id: selectedOrder.created_by || 1,
+        });
+      }
+
+      // Save each line item using sampleCheckInApi.updateWOLine
+      const { sampleCheckInService } =
+        await import("../services/sampleCheckInService");
+      const { analysisPricingService } =
+        await import("../services/analysisPricingService");
+      // Ensure analysis prices are loaded
+      await analysisPricingService.fetchAnalysisPrices();
+
+      for (const item of lineItems) {
+        try {
+          // Find analysis type id
+          const analysis = analysisPricingService
+            .getAnalysisPrices()
+            .find((a) => a.analysis_code === item.analysis_type);
+          const analysis_type_id = analysis ? analysis.id : null;
+          if (!analysis_type_id) {
+            allSucceeded = false;
+            errorMessages.push(
+              `Line item ${item.analysis_number}: Invalid analysis type.`,
+            );
+            continue;
+          }
+          // Pass standard_rate as in textbox (item.standard_rate)
+          await sampleCheckInService.updateWOLine(item.id, {
+            analysis_type_id,
+            rushed: item.rushed,
+            standard_rate: item.standard_rate,
+            applied_rate: item.applied_rate,
+            sample_fee: item.sample_fee,
+            h2_pop_fee: item.h2_pop_fee,
+            spot_composite_fee: item.spot_composite_fee,
+          });
+        } catch (err: any) {
+          allSucceeded = false;
+          errorMessages.push(
+            `Line item ${item.analysis_number}: ${err?.detail || err?.error || "Failed to update line item"}`,
+          );
+        }
+      }
+
+      if (allSucceeded) {
+        toast.success(
+          `Work Order ${selectedOrder.id} line items updated successfully`,
+        );
+        setIsEditDialogOpen(false);
+      } else {
+        toast.error(
+          `Some line items failed to update:\n${errorMessages.join("\n")}`,
+        );
+      }
+    } catch (error: any) {
+      toast.error(
+        error?.detail ||
+          error?.error ||
+          "Failed to save work order header or line items",
+      );
+    }
   };
 
   const handleViewOrder = (order: WorkOrderWithId) => {
@@ -236,7 +316,11 @@ export function WorkOrders() {
       <EditLineItemsDialog
         open={isEditDialogOpen}
         onOpenChange={setIsEditDialogOpen}
-        order={selectedOrder}
+        order={
+          selectedOrder
+            ? { ...selectedOrder, well_name: selectedOrder.well_name || "" }
+            : null
+        }
         lineItems={lineItems}
         mileageFee={mileageFee}
         miscellaneousCharges={miscellaneousCharges}
@@ -252,7 +336,11 @@ export function WorkOrders() {
       <ViewWorkOrderDialog
         open={isViewDialogOpen}
         onOpenChange={setIsViewDialogOpen}
-        order={selectedOrder}
+        order={
+          selectedOrder
+            ? { ...selectedOrder, well_name: selectedOrder.well_name || "" }
+            : null
+        }
         lineItems={lineItems}
         mileageFee={mileageFee}
         miscellaneousCharges={miscellaneousCharges}
@@ -271,7 +359,22 @@ export function WorkOrders() {
       <WorkOrderReportDialog
         open={isReportDialogOpen}
         onOpenChange={setIsReportDialogOpen}
-        order={selectedOrder}
+        order={
+          selectedOrder
+            ? {
+                ...selectedOrder,
+                well_name: selectedOrder.well_name || "",
+                meter_number: selectedOrder.meter_number || "",
+                cylinders:
+                  typeof selectedOrder.cylinders === "number"
+                    ? selectedOrder.cylinders
+                    : typeof selectedOrder.cylinders === "string" &&
+                        !isNaN(Number(selectedOrder.cylinders))
+                      ? Number(selectedOrder.cylinders)
+                      : undefined,
+              }
+            : null
+        }
         contactName="John Doe"
         contactEmail="john.doe@example.com"
         contactPhone="(555) 123-4567"

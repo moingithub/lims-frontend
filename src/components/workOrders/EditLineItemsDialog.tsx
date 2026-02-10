@@ -67,7 +67,7 @@ export function EditLineItemsDialog({
   // Load active analysis types from Analysis Pricing service
   const analysisOptions = analysisPricingService.getActiveAnalysisOptions();
 
-  const subtotal = lineItems.reduce((sum, item) => sum + item.rate, 0);
+  const subtotal = lineItems.reduce((sum, item) => sum + item.applied_rate, 0);
   const totalOrderAmount =
     subtotal + mileageFee + miscellaneousCharges + hourlyFee;
 
@@ -112,8 +112,9 @@ export function EditLineItemsDialog({
                     <TableHead className="w-[150px]">Cylinder #</TableHead>
                     <TableHead className="w-[120px]">Analysis #</TableHead>
                     <TableHead className="w-[200px]">Analysis Type</TableHead>
-                    <TableHead className="w-[100px]">Rushed</TableHead>
                     <TableHead className="w-[120px]">Standard Rate</TableHead>
+                    <TableHead className="w-[100px]">Rushed</TableHead>
+                    <TableHead className="w-[120px]">Applied Rate</TableHead>
                     <TableHead className="w-[120px]">Sample Fee</TableHead>
                     <TableHead className="w-[120px]">H2 Pop Fee</TableHead>
                     <TableHead className="w-[120px]">
@@ -167,6 +168,22 @@ export function EditLineItemsDialog({
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      {/* Standard Rate column (display only, fetched from analysisPricingService) */}
+                      <TableCell>
+                        <Input
+                          type="number"
+                          value={
+                            analysisPricingService
+                              .getAnalysisPriceByCode(item.analysis_type)
+                              ?.standard_rate?.toString() || ""
+                          }
+                          readOnly
+                          disabled
+                          className="h-9"
+                          step="0.01"
+                          placeholder="0.00"
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-center">
                           <Checkbox
@@ -186,11 +203,11 @@ export function EditLineItemsDialog({
                       <TableCell>
                         <Input
                           type="number"
-                          value={item.rate || ""}
+                          value={item.applied_rate || ""}
                           onChange={(e) =>
                             onLineItemChange(
                               item.id.toString(),
-                              "rate",
+                              "applied_rate",
                               parseFloat(e.target.value) || 0,
                             )
                           }

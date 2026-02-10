@@ -91,6 +91,16 @@ export interface SampleCheckInPayload {
   status: string;
 }
 
+export interface UpdateWOLinePayload {
+  analysis_type_id: number;
+  rushed: boolean;
+  standard_rate: number;
+  applied_rate: number;
+  sample_fee: number;
+  h2_pop_fee: number;
+  spot_composite_fee: number;
+}
+
 type SampleCheckInApiRecord = {
   id: number;
   analysis_number: string;
@@ -818,5 +828,25 @@ export const sampleCheckInService = {
    */
   getTotalCheckInCount: (): number => {
     return checkedInSamples.length;
+  },
+
+  /**
+   * Update a Work Order Line
+   */
+  updateWOLine: async (id: number, payload: UpdateWOLinePayload) => {
+    const token = authService.getAuthState().token;
+    const response = await fetch(
+      `${API_BASE_URL}/sample_checkin/update_wo_lines/${id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+    if (!response.ok) throw await response.json();
+    return await response.json();
   },
 };

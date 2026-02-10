@@ -65,7 +65,7 @@ export interface LineItem {
   rushed: boolean;
   well_name: string;
   meter_number: string;
-  rate: number;
+  applied_rate: number;
   standard_rate: number; // Base rate before rushed multiplier
   sample_fee: number;
   h2_pop_fee: number;
@@ -100,7 +100,7 @@ type ApiWorkOrderLineItem = {
   rushed?: boolean;
   well_name?: string;
   meter_number?: string;
-  rate?: number | string | null;
+  applied_rate?: number | string | null;
   standard_rate?: number | string | null;
   sample_fee?: number | string | null;
   h2_pop_fee?: number | string | null;
@@ -155,7 +155,8 @@ const normalizeLineItem = (
   item: ApiWorkOrderLineItem,
   index: number,
 ): LineItem => {
-  const rate = toNumber(item.rate);
+  // const rate = toNumber(item.rate);
+  const applied_rate = toNumber(item.applied_rate);
   const sampleFee = toNumber(item.sample_fee);
   const h2PopFee = toNumber(item.h2_pop_fee);
   const spotCompositeFee = toNumber(item.spot_composite_fee);
@@ -169,13 +170,13 @@ const normalizeLineItem = (
     rushed: Boolean(item.rushed),
     well_name: item.well_name ?? "",
     meter_number: item.meter_number ?? "",
-    rate,
-    standard_rate: toNumber(item.standard_rate ?? item.rate),
+    applied_rate,
+    standard_rate: toNumber(item.standard_rate ?? applied_rate),
     sample_fee: sampleFee,
     h2_pop_fee: h2PopFee,
     spot_composite_fee: spotCompositeFee,
     amount: toNumber(
-      item.amount ?? rate + sampleFee + h2PopFee + spotCompositeFee,
+      item.amount ?? applied_rate + sampleFee + h2PopFee + spotCompositeFee,
     ),
   };
 };
@@ -1759,7 +1760,7 @@ export const workOrdersService = {
 
   calculateLineItemAmount: (item: Partial<LineItem>): number => {
     return (
-      (item.rate || 0) +
+      (item.applied_rate || 0) +
       (item.sample_fee || 0) +
       (item.h2_pop_fee || 0) +
       (item.spot_composite_fee || 0)
@@ -1847,30 +1848,40 @@ export const workOrdersService = {
     return items.map((item) => {
       if (item.id.toString() !== id) return item;
 
-      const updatedItem = { ...item, [field]: value } as LineItem;
+      // Only allow sample_fee to be changed by user input (field === 'sample_fee')
+      let updatedItem: LineItem;
+      if (field === "sample_fee") {
+        updatedItem = { ...item, sample_fee: Number(value) };
+        updatedItem.amount =
+          item.applied_rate +
+          updatedItem.sample_fee +
+          item.h2_pop_fee +
+          item.spot_composite_fee;
+        return updatedItem;
+      }
+
+      // For all other fields, do NOT change sample_fee
+      updatedItem = { ...item, [field]: value } as LineItem;
 
       if (field === "analysis_type") {
         const analysisPrice = analysisPricingService.getAnalysisPriceByCode(
           value as string,
         );
-
         if (analysisPrice) {
-          updatedItem.standard_rate = analysisPrice.standard_rate;
-          updatedItem.sample_fee = analysisPrice.sample_fee || 0;
-          updatedItem.rate = item.rushed
+          updatedItem.standard_rate = analysisPrice.standard_rate || 0;
+          updatedItem.applied_rate = item.rushed
             ? analysisPrice.rushed_rate
             : analysisPrice.standard_rate;
         } else {
           const newRate = workOrdersService.getRateByAnalysisType(
             value as string,
           );
-          updatedItem.rate = item.rushed ? newRate * 1.5 : newRate;
           updatedItem.standard_rate = newRate;
+          updatedItem.applied_rate = item.rushed ? newRate * 1.5 : newRate;
         }
-
         updatedItem.amount =
-          updatedItem.rate +
-          updatedItem.sample_fee +
+          updatedItem.applied_rate +
+          item.sample_fee +
           item.h2_pop_fee +
           item.spot_composite_fee;
       }
@@ -1880,48 +1891,39 @@ export const workOrdersService = {
         const analysisPrice = analysisPricingService.getAnalysisPriceByCode(
           item.analysis_type,
         );
-
         if (analysisPrice) {
-          updatedItem.rate = isRushed
+          updatedItem.standard_rate = analysisPrice.standard_rate || 0;
+          updatedItem.applied_rate = isRushed
             ? analysisPrice.rushed_rate
             : analysisPrice.standard_rate;
         } else {
-          updatedItem.rate = isRushed
-            ? item.standard_rate * 1.5
-            : item.standard_rate;
+          // item.standard_rate may be outdated if analysis_type changed, so recalc
+          const newRate = workOrdersService.getRateByAnalysisType(
+            item.analysis_type,
+          );
+          updatedItem.standard_rate = newRate;
+          updatedItem.applied_rate = isRushed ? newRate * 1.5 : newRate;
         }
-
         updatedItem.amount =
-          updatedItem.rate +
+          updatedItem.applied_rate +
           item.sample_fee +
           item.h2_pop_fee +
           item.spot_composite_fee;
       }
 
-      if (field === "rate") {
-        const newRate = Number(value);
-        updatedItem.rate = newRate;
-        updatedItem.standard_rate = item.rushed ? newRate / 1.5 : newRate;
+      // Removed 'rate' field update, replaced by 'applied_rate'.
+
+      if (field === "h2_pop_fee") {
         updatedItem.amount =
-          newRate + item.sample_fee + item.h2_pop_fee + item.spot_composite_fee;
+          item.applied_rate +
+          item.sample_fee +
+          Number(value) +
+          item.spot_composite_fee;
       }
 
-      if (
-        field === "sample_fee" ||
-        field === "h2_pop_fee" ||
-        field === "spot_composite_fee"
-      ) {
-        const rate = item.rate;
-        const sample_fee =
-          field === "sample_fee" ? Number(value) : item.sample_fee;
-        const h2_pop_fee =
-          field === "h2_pop_fee" ? Number(value) : item.h2_pop_fee;
-        const spot_composite_fee =
-          field === "spot_composite_fee"
-            ? Number(value)
-            : item.spot_composite_fee;
+      if (field === "spot_composite_fee") {
         updatedItem.amount =
-          rate + sample_fee + h2_pop_fee + spot_composite_fee;
+          item.applied_rate + item.sample_fee + item.h2_pop_fee + Number(value);
       }
 
       return updatedItem;
@@ -1939,7 +1941,7 @@ export const workOrdersService = {
         rushed: true,
         well_name: "Well A",
         meter_number: "MTR-001",
-        rate: 45.0,
+        applied_rate: 45.0,
         standard_rate: 45.0,
         sample_fee: 80.0,
         h2_pop_fee: 5.0,
@@ -1955,7 +1957,7 @@ export const workOrdersService = {
         rushed: false,
         well_name: "Well B",
         meter_number: "MTR-002",
-        rate: 55.0,
+        applied_rate: 55.0,
         standard_rate: 55.0,
         sample_fee: 65.0,
         h2_pop_fee: 5.0,
@@ -1971,7 +1973,7 @@ export const workOrdersService = {
         rushed: false,
         well_name: "Well C",
         meter_number: "MTR-003",
-        rate: 45.0,
+        applied_rate: 45.0,
         standard_rate: 45.0,
         sample_fee: 90.0,
         h2_pop_fee: 5.0,
@@ -1987,7 +1989,7 @@ export const workOrdersService = {
         rushed: false,
         well_name: "Well D",
         meter_number: "MTR-004",
-        rate: 65.0,
+        applied_rate: 65.0,
         standard_rate: 65.0,
         sample_fee: 85.0,
         h2_pop_fee: 5.0,
@@ -2003,7 +2005,7 @@ export const workOrdersService = {
         rushed: true,
         well_name: "Well E",
         meter_number: "MTR-005",
-        rate: 75.0,
+        applied_rate: 75.0,
         standard_rate: 75.0,
         sample_fee: 55.0,
         h2_pop_fee: 5.0,

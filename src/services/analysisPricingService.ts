@@ -286,7 +286,7 @@ export const analysisPricingService = {
       .filter((price) => price.active)
       .map((price) => ({
         value: price.analysis_code,
-        label: `${price.analysis_code} - ${price.description}`,
+        label: price.analysis_code,
       }));
   },
 
