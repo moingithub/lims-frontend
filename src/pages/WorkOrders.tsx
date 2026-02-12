@@ -146,6 +146,8 @@ export function WorkOrders() {
         selectedOrder.id,
       );
       const payload = {
+        company_id: selectedOrder.company_id,
+        work_order_date: selectedOrder.date,
         work_order_number: selectedOrder.id,
         mileage_fee: mileageFee,
         miscellaneous_charges: miscellaneousCharges,

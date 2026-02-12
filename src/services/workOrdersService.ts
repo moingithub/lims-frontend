@@ -10,6 +10,7 @@ export interface WorkOrderWithId {
   created_by: number;
   pending_since?: number | null;
   api_id?: number;
+  company_id?: number; // <-- Added
 }
 
 // New interface for Work Order Header table
@@ -88,7 +89,13 @@ type ApiWorkOrder = {
   pending_since: number | null;
   cylinders: string | number | null;
   amount: number;
-  status: "Pending" | "In Progress" | "Completed" | "Invoiced" | "Submitted" | string;
+  status:
+    | "Pending"
+    | "In Progress"
+    | "Completed"
+    | "Invoiced"
+    | "Submitted"
+    | string;
 };
 
 type ApiWorkOrderLineItem = {
@@ -144,6 +151,7 @@ const mapApiWorkOrder = (order: ApiWorkOrder): WorkOrderWithId => ({
   created_by: 0,
   pending_since: order.pending_since ?? null,
   api_id: order.id,
+  company_id: order.company_id, // <-- Added
 });
 
 const toNumber = (value: unknown, fallback = 0): number => {
@@ -369,10 +377,7 @@ export const workOrdersService = {
     return `$${amount.toFixed(2)}`;
   },
 
-  calculateDaysSince: (
-    dateString: string,
-    currentDate?: string,
-  ): number => {
+  calculateDaysSince: (dateString: string, currentDate?: string): number => {
     const orderDate = new Date(dateString);
     const today = currentDate ? new Date(currentDate) : new Date();
     const diffTime = Math.abs(today.getTime() - orderDate.getTime());

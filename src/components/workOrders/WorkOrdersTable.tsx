@@ -61,6 +61,8 @@ export function WorkOrdersTable({
             <TableHead>Pending Since</TableHead>
             <TableHead>Cylinders</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead style={{ display: "none" }}>Company ID</TableHead>{" "}
+            {/* Hidden column */}
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -103,6 +105,10 @@ export function WorkOrdersTable({
                       {order.status}
                     </Badge>
                   </TableCell>
+                  <TableCell style={{ display: "none" }}>
+                    {order.company_id}
+                  </TableCell>{" "}
+                  {/* Hidden column */}
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
                       {/* View button hidden for now */}
