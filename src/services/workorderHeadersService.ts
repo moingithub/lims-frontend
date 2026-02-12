@@ -1,3 +1,4 @@
+
 import { API_BASE_URL } from "../config/api";
 import { authService } from "./authService";
 
@@ -7,6 +8,7 @@ export interface WorkOrderHeaderPayload {
   miscellaneous_charges: number;
   hourly_fee: number;
   created_by_id: number;
+  status: string;
 }
 
 export const workorderHeadersService = {
@@ -40,7 +42,7 @@ export const workorderHeadersService = {
 
   async updateByNumber(
     work_order_number: string,
-    payload: Omit<WorkOrderHeaderPayload, "work_order_number">,
+    payload: Partial<Omit<WorkOrderHeaderPayload, "work_order_number">>,
   ) {
     const token = authService.getAuthState().token;
     const response = await fetch(

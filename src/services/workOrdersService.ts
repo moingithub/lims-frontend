@@ -4,7 +4,7 @@ export interface WorkOrderWithId {
   date: string;
   cylinders: string | number | null;
   amount: number;
-  status: "Pending" | "In Progress" | "Completed" | "Invoiced";
+  status: "Pending" | "In Progress" | "Completed" | "Invoiced" | "Submitted";
   well_name?: string | null;
   meter_number?: string | null;
   created_by: number;
@@ -22,7 +22,7 @@ export interface WorkOrderHeader {
   hourly_fee: number;
   company_id: number;
   contact_id: number;
-  status: "Pending" | "In Progress" | "Completed" | "Invoiced"; // ✅ Added status field
+  status: "Pending" | "In Progress" | "Completed" | "Invoiced" | "Submitted"; // ✅ Added status field
   created_by: number;
 }
 
@@ -88,7 +88,7 @@ type ApiWorkOrder = {
   pending_since: number | null;
   cylinders: string | number | null;
   amount: number;
-  status: "Pending" | "In Progress" | "Completed" | "Invoiced" | string;
+  status: "Pending" | "In Progress" | "Completed" | "Invoiced" | "Submitted" | string;
 };
 
 type ApiWorkOrderLineItem = {
@@ -371,10 +371,10 @@ export const workOrdersService = {
 
   calculateDaysSince: (
     dateString: string,
-    currentDate: string = "2025-11-17",
+    currentDate?: string,
   ): number => {
     const orderDate = new Date(dateString);
-    const today = new Date(currentDate);
+    const today = currentDate ? new Date(currentDate) : new Date();
     const diffTime = Math.abs(today.getTime() - orderDate.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
@@ -411,6 +411,8 @@ export const workOrdersService = {
         return "bg-yellow-100 text-yellow-800";
       case "Pending":
         return "bg-gray-100 text-gray-800";
+      case "Submitted":
+        return "bg-purple-100 text-purple-800";
       default:
         return "bg-gray-100 text-gray-800";
     }

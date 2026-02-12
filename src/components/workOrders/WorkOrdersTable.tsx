@@ -20,7 +20,7 @@ interface WorkOrdersTableProps {
   onView: (order: WorkOrderWithId) => void;
   onEdit: (order: WorkOrderWithId) => void;
   onDelete: (order: WorkOrderWithId) => void;
-  onCreateInvoice: (order: WorkOrderWithId) => void;
+  onSubmitOrder: (order: WorkOrderWithId) => void;
   onViewReport: (order: WorkOrderWithId) => void;
 }
 
@@ -29,7 +29,7 @@ export function WorkOrdersTable({
   onView,
   onEdit,
   onDelete,
-  onCreateInvoice,
+  onSubmitOrder,
   onViewReport,
 }: WorkOrdersTableProps) {
   // Group orders by work order id and count records for cylinders
@@ -121,7 +121,8 @@ export function WorkOrdersTable({
                         onClick={() => onEdit(order)}
                         disabled={
                           order.status === "Invoiced" ||
-                          order.status === "Completed"
+                          order.status === "Completed" ||
+                          order.status === "Submitted"
                         }
                       >
                         <Pencil
@@ -159,17 +160,19 @@ export function WorkOrdersTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        title="Create Invoice"
+                        title="Submit"
                         disabled={
                           order.status === "Invoiced" ||
-                          order.status === "Completed"
+                          order.status === "Completed" ||
+                          order.status === "Submitted"
                         }
-                        onClick={() => onCreateInvoice(order)}
+                        onClick={() => onSubmitOrder(order)}
                       >
                         <FileText
                           className={`w-4 h-4 ${
                             order.status === "Invoiced" ||
-                            order.status === "Completed"
+                            order.status === "Completed" ||
+                            order.status === "Submitted"
                               ? "text-gray-400"
                               : "text-emerald-600"
                           }`}

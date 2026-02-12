@@ -23,6 +23,7 @@ import { WorkOrderReportDialog } from "../components/sampleCheckIn/WorkOrderRepo
 import { useAuth } from "../contexts/AuthContext";
 import { analysisPricingService } from "../services/analysisPricingService";
 import { workorderHeadersService } from "../services/workorderHeadersService";
+import { sampleCheckInService } from "../services/sampleCheckInService";
 
 export function WorkOrders() {
   const { filterDataByAccess, hasOwnDataRestriction } = useAuth();
@@ -150,6 +151,7 @@ export function WorkOrders() {
         miscellaneous_charges: miscellaneousCharges,
         hourly_fee: hourlyFee,
         created_by_id: selectedOrder.created_by || 1,
+        status: "Pending",
       };
       if (!header) {
         await workorderHeadersService.create(payload);
@@ -159,6 +161,7 @@ export function WorkOrders() {
           miscellaneous_charges: miscellaneousCharges,
           hourly_fee: hourlyFee,
           created_by_id: selectedOrder.created_by || 1,
+          status: "Pending",
         });
       }
 
@@ -258,11 +261,22 @@ export function WorkOrders() {
     }
   };
 
-  const handleCreateInvoice = (order: WorkOrderWithId) => {
-    const invoiceNumber = workOrdersService.generateInvoiceNumber();
-    toast.success(
-      `Invoice ${invoiceNumber} generated successfully for ${order.customer} with 1 work order(s)`,
-    );
+  const handleSubmitOrder = async (order: WorkOrderWithId) => {
+    try {
+      await workorderHeadersService.updateByNumber(order.id, {
+        status: "Submitted",
+      });
+      // Also update status in sample_checkin
+      await sampleCheckInService.updateStatusByWorkOrderNumber(order.id, {
+        status: "Submitted",
+      });
+      toast.success(`Work Order ${order.id} submitted successfully.`);
+      await loadOrders();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to submit work order";
+      toast.error(message);
+    }
   };
 
   const handleGenerateReport = (order: WorkOrderWithId) => {
@@ -292,7 +306,7 @@ export function WorkOrders() {
             onView={handleViewOrder}
             onEdit={handleEditOrder}
             onDelete={handleDeleteOrder}
-            onCreateInvoice={handleCreateInvoice}
+            onSubmitOrder={handleSubmitOrder}
             onViewReport={handleGenerateReport}
           />
 
