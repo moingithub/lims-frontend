@@ -1,4 +1,3 @@
-
 import { API_BASE_URL } from "../config/api";
 import { authService } from "./authService";
 
@@ -9,6 +8,7 @@ export interface WorkOrderHeaderPayload {
   hourly_fee: number;
   created_by_id: number;
   status: string;
+  cylinders: number;
 }
 
 export const workorderHeadersService = {

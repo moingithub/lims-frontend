@@ -1,15 +1,17 @@
 import { Button } from "../ui/button";
 import { Label } from "../ui/label";
-import { Printer, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { Cylinder } from "../../services/cylinderCheckOutService";
 
 interface ScannedCylindersListProps {
   cylinders: Cylinder[];
   onRemove: (index: number) => void;
-  onPrint: (cylinder: Cylinder) => void;
 }
 
-export function ScannedCylindersList({ cylinders, onRemove, onPrint }: ScannedCylindersListProps) {
+export function ScannedCylindersList({
+  cylinders,
+  onRemove,
+}: ScannedCylindersListProps) {
   return (
     <div className="space-y-2">
       <Label>Scanned Cylinders ({cylinders.length})</Label>
@@ -28,13 +30,6 @@ export function ScannedCylindersList({ cylinders, onRemove, onPrint }: ScannedCy
                 <p className="text-sm">{cylinder.barcode}</p>
               </div>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onPrint(cylinder)}
-                >
-                  <Printer className="w-4 h-4" />
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"

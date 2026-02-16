@@ -141,10 +141,16 @@ export function WorkOrders() {
     let allSucceeded = true;
     let errorMessages: string[] = [];
     try {
+      // Ensure company_id is present
+      if (!selectedOrder.company_id) {
+        toast.error("Company is required for this work order.");
+        return;
+      }
       // Save header (fees)
       const header = await workorderHeadersService.getByNumber(
         selectedOrder.id,
       );
+      const cylinders = lineItems.length;
       const payload = {
         company_id: selectedOrder.company_id,
         work_order_date: selectedOrder.date,
@@ -154,6 +160,7 @@ export function WorkOrders() {
         hourly_fee: hourlyFee,
         created_by_id: selectedOrder.created_by || 1,
         status: "Pending",
+        cylinders,
       };
       if (!header) {
         await workorderHeadersService.create(payload);
@@ -164,6 +171,7 @@ export function WorkOrders() {
           hourly_fee: hourlyFee,
           created_by_id: selectedOrder.created_by || 1,
           status: "Pending",
+          cylinders,
         });
       }
 
@@ -274,9 +282,23 @@ export function WorkOrders() {
       });
       toast.success(`Work Order ${order.id} submitted successfully.`);
       await loadOrders();
-    } catch (error) {
+    } catch (error: any) {
+      // Improved error logging
+      console.error("Submit Order Error:", error);
+      if (error instanceof Response) {
+        error.text().then((text: string) => {
+          console.error("Raw response:", text);
+        });
+      } else {
+        if (error && error.message) {
+          console.error("Error message:", error.message);
+        }
+        if (error && error.stack) {
+          console.error("Error stack:", error.stack);
+        }
+      }
       const message =
-        error instanceof Error ? error.message : "Failed to submit work order";
+        error instanceof Error ? error.message : JSON.stringify(error);
       toast.error(message);
     }
   };

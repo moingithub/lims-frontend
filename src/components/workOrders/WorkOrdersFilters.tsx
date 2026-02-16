@@ -12,7 +12,10 @@ interface WorkOrdersFiltersProps {
   onStatusChange: (value: string) => void;
 }
 
-export function WorkOrdersFilters({ statusFilter, onStatusChange }: WorkOrdersFiltersProps) {
+export function WorkOrdersFilters({
+  statusFilter,
+  onStatusChange,
+}: WorkOrdersFiltersProps) {
   return (
     <Select value={statusFilter} onValueChange={onStatusChange}>
       <SelectTrigger className="w-40">
@@ -22,8 +25,9 @@ export function WorkOrdersFilters({ statusFilter, onStatusChange }: WorkOrdersFi
       <SelectContent>
         <SelectItem value="all">All Status</SelectItem>
         <SelectItem value="Pending">Pending</SelectItem>
-        <SelectItem value="In Progress">In Progress</SelectItem>
-        <SelectItem value="Completed">Completed</SelectItem>
+        {/* <SelectItem value="In Progress">In Progress</SelectItem> */}
+        <SelectItem value="Submitted">Submitted</SelectItem>
+        {/* <SelectItem value="Completed">Completed</SelectItem> */}
         <SelectItem value="Invoiced">Invoiced</SelectItem>
       </SelectContent>
     </Select>

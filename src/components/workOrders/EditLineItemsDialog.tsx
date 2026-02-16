@@ -173,9 +173,9 @@ export function EditLineItemsDialog({
                         <Input
                           type="number"
                           value={
-                            analysisPricingService
-                              .getAnalysisPriceByCode(item.analysis_type)
-                              ?.standard_rate?.toString() || ""
+                            analysisPricingService.getAnalysisPriceByCode(
+                              item.analysis_type,
+                            )?.standard_rate ?? 0
                           }
                           readOnly
                           disabled

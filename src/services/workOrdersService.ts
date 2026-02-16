@@ -169,6 +169,13 @@ const normalizeLineItem = (
   const h2PopFee = toNumber(item.h2_pop_fee);
   const spotCompositeFee = toNumber(item.spot_composite_fee);
 
+  // Always get the correct standard_rate from analysisPricingService if possible
+  const analysisPrice = analysisPricingService.getAnalysisPriceByCode(
+    item.analysis_type ?? "",
+  );
+  const standard_rate =
+    analysisPrice?.standard_rate ??
+    toNumber(item.standard_rate ?? applied_rate);
   return {
     id: item.id ?? index + 1,
     cylinder_number: item.cylinder_number ?? "",
@@ -179,7 +186,7 @@ const normalizeLineItem = (
     well_name: item.well_name ?? "",
     meter_number: item.meter_number ?? "",
     applied_rate,
-    standard_rate: toNumber(item.standard_rate ?? applied_rate),
+    standard_rate,
     sample_fee: sampleFee,
     h2_pop_fee: h2PopFee,
     spot_composite_fee: spotCompositeFee,
@@ -466,16 +473,18 @@ export const workOrdersService = {
           value as string,
         );
         if (analysisPrice) {
-          updatedItem.standard_rate = analysisPrice.standard_rate || 0;
+          updatedItem.standard_rate = Number(analysisPrice.standard_rate) || 0;
           updatedItem.applied_rate = item.rushed
-            ? analysisPrice.rushed_rate
-            : analysisPrice.standard_rate;
+            ? Number(analysisPrice.rushed_rate)
+            : Number(analysisPrice.standard_rate);
         } else {
           const newRate = workOrdersService.getRateByAnalysisType(
             value as string,
           );
-          updatedItem.standard_rate = newRate;
-          updatedItem.applied_rate = item.rushed ? newRate * 1.5 : newRate;
+          updatedItem.standard_rate = Number(newRate);
+          updatedItem.applied_rate = item.rushed
+            ? Number(newRate) * 1.5
+            : Number(newRate);
         }
       }
 
@@ -485,16 +494,18 @@ export const workOrdersService = {
           item.analysis_type,
         );
         if (analysisPrice) {
-          updatedItem.standard_rate = analysisPrice.standard_rate || 0;
+          updatedItem.standard_rate = Number(analysisPrice.standard_rate) || 0;
           updatedItem.applied_rate = isRushed
-            ? analysisPrice.rushed_rate
-            : analysisPrice.standard_rate;
+            ? Number(analysisPrice.rushed_rate)
+            : Number(analysisPrice.standard_rate);
         } else {
           const newRate = workOrdersService.getRateByAnalysisType(
             item.analysis_type,
           );
-          updatedItem.standard_rate = newRate;
-          updatedItem.applied_rate = isRushed ? newRate * 1.5 : newRate;
+          updatedItem.standard_rate = Number(newRate);
+          updatedItem.applied_rate = isRushed
+            ? Number(newRate) * 1.5
+            : Number(newRate);
         }
       }
 

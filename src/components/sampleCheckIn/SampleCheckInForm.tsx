@@ -130,7 +130,7 @@ export function SampleCheckInForm({
           <Label>Analysis Type</Label>
           <Select
             value={formData.analysisType}
-            onValueChange={(val) => onFormChange({ analysisType: val })}
+            onValueChange={(val: string) => onFormChange({ analysisType: val })}
           >
             <SelectTrigger>
               <SelectValue />
@@ -173,8 +173,8 @@ export function SampleCheckInForm({
               <Checkbox
                 id="customerCylinder"
                 checked={formData.customerCylinder}
-                onCheckedChange={(checked) =>
-                  onFormChange({ customerCylinder: checked as boolean })
+                onCheckedChange={(checked: boolean | "indeterminate") =>
+                  onFormChange({ customerCylinder: checked === true })
                 }
               />
               <Label htmlFor="customerCylinder" className="cursor-pointer">
@@ -185,8 +185,8 @@ export function SampleCheckInForm({
               <Checkbox
                 id="rushed"
                 checked={formData.rushed}
-                onCheckedChange={(checked) =>
-                  onFormChange({ rushed: checked as boolean })
+                onCheckedChange={(checked: boolean | "indeterminate") =>
+                  onFormChange({ rushed: checked === true })
                 }
               />
               <Label htmlFor="rushed" className="cursor-pointer">

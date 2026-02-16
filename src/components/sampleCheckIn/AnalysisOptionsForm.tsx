@@ -85,7 +85,7 @@ export function AnalysisOptionsForm({
           <Checkbox
             id="customer-cylinder-main"
             checked={customerCylinder}
-            onCheckedChange={(checked) => onCustomerCylinderChange(checked as boolean)}
+            onCheckedChange={(checked: boolean) => onCustomerCylinderChange(checked)}
           />
           <Label htmlFor="customer-cylinder-main" className="font-normal cursor-pointer">
             This is a customer-owned cylinder
@@ -96,7 +96,7 @@ export function AnalysisOptionsForm({
           <Checkbox
             id="rushed-main"
             checked={rushed}
-            onCheckedChange={(checked) => onRushedChange(checked as boolean)}
+            onCheckedChange={(checked: boolean) => onRushedChange(checked)}
           />
           <Label htmlFor="rushed-main" className="font-normal cursor-pointer">
             Rushed
@@ -107,7 +107,7 @@ export function AnalysisOptionsForm({
           <Checkbox
             id="sampled-by-natty"
             checked={sampledByNatty}
-            onCheckedChange={(checked) => onSampledByNattyChange(checked as boolean)}
+            onCheckedChange={(checked: boolean) => onSampledByNattyChange(checked)}
           />
           <Label htmlFor="sampled-by-natty" className="font-normal cursor-pointer">
             Sampled By Natty

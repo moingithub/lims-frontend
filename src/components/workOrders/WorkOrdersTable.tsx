@@ -107,19 +107,12 @@ export function WorkOrdersTable({
                   </TableCell>
                   <TableCell style={{ display: "none" }}>
                     {order.company_id}
-                  </TableCell>{" "}
+                  </TableCell>
                   {/* Hidden column */}
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
                       {/* View button hidden for now */}
-                      {/* <Button
-                        variant="ghost"
-                        size="sm"
-                        title="View"
-                        onClick={() => onView(order)}
-                      >
-                        <Eye className="w-4 h-4 text-blue-600" />
-                      </Button> */}
+                      {/* <Button variant="ghost" size="sm" title="View" onClick={() => onView(order)}><Eye className="w-4 h-4 text-blue-600" /></Button> */}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -132,12 +125,7 @@ export function WorkOrdersTable({
                         }
                       >
                         <Pencil
-                          className={`w-4 h-4 ${
-                            order.status === "Invoiced" ||
-                            order.status === "Completed"
-                              ? "text-gray-400"
-                              : "text-purple-600"
-                          }`}
+                          className={`w-4 h-4 ${order.status === "Invoiced" || order.status === "Completed" ? "text-gray-400" : "text-purple-600"}`}
                         />
                       </Button>
                       <Button
@@ -148,11 +136,7 @@ export function WorkOrdersTable({
                         disabled={order.status !== "Pending"}
                       >
                         <Trash2
-                          className={`w-4 h-4 ${
-                            order.status !== "Pending"
-                              ? "text-gray-400"
-                              : "text-red-600"
-                          }`}
+                          className={`w-4 h-4 ${order.status !== "Pending" ? "text-gray-400" : "text-red-600"}`}
                         />
                       </Button>
                       <Button
@@ -175,13 +159,7 @@ export function WorkOrdersTable({
                         onClick={() => onSubmitOrder(order)}
                       >
                         <FileText
-                          className={`w-4 h-4 ${
-                            order.status === "Invoiced" ||
-                            order.status === "Completed" ||
-                            order.status === "Submitted"
-                              ? "text-gray-400"
-                              : "text-emerald-600"
-                          }`}
+                          className={`w-4 h-4 ${order.status === "Invoiced" || order.status === "Completed" || order.status === "Submitted" ? "text-gray-400" : "text-emerald-600"}`}
                         />
                       </Button>
                     </div>
