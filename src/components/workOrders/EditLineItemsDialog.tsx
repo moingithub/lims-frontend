@@ -112,15 +112,25 @@ export function EditLineItemsDialog({
                     <TableHead className="w-[150px]">Cylinder #</TableHead>
                     <TableHead className="w-[120px]">Analysis #</TableHead>
                     <TableHead className="w-[200px]">Analysis Type</TableHead>
-                    <TableHead className="w-[120px]">Standard Rate</TableHead>
+                    <TableHead className="w-[120px] text-right">
+                      Standard Rate
+                    </TableHead>
                     <TableHead className="w-[100px]">Rushed</TableHead>
-                    <TableHead className="w-[120px]">Applied Rate</TableHead>
-                    <TableHead className="w-[120px]">Sample Fee</TableHead>
-                    <TableHead className="w-[120px]">H2 Pop Fee</TableHead>
-                    <TableHead className="w-[120px]">
+                    <TableHead className="w-[120px] text-right">
+                      Applied Rate
+                    </TableHead>
+                    <TableHead className="w-[120px] text-right">
+                      Sample Fee
+                    </TableHead>
+                    <TableHead className="w-[120px] text-right">
+                      H2 Pop Fee
+                    </TableHead>
+                    <TableHead className="w-[120px] text-right">
                       Spot Composite Fee
                     </TableHead>
-                    <TableHead className="w-[120px]">Amount</TableHead>
+                    <TableHead className="w-[120px] text-right">
+                      Amount
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -169,7 +179,7 @@ export function EditLineItemsDialog({
                         </Select>
                       </TableCell>
                       {/* Standard Rate column (display only, fetched from analysisPricingService) */}
-                      <TableCell>
+                      <TableCell className="text-right">
                         <Input
                           type="number"
                           value={
@@ -179,7 +189,7 @@ export function EditLineItemsDialog({
                           }
                           readOnly
                           disabled
-                          className="h-9"
+                          className="h-9 text-right"
                           step="0.01"
                           placeholder="0.00"
                         />
@@ -200,7 +210,7 @@ export function EditLineItemsDialog({
                           />
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         <Input
                           type="number"
                           value={item.applied_rate || ""}
@@ -211,12 +221,12 @@ export function EditLineItemsDialog({
                               parseFloat(e.target.value) || 0,
                             )
                           }
-                          className="h-9"
+                          className="h-9 text-right"
                           step="0.01"
                           placeholder="0.00"
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         <Input
                           type="number"
                           value={item.sample_fee}
@@ -227,11 +237,11 @@ export function EditLineItemsDialog({
                               parseFloat(e.target.value) || 0,
                             )
                           }
-                          className="h-9"
+                          className="h-9 text-right"
                           step="0.01"
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         <Input
                           type="number"
                           value={item.h2_pop_fee}
@@ -242,11 +252,11 @@ export function EditLineItemsDialog({
                               parseFloat(e.target.value) || 0,
                             )
                           }
-                          className="h-9"
+                          className="h-9 text-right"
                           step="0.01"
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-right">
                         <Input
                           type="number"
                           value={item.spot_composite_fee}
@@ -257,12 +267,12 @@ export function EditLineItemsDialog({
                               parseFloat(e.target.value) || 0,
                             )
                           }
-                          className="h-9"
+                          className="h-9 text-right"
                           step="0.01"
                         />
                       </TableCell>
-                      <TableCell>
-                        <div className="px-3 py-2 bg-gray-50 rounded">
+                      <TableCell className="text-right">
+                        <div className="px-3 py-2 bg-gray-50 rounded inline-block">
                           ${item.amount.toFixed(2)}
                         </div>
                       </TableCell>

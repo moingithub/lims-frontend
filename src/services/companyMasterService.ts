@@ -192,27 +192,7 @@ export const companyMasterService = {
     if (!company.company_name || company.company_name.trim() === "") {
       return { valid: false, error: "Company name is required" };
     }
-    if (!company.phone || company.phone.trim() === "") {
-      return { valid: false, error: "Phone is required" };
-    }
-    if (!company.email || company.email.trim() === "") {
-      return { valid: false, error: "Email is required" };
-    }
-    if (
-      !company.billing_reference_type ||
-      company.billing_reference_type.trim() === ""
-    ) {
-      return { valid: false, error: "Billing reference type is required" };
-    }
-    if (
-      !company.billing_reference_number ||
-      company.billing_reference_number.trim() === ""
-    ) {
-      return { valid: false, error: "Billing reference number is required" };
-    }
-    if (!company.billing_address || company.billing_address.trim() === "") {
-      return { valid: false, error: "Billing address is required" };
-    }
+    // Phone, email, billing_reference_type, billing_reference_number, and billing_address are not required
     return { valid: true };
   },
 
@@ -438,13 +418,13 @@ export const companyMasterService = {
     byBillingType: { [type: string]: number };
   } => {
     const stats = {
-      total: initialCompanies.length,
-      active: initialCompanies.filter((c) => c.active).length,
-      inactive: initialCompanies.filter((c) => !c.active).length,
+      total: companiesCache.length,
+      active: companiesCache.filter((c) => c.active).length,
+      inactive: companiesCache.filter((c) => !c.active).length,
       byBillingType: {} as { [type: string]: number },
     };
 
-    initialCompanies.forEach((company) => {
+    companiesCache.forEach((company) => {
       stats.byBillingType[company.billing_reference_type] =
         (stats.byBillingType[company.billing_reference_type] || 0) + 1;
     });
@@ -463,10 +443,10 @@ export const companyMasterService = {
     return types.map((type) => ({
       type,
       total: companyMasterService.countCompaniesByBillingType(type),
-      active: initialCompanies.filter(
+      active: companiesCache.filter(
         (c) => c.billing_reference_type === type && c.active,
       ).length,
-      inactive: initialCompanies.filter(
+      inactive: companiesCache.filter(
         (c) => c.billing_reference_type === type && !c.active,
       ).length,
     }));
@@ -481,26 +461,26 @@ export const companyMasterService = {
 
   // Get active company names for dropdown
   getActiveCompanyNames: (): string[] => {
-    return initialCompanies
+    return companiesCache
       .filter((company) => company.active)
       .map((company) => company.company_name);
   },
 
   // Get company codes for dropdown
   getCompanyCodes: (): string[] => {
-    return initialCompanies.map((company) => company.company_code);
+    return companiesCache.map((company) => company.company_code);
   },
 
   // Get active company codes for dropdown
   getActiveCompanyCodes: (): string[] => {
-    return initialCompanies
+    return companiesCache
       .filter((company) => company.active)
       .map((company) => company.company_code);
   },
 
   // Get company options for select components
   getCompanyOptions: (): { value: string; label: string }[] => {
-    return initialCompanies.map((company) => ({
+    return companiesCache.map((company) => ({
       value: company.company_code,
       label: `${company.company_code} - ${company.company_name}`,
     }));
@@ -508,7 +488,7 @@ export const companyMasterService = {
 
   // Get active company options for select components
   getActiveCompanyOptions: (): { value: string; label: string }[] => {
-    return initialCompanies
+    return companiesCache
       .filter((company) => company.active)
       .map((company) => ({
         value: company.company_code,
@@ -523,7 +503,7 @@ export const companyMasterService = {
     email: string;
     phone: string;
   }[] => {
-    return initialCompanies.map((company) => ({
+    return companiesCache.map((company) => ({
       value: company.company_code,
       label: `${company.company_code} - ${company.company_name}`,
       email: company.email,
@@ -533,9 +513,7 @@ export const companyMasterService = {
 
   // Format company display
   formatCompanyDisplay: (companyCode: string): string => {
-    const company = initialCompanies.find(
-      (c) => c.company_code === companyCode,
-    );
+    const company = companiesCache.find((c) => c.company_code === companyCode);
     return company
       ? `${company.company_code} - ${company.company_name}`
       : companyCode;
@@ -543,9 +521,7 @@ export const companyMasterService = {
 
   // Format billing reference display
   formatBillingReferenceDisplay: (companyCode: string): string => {
-    const company = initialCompanies.find(
-      (c) => c.company_code === companyCode,
-    );
+    const company = companiesCache.find((c) => c.company_code === companyCode);
     return company
       ? `${company.billing_reference_type}: ${company.billing_reference_number}`
       : "N/A";

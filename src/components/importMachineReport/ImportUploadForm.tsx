@@ -1,4 +1,10 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Upload } from "lucide-react";
@@ -35,8 +41,8 @@ export function ImportUploadForm({
               <SelectValue placeholder="Select Machine" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Inficon">Inficon</SelectItem>
-              <SelectItem value="GC">GC</SelectItem>
+              <SelectItem value="Inficon GC">Inficon GC</SelectItem>
+              <SelectItem value="Scion GC">Scion GC</SelectItem>
             </SelectContent>
           </Select>
         </div>

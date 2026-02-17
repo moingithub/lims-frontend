@@ -82,6 +82,7 @@ import { authService } from "./authService";
 type ApiWorkOrder = {
   id: number;
   work_order_number: string;
+  company_id: number;
   company: string;
   well_name: string | null;
   meter_number: string | null;
