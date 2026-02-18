@@ -25,18 +25,36 @@ export function InvoiceSummary({
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Lines Subtotal:</span>
-            <span>${totals.subtotal.toFixed(2)}</span>
+            <span>${Number(totals.subtotal || 0).toFixed(2)}</span>
           </div>
-          {totals.additionalFees && totals.additionalFees > 0 && (
+          {Number(totals.mileageFee) > 0 && (
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Additional Fees:</span>
-              <span>${totals.additionalFees.toFixed(2)}</span>
+              <span className="text-muted-foreground">Mileage Fee:</span>
+              <span>${Number(totals.mileageFee || 0).toFixed(2)}</span>
+            </div>
+          )}
+          {Number(totals.miscellaneousCharges) > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">
+                Miscellaneous Charges:
+              </span>
+              <span>
+                ${Number(totals.miscellaneousCharges || 0).toFixed(2)}
+              </span>
+            </div>
+          )}
+          {Number(totals.hourlyFee) > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Hourly Fee:</span>
+              <span>${Number(totals.hourlyFee || 0).toFixed(2)}</span>
             </div>
           )}
           <Separator />
           <div className="flex justify-between font-medium">
             <span>Total Amount:</span>
-            <span className="text-blue-600">${totals.total.toFixed(2)}</span>
+            <span className="text-blue-600">
+              ${Number(totals.total || 0).toFixed(2)}
+            </span>
           </div>
         </div>
       </CardContent>

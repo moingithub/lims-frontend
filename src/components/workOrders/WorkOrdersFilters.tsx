@@ -25,6 +25,7 @@ export function WorkOrdersFilters({
       <SelectContent>
         <SelectItem value="all">All Status</SelectItem>
         <SelectItem value="Pending">Pending</SelectItem>
+        <SelectItem value="Price Verified">Price Verified</SelectItem>
         {/* <SelectItem value="In Progress">In Progress</SelectItem> */}
         <SelectItem value="Submitted">Submitted</SelectItem>
         {/* <SelectItem value="Completed">Completed</SelectItem> */}

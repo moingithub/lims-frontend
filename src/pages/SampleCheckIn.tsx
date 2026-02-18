@@ -116,7 +116,7 @@ export function SampleCheckIn({
 
   // Form fields for scanned data
   const [analysisType, setAnalysisType] = useState(getDefaultAnalysisType());
-  const [checkInType, setCheckInType] = useState<"Cylinder" | "Sample">(
+  const [checkInType, setCheckInType] = useState<"Cylinder" | "Bottle">(
     "Cylinder",
   );
   const [customerCylinder, setCustomerCylinder] = useState(false);

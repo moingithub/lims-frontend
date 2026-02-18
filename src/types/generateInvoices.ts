@@ -2,10 +2,16 @@ export interface WorkOrder {
   id: number;
   work_order_number: string;
   company_id: number; // ✅ Changed from customer (string) to company_id (number)
+  company_name?: string; // <-- Optional, from API, for fallback display
   date: string;
   cylinders: number;
   amount: number;
-  status: "Pending" | "In Progress" | "Completed" | "Invoiced";
+  status:
+    | "Pending"
+    | "Price Verified"
+    | "In Progress"
+    | "Completed"
+    | "Invoiced";
   items: OrderItem[];
   mileage_fee: number; // ✅ Added additional fees
   miscellaneous_charges: number; // ✅ Added additional fees
@@ -42,5 +48,8 @@ export interface InvoiceFilters {
 export interface InvoiceTotals {
   subtotal: number;
   total: number;
-  additionalFees?: number; // ✅ Added for mileage, misc, hourly fees
+  additionalFees?: number;
+  mileageFee?: number;
+  miscellaneousCharges?: number;
+  hourlyFee?: number;
 }

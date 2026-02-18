@@ -1,6 +1,12 @@
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { billingReferenceTypes } from "../../services/companyMasterService";
 
 export interface CompanyMasterFormData {
@@ -20,23 +26,36 @@ interface CompanyMasterFormProps {
   onChange: (data: CompanyMasterFormData) => void;
 }
 
-export function CompanyMasterForm({ formData, onChange }: CompanyMasterFormProps) {
+export function CompanyMasterForm({
+  formData,
+  onChange,
+}: CompanyMasterFormProps) {
   return (
     <div className="space-y-4 py-4">
       <div className="space-y-2">
-        <Label>Company Code</Label>
+        <Label>
+          Company Code
+          <span style={{ color: "red", marginLeft: 2 }}>*</span>
+        </Label>
         <Input
           placeholder="Enter company code"
           value={formData.company_code}
-          onChange={(e) => onChange({ ...formData, company_code: e.target.value })}
+          onChange={(e) =>
+            onChange({ ...formData, company_code: e.target.value })
+          }
         />
       </div>
       <div className="space-y-2">
-        <Label>Company Name</Label>
+        <Label>
+          Company Name
+          <span style={{ color: "red", marginLeft: 2 }}>*</span>
+        </Label>
         <Input
           placeholder="Enter company name"
           value={formData.company_name}
-          onChange={(e) => onChange({ ...formData, company_name: e.target.value })}
+          onChange={(e) =>
+            onChange({ ...formData, company_name: e.target.value })
+          }
         />
       </div>
       <div className="space-y-2">
@@ -60,7 +79,9 @@ export function CompanyMasterForm({ formData, onChange }: CompanyMasterFormProps
         <Label>Billing Ref</Label>
         <Select
           value={formData.billing_reference_type}
-          onValueChange={(value) => onChange({ ...formData, billing_reference_type: value })}
+          onValueChange={(value: string) =>
+            onChange({ ...formData, billing_reference_type: value })
+          }
         >
           <SelectTrigger>
             <SelectValue />
@@ -79,7 +100,9 @@ export function CompanyMasterForm({ formData, onChange }: CompanyMasterFormProps
         <Input
           placeholder="Enter billing ref number"
           value={formData.billing_reference_number}
-          onChange={(e) => onChange({ ...formData, billing_reference_number: e.target.value })}
+          onChange={(e) =>
+            onChange({ ...formData, billing_reference_number: e.target.value })
+          }
         />
       </div>
       <div className="space-y-2">
@@ -87,19 +110,21 @@ export function CompanyMasterForm({ formData, onChange }: CompanyMasterFormProps
         <Input
           placeholder="Enter billing address"
           value={formData.billing_address}
-          onChange={(e) => onChange({ ...formData, billing_address: e.target.value })}
+          onChange={(e) =>
+            onChange({ ...formData, billing_address: e.target.value })
+          }
         />
       </div>
       <div className="space-y-2">
         <Label>Active</Label>
         <Select
           value={formData.active ? "active" : "inactive"}
-          onValueChange={(value) => onChange({ ...formData, active: value === "active" })}
+          onValueChange={(value: string) =>
+            onChange({ ...formData, active: value === "active" })
+          }
         >
           <SelectTrigger>
-            <SelectValue>
-              {formData.active ? "True" : "False"}
-            </SelectValue>
+            <SelectValue>{formData.active ? "True" : "False"}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="active">True</SelectItem>

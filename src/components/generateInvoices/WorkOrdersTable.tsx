@@ -65,8 +65,13 @@ export function WorkOrdersTable({
             {orders.map((order) => {
               const linesTotal = order.items.reduce(
                 (sum, item) => sum + item.price,
-                0
+                0,
               );
+              const additionalFees =
+                Number(order.mileage_fee || 0) +
+                Number(order.miscellaneous_charges || 0) +
+                Number(order.hourly_fee || 0);
+              const totalAmount = linesTotal + additionalFees;
               return (
                 <TableRow key={order.id}>
                   <TableCell>
@@ -77,7 +82,9 @@ export function WorkOrdersTable({
                   </TableCell>
                   <TableCell>{order.work_order_number}</TableCell>
                   <TableCell>{isoToUSDate(order.date)}</TableCell>
-                  <TableCell>{getCompanyNameById(order.company_id)}</TableCell>
+                  <TableCell>
+                    {getCompanyNameById(order.company_id, order.company_name)}
+                  </TableCell>
                   <TableCell className="text-right">
                     {order.cylinders}
                   </TableCell>
@@ -85,16 +92,16 @@ export function WorkOrdersTable({
                     ${linesTotal.toFixed(2)}
                   </TableCell>
                   <TableCell className="text-right">
-                    ${order.mileage_fee.toFixed(2)}
+                    ${Number(order.mileage_fee || 0).toFixed(2)}
                   </TableCell>
                   <TableCell className="text-right">
-                    ${order.miscellaneous_charges.toFixed(2)}
+                    ${Number(order.miscellaneous_charges || 0).toFixed(2)}
                   </TableCell>
                   <TableCell className="text-right">
-                    ${order.hourly_fee.toFixed(2)}
+                    ${Number(order.hourly_fee || 0).toFixed(2)}
                   </TableCell>
                   <TableCell className="text-right">
-                    ${order.amount.toFixed(2)}
+                    ${totalAmount.toFixed(2)}
                   </TableCell>
                 </TableRow>
               );

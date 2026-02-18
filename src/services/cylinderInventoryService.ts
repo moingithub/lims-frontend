@@ -1,6 +1,6 @@
-import { cylinderMasterService } from './cylinderMasterService';
-import { cylinderCheckOutService } from './cylinderCheckOutService';
-import { companyMasterService } from './companyMasterService';
+import { cylinderMasterService } from "./cylinderMasterService";
+import { cylinderCheckOutService } from "./cylinderCheckOutService";
+import { companyMasterService } from "./companyMasterService";
 
 export interface CylinderInventoryItem {
   id: number;
@@ -45,25 +45,26 @@ export const cylinderInventoryService = {
   getInventory: (): CylinderInventoryItem[] => {
     // Get all cylinders from Cylinder Master
     const cylinders = cylinderMasterService.getCylinders();
-    
     // Get all checkout records
     const checkoutRecords = cylinderCheckOutService.getCheckOutRecords();
-    
+
     // Build inventory by merging cylinder master data with checkout records
-    return cylinders.map(cylinder => {
+    return cylinders.map((cylinder) => {
       // Find the most recent checkout record for this cylinder (by record ID)
       const checkoutRecord = checkoutRecords
-        .filter(record => record.barcode === cylinder.cylinder_number)
+        .filter((record) => record.barcode === cylinder.cylinder_number)
         .sort((a, b) => b.id - a.id)[0]; // Sort by ID descending (most recent first)
-      
+
       let issued_to = "";
       let since_days: number | string = "";
       let email = "";
-      
+
       // If cylinder is checked out and has a checkout record
       if (cylinder.location === "Checked Out" && checkoutRecord) {
         // Get company name from company_id
-        const company = companyMasterService.getCompanyById(checkoutRecord.company_id);
+        const company = companyMasterService.getCompanyById(
+          checkoutRecord.company_id,
+        );
         issued_to = company?.company_name || "";
         email = company?.email || "";
         // Calculate days since checkout if created_at exists
@@ -73,7 +74,7 @@ export const cylinderInventoryService = {
           since_days = "";
         }
       }
-      
+
       return {
         id: cylinder.id,
         cylinder_number: cylinder.cylinder_number,
@@ -88,36 +89,46 @@ export const cylinderInventoryService = {
     });
   },
 
-  searchInventory: (inventory: CylinderInventoryItem[], searchTerm: string): CylinderInventoryItem[] => {
+  searchInventory: (
+    inventory: CylinderInventoryItem[],
+    searchTerm: string,
+  ): CylinderInventoryItem[] => {
     if (!searchTerm) return inventory;
-    
+
     const lowerSearch = searchTerm.toLowerCase();
-    return inventory.filter(item =>
-      item.cylinder_number.toLowerCase().includes(lowerSearch) ||
-      item.cylinder_type.toLowerCase().includes(lowerSearch) ||
-      item.location.toLowerCase().includes(lowerSearch) ||
-      item.status.toLowerCase().includes(lowerSearch) ||
-      item.issued_to.toLowerCase().includes(lowerSearch) ||
-      item.email.toLowerCase().includes(lowerSearch)
+    return inventory.filter(
+      (item) =>
+        item.cylinder_number.toLowerCase().includes(lowerSearch) ||
+        item.cylinder_type.toLowerCase().includes(lowerSearch) ||
+        item.location.toLowerCase().includes(lowerSearch) ||
+        item.status.toLowerCase().includes(lowerSearch) ||
+        item.issued_to.toLowerCase().includes(lowerSearch) ||
+        item.email.toLowerCase().includes(lowerSearch),
     );
   },
 
-  filterByStatus: (inventory: CylinderInventoryItem[], status: string): CylinderInventoryItem[] => {
+  filterByStatus: (
+    inventory: CylinderInventoryItem[],
+    status: string,
+  ): CylinderInventoryItem[] => {
     if (status === "all") return inventory;
-    return inventory.filter(item => item.status === status);
+    return inventory.filter((item) => item.status === status);
   },
 
-  filterByLocation: (inventory: CylinderInventoryItem[], location: string): CylinderInventoryItem[] => {
+  filterByLocation: (
+    inventory: CylinderInventoryItem[],
+    location: string,
+  ): CylinderInventoryItem[] => {
     if (location === "all") return inventory;
-    return inventory.filter(item => item.location === location);
+    return inventory.filter((item) => item.location === location);
   },
 
   getUniqueStatuses: (inventory: CylinderInventoryItem[]): string[] => {
-    return Array.from(new Set(inventory.map(item => item.status))).sort();
+    return Array.from(new Set(inventory.map((item) => item.status))).sort();
   },
 
   getUniqueLocations: (inventory: CylinderInventoryItem[]): string[] => {
-    return Array.from(new Set(inventory.map(item => item.location))).sort();
+    return Array.from(new Set(inventory.map((item) => item.location))).sort();
   },
 
   getStatusBadgeVariant: (status: string): string => {
@@ -134,8 +145,16 @@ export const cylinderInventoryService = {
   },
 
   exportToCSV: (inventory: CylinderInventoryItem[]): string => {
-    const headers = ["Cylinder Number", "Cylinder Type", "Location", "Status", "Issued To", "Since Days", "Email"];
-    const rows = inventory.map(item => [
+    const headers = [
+      "Cylinder Number",
+      "Cylinder Type",
+      "Location",
+      "Status",
+      "Issued To",
+      "Since Days",
+      "Email",
+    ];
+    const rows = inventory.map((item) => [
       item.cylinder_number,
       item.cylinder_type,
       item.location,
@@ -144,12 +163,12 @@ export const cylinderInventoryService = {
       item.since_days.toString(),
       item.email,
     ]);
-    
+
     const csvContent = [
       headers.join(","),
-      ...rows.map(row => row.join(",")),
+      ...rows.map((row) => row.join(",")),
     ].join("\n");
-    
+
     return csvContent;
   },
 };

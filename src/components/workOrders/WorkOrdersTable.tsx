@@ -151,15 +151,11 @@ export function WorkOrdersTable({
                         variant="ghost"
                         size="sm"
                         title="Submit"
-                        disabled={
-                          order.status === "Invoiced" ||
-                          order.status === "Completed" ||
-                          order.status === "Submitted"
-                        }
+                        disabled={order.status !== "Price Verified"}
                         onClick={() => onSubmitOrder(order)}
                       >
                         <FileText
-                          className={`w-4 h-4 ${order.status === "Invoiced" || order.status === "Completed" || order.status === "Submitted" ? "text-gray-400" : "text-emerald-600"}`}
+                          className={`w-4 h-4 ${order.status === "Price Verified" ? "text-emerald-600" : "text-gray-400"}`}
                         />
                       </Button>
                     </div>

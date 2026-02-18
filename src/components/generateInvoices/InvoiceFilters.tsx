@@ -40,7 +40,9 @@ export function InvoiceFilters({
         <Label>Company (Optional)</Label>
         <Select
           value={selectedCompanyId?.toString() || ""}
-          onValueChange={(value) => onCompanyChange(value ? parseInt(value) : null)}
+          onValueChange={(value: string) =>
+            onCompanyChange(value ? parseInt(value) : null)
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="All companies" />

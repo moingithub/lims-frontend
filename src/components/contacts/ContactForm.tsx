@@ -1,6 +1,12 @@
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { companyMasterService } from "../../services/companyMasterService";
 import { ActiveSelect } from "../shared/ActiveSelect";
 
@@ -21,14 +27,19 @@ interface ContactFormProps {
 export function ContactForm({ formData, onChange }: ContactFormProps) {
   // Get active companies only from companyMasterService
   const companies = companyMasterService.getActiveCompanies();
-  
+
   return (
     <div className="space-y-4 py-4">
       <div className="space-y-2">
-        <Label>Company</Label>
+        <Label>
+          Company
+          <span style={{ color: "red", marginLeft: 2 }}>*</span>
+        </Label>
         <Select
           value={formData.company_id.toString()}
-          onValueChange={(val) => onChange({ ...formData, company_id: parseInt(val) })}
+          onValueChange={(val: string) =>
+            onChange({ ...formData, company_id: parseInt(val) })
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Select company" />
@@ -43,7 +54,10 @@ export function ContactForm({ formData, onChange }: ContactFormProps) {
         </Select>
       </div>
       <div className="space-y-2">
-        <Label>Name</Label>
+        <Label>
+          Name
+          <span style={{ color: "red", marginLeft: 2 }}>*</span>
+        </Label>
         <Input
           placeholder="Enter contact name"
           value={formData.name}
@@ -52,7 +66,10 @@ export function ContactForm({ formData, onChange }: ContactFormProps) {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Phone</Label>
+          <Label>
+            Phone
+            <span style={{ color: "red", marginLeft: 2 }}>*</span>
+          </Label>
           <Input
             placeholder="Enter phone number"
             value={formData.phone}
@@ -60,7 +77,10 @@ export function ContactForm({ formData, onChange }: ContactFormProps) {
           />
         </div>
         <div className="space-y-2">
-          <Label>Email</Label>
+          <Label>
+            Email
+            <span style={{ color: "red", marginLeft: 2 }}>*</span>
+          </Label>
           <Input
             type="email"
             placeholder="Enter email"

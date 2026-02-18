@@ -1,5 +1,10 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner@2.0.3";
@@ -22,14 +27,52 @@ import {
 } from "../services/generateInvoicesService";
 
 export function GenerateInvoices() {
-  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
+    null,
+  );
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
 
-  // Get data from service
-  const customers = getCustomers();
-  const allWorkOrders = getWorkOrders();
+  // Customers (companies) for filter dropdown
+  const [customers, setCustomers] = useState([]);
+
+  // Work orders state (async)
+  const [allWorkOrders, setAllWorkOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load companies for filter dropdown
+    import("../services/companyMasterService").then((mod) => {
+      if (mod.companyMasterService.fetchCompanies) {
+        mod.companyMasterService.fetchCompanies(true).then(() => {
+          const list = mod.companyMasterService
+            .getActiveCompanies()
+            .map((company) => ({
+              id: company.id,
+              code: company.company_code,
+              name: company.company_name,
+            }));
+          setCustomers(list);
+        });
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    getWorkOrders()
+      .then((orders) => {
+        setAllWorkOrders(orders);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message || "Failed to load work orders");
+        setLoading(false);
+      });
+  }, []);
 
   // Filter orders based on current filters
   const filteredOrders = getFilteredOrders(allWorkOrders, {
@@ -58,7 +101,7 @@ export function GenerateInvoices() {
     setSelectedOrders((prev) =>
       prev.includes(orderId)
         ? prev.filter((id) => id !== orderId)
-        : [...prev, orderId]
+        : [...prev, orderId],
     );
   };
 
@@ -73,10 +116,10 @@ export function GenerateInvoices() {
   const handleGenerateInvoice = () => {
     console.log("Generate Invoice clicked");
     console.log("Selected orders:", selectedOrders);
-    
+
     // Get selected orders data
     const selectedOrdersData = filteredOrders.filter((order) =>
-      selectedOrders.includes(order.id)
+      selectedOrders.includes(order.id),
     );
 
     console.log("Selected orders data:", selectedOrdersData);
@@ -84,7 +127,7 @@ export function GenerateInvoices() {
     // Validate
     const validation = validateInvoiceGeneration(selectedOrdersData);
     console.log("Validation result:", validation);
-    
+
     if (!validation.valid) {
       toast.error(validation.error);
       return;
@@ -96,10 +139,15 @@ export function GenerateInvoices() {
     const companyName = getCompanyNameById(companyId);
     const companyEmail = getCompanyEmailById(companyId);
 
-    console.log("Invoice details:", { invoiceNumber, companyId, companyName, companyEmail });
+    console.log("Invoice details:", {
+      invoiceNumber,
+      companyId,
+      companyName,
+      companyEmail,
+    });
 
     toast.success(
-      `Invoice ${invoiceNumber} generated successfully for ${companyName} (${companyEmail}) with ${selectedOrders.length} work order(s)!`
+      `Invoice ${invoiceNumber} generated successfully for ${companyName} (${companyEmail}) with ${selectedOrders.length} work order(s)!`,
     );
 
     // Reset the form
@@ -111,7 +159,7 @@ export function GenerateInvoices() {
 
   // Get selected orders and calculate totals
   const selectedOrdersData = filteredOrders.filter((order) =>
-    selectedOrders.includes(order.id)
+    selectedOrders.includes(order.id),
   );
   const totals = calculateInvoiceTotals(selectedOrdersData);
 
@@ -137,35 +185,46 @@ export function GenerateInvoices() {
 
           <Separator />
 
-          {/* Sales Orders Table */}
-          <WorkOrdersTable
-            orders={filteredOrders}
-            selectedOrders={selectedOrders}
-            onOrderSelection={handleOrderSelection}
-            onSelectAll={handleSelectAll}
-          />
-
-          {/* Selected Orders Details */}
-          {selectedOrders.length > 0 && (
+          {/* Loading/Error State */}
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Loading work orders...
+            </div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-600">{error}</div>
+          ) : (
             <>
-              <SelectedOrdersDetails orders={selectedOrdersData} />
-
-              {/* Invoice Summary */}
-              <InvoiceSummary
-                selectedOrdersCount={selectedOrders.length}
-                totals={totals}
+              {/* Sales Orders Table */}
+              <WorkOrdersTable
+                orders={filteredOrders}
+                selectedOrders={selectedOrders}
+                onOrderSelection={handleOrderSelection}
+                onSelectAll={handleSelectAll}
               />
 
-              {/* Generate Invoice Button */}
-              <Button
-                onClick={handleGenerateInvoice}
-                disabled={selectedOrders.length === 0}
-                size="lg"
-                className="w-full md:w-auto"
-              >
-                <FileSpreadsheet className="w-4 h-4 mr-2" />
-                Generate Invoice
-              </Button>
+              {/* Selected Orders Details */}
+              {selectedOrders.length > 0 && (
+                <>
+                  <SelectedOrdersDetails orders={selectedOrdersData} />
+
+                  {/* Invoice Summary */}
+                  <InvoiceSummary
+                    selectedOrdersCount={selectedOrders.length}
+                    totals={totals}
+                  />
+
+                  {/* Generate Invoice Button */}
+                  <Button
+                    onClick={handleGenerateInvoice}
+                    disabled={selectedOrders.length === 0}
+                    size="lg"
+                    className="w-full md:w-auto"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Generate Invoice
+                  </Button>
+                </>
+              )}
             </>
           )}
         </CardContent>

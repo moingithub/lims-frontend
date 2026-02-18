@@ -30,18 +30,21 @@ export function SelectedOrdersDetails({ orders }: SelectedOrdersDetailsProps) {
           <div key={order.id} className="space-y-2">
             <div className="flex justify-between items-center">
               <h4 className="font-medium">
-                {order.work_order_number} - {getCompanyNameById(order.company_id)}
+                {order.work_order_number} -{" "}
+                {getCompanyNameById(order.company_id, order.company_name)}
               </h4>
               <Badge variant="outline">{order.cylinders} cylinders</Badge>
             </div>
-            
+
             {/* Billing Reference if exists */}
-            {order.billing_reference_type !== "NA" && order.billing_reference_number && (
-              <div className="text-sm text-muted-foreground">
-                {order.billing_reference_type}: {order.billing_reference_number}
-              </div>
-            )}
-            
+            {order.billing_reference_type !== "NA" &&
+              order.billing_reference_number && (
+                <div className="text-sm text-muted-foreground">
+                  {order.billing_reference_type}:{" "}
+                  {order.billing_reference_number}
+                </div>
+              )}
+
             <div className="border rounded-lg overflow-hidden">
               <Table>
                 <TableHeader>
@@ -65,48 +68,29 @@ export function SelectedOrdersDetails({ orders }: SelectedOrdersDetailsProps) {
                       <TableCell>{item.well_name}</TableCell>
                       <TableCell>
                         {item.rushed ? (
-                          <Badge variant="outline" className="bg-orange-50 text-orange-700">
+                          <Badge
+                            variant="outline"
+                            className="bg-orange-50 text-orange-700"
+                          >
                             Rushed
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-gray-50 text-gray-600">
+                          <Badge
+                            variant="outline"
+                            className="bg-gray-50 text-gray-600"
+                          >
                             Normal
                           </Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        ${item.price.toFixed(2)}
+                        ${Number(item.price || 0).toFixed(2)}
                       </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             </div>
-            
-            {/* Additional Fees */}
-            {(order.mileage_fee > 0 || order.miscellaneous_charges > 0 || order.hourly_fee > 0) && (
-              <div className="bg-muted/50 p-3 rounded-md space-y-1 text-sm">
-                <div className="font-medium">Additional Charges:</div>
-                {order.mileage_fee > 0 && (
-                  <div className="flex justify-between">
-                    <span>Mileage Fee:</span>
-                    <span>${order.mileage_fee.toFixed(2)}</span>
-                  </div>
-                )}
-                {order.miscellaneous_charges > 0 && (
-                  <div className="flex justify-between">
-                    <span>Miscellaneous Charges:</span>
-                    <span>${order.miscellaneous_charges.toFixed(2)}</span>
-                  </div>
-                )}
-                {order.hourly_fee > 0 && (
-                  <div className="flex justify-between">
-                    <span>Hourly Fee:</span>
-                    <span>${order.hourly_fee.toFixed(2)}</span>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         ))}
       </CardContent>

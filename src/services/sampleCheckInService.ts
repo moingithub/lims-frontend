@@ -1,11 +1,13 @@
-
 import { API_BASE_URL } from "../config/api";
 import { authService } from "./authService";
 
 /**
  * Update status in sample_checkin by work order number
  */
-const updateStatusByWorkOrderNumber = async (workOrderNumber: string, payload: { status: string }) => {
+const updateStatusByWorkOrderNumber = async (
+  workOrderNumber: string,
+  payload: { status: string },
+) => {
   const token = authService.getAuthState().token;
   const response = await fetch(
     `${API_BASE_URL}/sample_checkin/update_status_by_wo/${encodeURIComponent(workOrderNumber)}`,
@@ -20,11 +22,9 @@ const updateStatusByWorkOrderNumber = async (workOrderNumber: string, payload: {
   );
   if (!response.ok) throw await response.json();
   return await response.json();
-}
+};
 
 // ...existing code...
-
-
 
 export interface CheckedInSample {
   id: number;
@@ -878,5 +878,8 @@ export const sampleCheckInService = {
   /**
    * Update status in sample_checkin by work order number
    */
-  updateStatusByWorkOrderNumber: updateStatusByWorkOrderNumber as (workOrderNumber: string, payload: { status: string }) => Promise<any>,
+  updateStatusByWorkOrderNumber: updateStatusByWorkOrderNumber as (
+    workOrderNumber: string,
+    payload: { status: string },
+  ) => Promise<any>,
 };

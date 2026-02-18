@@ -22,7 +22,7 @@ interface SampleDetailsFormProps {
   temperature: string;
   fieldH2S: string;
   costCode: string;
-  checkInType: "Cylinder" | "Sample";
+  checkInType: "Cylinder" | "Bottle" | "CP Cylinder";
   billingReferenceType: string;
   billingReferenceNumber: string;
   remarks: string;
@@ -37,7 +37,7 @@ interface SampleDetailsFormProps {
   onTemperatureChange: (value: string) => void;
   onFieldH2SChange: (value: string) => void;
   onCostCodeChange: (value: string) => void;
-  onCheckInTypeChange: (value: "Cylinder" | "Sample") => void;
+  onCheckInTypeChange: (value: "Cylinder" | "Bottle" | "CP Cylinder") => void;
   onBillingReferenceTypeChange: (value: string) => void;
   onBillingReferenceNumberChange: (value: string) => void;
   onRemarksChange: (value: string) => void;
@@ -78,6 +78,38 @@ export function SampleDetailsForm({
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
+        {/* Check-In Type as first entry */}
+        <div className="space-y-2">
+          <Label>Check-In Type</Label>
+          <RadioGroup
+            value={checkInType}
+            onValueChange={(value: "Cylinder" | "Bottle" | "CP Cylinder") =>
+              onCheckInTypeChange(value)
+            }
+            className="flex gap-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="Cylinder" id="cylinder-type" />
+              <Label htmlFor="cylinder-type" className="cursor-pointer">
+                Cylinder
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="Bottle" id="bottle-type" />
+              <Label htmlFor="bottle-type" className="cursor-pointer">
+                Bottle
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="CP Cylinder" id="cp-cylinder-type" />
+              <Label htmlFor="cp-cylinder-type" className="cursor-pointer">
+                CP Cylinder
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        {/* Cylinder # moved to Producer's place */}
         <div className="space-y-2">
           <Label>Cylinder #</Label>
           <Input
@@ -87,6 +119,7 @@ export function SampleDetailsForm({
           />
         </div>
 
+        {/* Producer moved below Cylinder # */}
         <div className="space-y-2">
           <Label>Producer</Label>
           <Input
@@ -202,29 +235,7 @@ export function SampleDetailsForm({
           />
         </div>
 
-        <div className="space-y-2">
-          <Label>Check-In Type</Label>
-          <RadioGroup
-            value={checkInType}
-            onValueChange={(value: "Cylinder" | "Sample") =>
-              onCheckInTypeChange(value)
-            }
-            className="flex gap-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="Cylinder" id="cylinder-type" />
-              <Label htmlFor="cylinder-type" className="cursor-pointer">
-                Cylinder
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="Sample" id="sample-type" />
-              <Label htmlFor="sample-type" className="cursor-pointer">
-                Sample
-              </Label>
-            </div>
-          </RadioGroup>
-        </div>
+        {/* ...existing code... */}
 
         <div className="space-y-2">
           <Label>Billing Ref</Label>

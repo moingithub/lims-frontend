@@ -18,7 +18,7 @@ import { analysisPricingService } from "../../services/analysisPricingService";
 export interface SampleFormData {
   analysisNumber: string;
   analysisType: string;
-  checkInType: "Cylinder" | "Sample";
+  checkInType: "Cylinder" | "Bottle" | "CP Cylinder";
   customerCylinder: boolean;
   rushed: boolean;
   date: string;
@@ -149,7 +149,7 @@ export function SampleCheckInForm({
           <Label>Check-In Type</Label>
           <RadioGroup
             value={formData.checkInType}
-            onValueChange={(val: "Cylinder" | "Sample") =>
+            onValueChange={(val: "Cylinder" | "Bottle" | "CP Cylinder") =>
               onFormChange({ checkInType: val })
             }
           >
@@ -159,8 +159,12 @@ export function SampleCheckInForm({
                 <Label htmlFor="cylinder">Cylinder</Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="Sample" id="sample" />
-                <Label htmlFor="sample">Sample</Label>
+                <RadioGroupItem value="Bottle" id="bottle" />
+                <Label htmlFor="bottle">Bottle</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="CP Cylinder" id="cp-cylinder" />
+                <Label htmlFor="cp-cylinder">CP Cylinder</Label>
               </div>
             </div>
           </RadioGroup>

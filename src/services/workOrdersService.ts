@@ -426,6 +426,8 @@ export const workOrdersService = {
         return "bg-gray-100 text-gray-800";
       case "Submitted":
         return "bg-purple-100 text-purple-800";
+      case "Price Verified":
+        return "bg-green-200 text-green-900";
       default:
         return "bg-gray-100 text-gray-800";
     }
