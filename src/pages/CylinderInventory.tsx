@@ -1,5 +1,10 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { cylinderInventoryService } from "../services/cylinderInventoryService";
 import { SearchBar } from "../components/shared/SearchBar";
 import { CylinderInventoryTable } from "../components/cylinderInventory/CylinderInventoryTable";
@@ -10,14 +15,35 @@ export function CylinderInventory() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [locationFilter, setLocationFilter] = useState("all");
 
-  const inventoryData = cylinderInventoryService.getInventory();
+  const [inventoryData, setInventoryData] = useState<CylinderInventoryItem[]>(
+    [],
+  );
+
+  useEffect(() => {
+    cylinderInventoryService
+      .getInventory()
+      .then((data) =>
+        Array.isArray(data) ? setInventoryData(data) : setInventoryData([]),
+      )
+      .catch(() => setInventoryData([]));
+  }, []);
+
   const statuses = cylinderInventoryService.getUniqueStatuses(inventoryData);
   const locations = cylinderInventoryService.getUniqueLocations(inventoryData);
 
   // Apply filters
-  let filteredData = cylinderInventoryService.searchInventory(inventoryData, searchTerm);
-  filteredData = cylinderInventoryService.filterByStatus(filteredData, statusFilter);
-  filteredData = cylinderInventoryService.filterByLocation(filteredData, locationFilter);
+  let filteredData = cylinderInventoryService.searchInventory(
+    inventoryData,
+    searchTerm,
+  );
+  filteredData = cylinderInventoryService.filterByStatus(
+    filteredData,
+    statusFilter,
+  );
+  filteredData = cylinderInventoryService.filterByLocation(
+    filteredData,
+    locationFilter,
+  );
 
   return (
     <div className="space-y-6">
@@ -49,7 +75,9 @@ export function CylinderInventory() {
           <CylinderInventoryTable inventory={filteredData} />
 
           <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-            <p>Showing {filteredData.length} of {inventoryData.length} records</p>
+            <p>
+              Showing {filteredData.length} of {inventoryData.length} records
+            </p>
           </div>
         </CardContent>
       </Card>

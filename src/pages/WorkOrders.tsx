@@ -220,6 +220,8 @@ export function WorkOrders() {
           `Work Order ${selectedOrder.id} line items updated successfully`,
         );
         setIsEditDialogOpen(false);
+        // Reload work orders after successful save
+        await loadOrders();
       } else {
         toast.error(
           `Some line items failed to update:\n${errorMessages.join("\n")}`,
