@@ -99,8 +99,40 @@ export const cylinderMasterService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to create cylinder";
+      let message = "Failed to create cylinder";
+      try {
+        const errorData = await response.json();
+        // Try to extract error from common structures
+        if (errorData) {
+          if (typeof errorData.message === "string") {
+            message = errorData.message;
+          } else if (typeof errorData.error === "string") {
+            message = errorData.error;
+          } else if (errorData.errors && typeof errorData.errors === "object") {
+            // Look for cylinder_number errors
+            if (Array.isArray(errorData.errors.cylinder_number)) {
+              message = errorData.errors.cylinder_number.join(" ");
+            } else {
+              // Fallback: join all error messages
+              message = Object.values(errorData.errors).flat().join(" ");
+            }
+          } else if (typeof errorData === "string") {
+            message = errorData;
+          }
+        }
+        // Refine known error
+        if (message.includes("cylinder_number must be unique")) {
+          message =
+            "Cylinder number already exists. Please use a unique cylinder number.";
+        }
+      } catch (e) {
+        // fallback to status text if JSON parse fails
+        if (response.status === 401) {
+          message = "Unauthorized";
+        } else if (response.statusText) {
+          message = response.statusText;
+        }
+      }
       throw new Error(message);
     }
 

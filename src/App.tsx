@@ -12,6 +12,8 @@ import { Contacts } from "./pages/Contacts";
 import { CylinderInventory } from "./pages/CylinderInventory";
 import { AnalysisReports } from "./pages/AnalysisReports";
 import { PendingOrders } from "./pages/PendingOrders";
+import React, { Suspense } from "react";
+const OpenCheckoutsLazy = React.lazy(() => import("./pages/OpenCheckouts"));
 import { Roles } from "./pages/Roles";
 import { Users } from "./pages/Users";
 import { Modules } from "./pages/Modules";
@@ -122,6 +124,15 @@ function AppContent() {
         return (
           <ProtectedRoute moduleId={15}>
             <PendingOrders />
+          </ProtectedRoute>
+        );
+
+      case "open-checkouts":
+        return (
+          <ProtectedRoute moduleId={13}>
+            <Suspense fallback={<div>Loading...</div>}>
+              <OpenCheckoutsLazy />
+            </Suspense>
           </ProtectedRoute>
         );
 

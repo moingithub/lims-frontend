@@ -1,7 +1,8 @@
 import { API_BASE_URL } from "../config/api";
 import { authService } from "./authService";
-// Import cylinder master service for validation
 import { cylinderMasterService } from "./cylinderMasterService";
+import { companyMasterService } from "./companyMasterService";
+import { contactsService } from "./contactsService";
 
 export interface Cylinder {
   id: number;
@@ -60,92 +61,33 @@ const buildAuthHeaders = (): HeadersInit => {
 let checkOutApiCache: CylinderCheckOutApiRecord[] = [];
 let checkOutApiCacheLoaded = false;
 
-const initialCustomers: Customer[] = [
-  {
-    id: 1,
-    code: "ACME",
-    name: "Acme Corporation",
-    contact: "John Doe",
-    email: "john@acme.com",
-    status: "Active",
-  },
-  {
-    id: 2,
-    code: "TECH",
-    name: "TechGas Inc",
-    contact: "Jane Smith",
-    email: "jane@techgas.com",
-    status: "Active",
-  },
-  {
-    id: 3,
-    code: "IND",
-    name: "Industrial Co",
-    contact: "Bob Johnson",
-    email: "bob@industrial.com",
-    status: "Active",
-  },
-  {
-    id: 4,
-    code: "GAS",
-    name: "Gas Solutions",
-    contact: "Alice Brown",
-    email: "alice@gassolutions.com",
-    status: "Active",
-  },
-];
-
-const initialContacts: Contact[] = [
-  {
-    id: 1,
-    company_id: 1,
-    name: "John Doe",
-    phone: "+1-555-0101",
-    email: "john@acme.com",
-  },
-  {
-    id: 2,
-    company_id: 1,
-    name: "Sarah Lee",
-    phone: "+1-555-0102",
-    email: "sarah@acme.com",
-  },
-  {
-    id: 3,
-    company_id: 2,
-    name: "Jane Smith",
-    phone: "+1-555-0201",
-    email: "jane@techgas.com",
-  },
-  {
-    id: 4,
-    company_id: 3,
-    name: "Bob Johnson",
-    phone: "+1-555-0301",
-    email: "bob@industrial.com",
-  },
-  {
-    id: 5,
-    company_id: 4,
-    name: "Alice Brown",
-    phone: "+1-555-0401",
-    email: "alice@gassolutions.com",
-  },
-];
-
 export const cylinderCheckOutService = {
-  getCustomers: (): Customer[] => {
-    return initialCustomers;
+  // Fetch all customers (companies) from backend (cached)
+  getCustomers: async (force = false): Promise<Customer[]> => {
+    const companies = await companyMasterService.fetchCompanies(force);
+    // Map Company to Customer interface if needed
+    return companies.map((company) => ({
+      id: company.id,
+      code: company.company_code,
+      name: company.company_name,
+      contact: company.phone, // or another field if needed
+      email: company.email,
+      status: company.active ? "Active" : "Inactive",
+    }));
   },
 
-  getContacts: (): Contact[] => {
-    return initialContacts;
+  // Fetch all contacts from backend (cached)
+  getContacts: async (force = false): Promise<Contact[]> => {
+    return await contactsService.fetchContacts(force);
   },
 
-  getContactsByCustomer: (companyId: number): Contact[] => {
-    return initialContacts.filter(
-      (contact) => contact.company_id === companyId,
-    );
+  // Fetch contacts by customer/company ID
+  getContactsByCustomer: async (
+    companyId: number,
+    force = false,
+  ): Promise<Contact[]> => {
+    const contacts = await contactsService.fetchContacts(force);
+    return contacts.filter((contact) => contact.company_id === companyId);
   },
 
   validateBarcode: (
@@ -602,12 +544,20 @@ export const cylinderCheckOutService = {
     return [];
   },
 
-  getCustomerById: (id: number): Customer | undefined => {
-    return initialCustomers.find((customer) => customer.id === id);
+  getCustomerById: async (
+    id: number,
+    force = false,
+  ): Promise<Customer | undefined> => {
+    const customers = await cylinderCheckOutService.getCustomers(force);
+    return customers.find((customer) => customer.id === id);
   },
 
-  getContactById: (id: number): Contact | undefined => {
-    return initialContacts.find((contact) => contact.id === id);
+  getContactById: async (
+    id: number,
+    force = false,
+  ): Promise<Contact | undefined> => {
+    const contacts = await contactsService.fetchContacts(force);
+    return contacts.find((contact) => contact.id === id);
   },
 
   validateCheckOutWithIds: (
