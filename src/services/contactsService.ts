@@ -5,6 +5,8 @@ import { authService } from "./authService";
 export interface Contact {
   id: number;
   company_id: number;
+  // Optional link to a specific company area (if provided by API)
+  company_area_id?: number | null;
   name: string;
   phone: string;
   email: string;
@@ -15,6 +17,7 @@ export interface Contact {
 type ApiContact = {
   id: number;
   company_id: number;
+  company_area_id?: number | null;
   name: string;
   phone: string;
   email: string;
@@ -28,6 +31,7 @@ let contactsLoaded = false;
 const mapApiContact = (contact: ApiContact): Contact => ({
   id: contact.id,
   company_id: contact.company_id,
+  company_area_id: contact.company_area_id ?? null,
   name: contact.name,
   phone: contact.phone,
   email: contact.email,
@@ -87,6 +91,7 @@ export const contactsService = {
       headers: buildAuthHeaders(),
       body: JSON.stringify({
         company_id: contact.company_id,
+        company_area_id: contact.company_area_id ?? null,
         name: contact.name,
         phone: contact.phone,
         email: contact.email,
@@ -117,6 +122,7 @@ export const contactsService = {
       headers: buildAuthHeaders(),
       body: JSON.stringify({
         company_id: updatedContact.company_id,
+        company_area_id: updatedContact.company_area_id ?? null,
         name: updatedContact.name,
         phone: updatedContact.phone,
         email: updatedContact.email,

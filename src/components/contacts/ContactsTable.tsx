@@ -1,8 +1,16 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 import { Button } from "../ui/button";
 import { Edit, Trash2 } from "lucide-react";
 import { Contact } from "../../services/contactsService";
 import { companyMasterService } from "../../services/companyMasterService";
+import { companyAreaService } from "../../services/companyAreaService";
 import { ActiveBadge } from "../shared/ActiveBadge";
 
 interface ContactsTableProps {
@@ -11,11 +19,21 @@ interface ContactsTableProps {
   onDelete: (contact: Contact) => void;
 }
 
-export function ContactsTable({ contacts, onEdit, onDelete }: ContactsTableProps) {
+export function ContactsTable({
+  contacts,
+  onEdit,
+  onDelete,
+}: ContactsTableProps) {
   // Helper to get company name by ID
   const getCompanyName = (companyId: number): string => {
     const company = companyMasterService.getCompanyById(companyId);
     return company ? company.company_name : `Company #${companyId}`;
+  };
+
+  const getAreaLabel = (companyAreaId?: number | null): string => {
+    if (!companyAreaId) return "";
+    const area = companyAreaService.getCompanyAreaById(companyAreaId);
+    return area ? `${area.area} (${area.region})` : "";
   };
 
   return (
@@ -24,6 +42,7 @@ export function ContactsTable({ contacts, onEdit, onDelete }: ContactsTableProps
         <TableHeader>
           <TableRow>
             <TableHead>Company</TableHead>
+            <TableHead>Area</TableHead>
             <TableHead>Name</TableHead>
             <TableHead>Phone</TableHead>
             <TableHead>Email</TableHead>
@@ -34,7 +53,10 @@ export function ContactsTable({ contacts, onEdit, onDelete }: ContactsTableProps
         <TableBody>
           {contacts.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+              <TableCell
+                colSpan={7}
+                className="text-center text-muted-foreground py-8"
+              >
                 No records found
               </TableCell>
             </TableRow>
@@ -42,6 +64,7 @@ export function ContactsTable({ contacts, onEdit, onDelete }: ContactsTableProps
             contacts.map((contact) => (
               <TableRow key={contact.id}>
                 <TableCell>{getCompanyName(contact.company_id)}</TableCell>
+                <TableCell>{getAreaLabel(contact.company_area_id)}</TableCell>
                 <TableCell>{contact.name}</TableCell>
                 <TableCell>{contact.phone}</TableCell>
                 <TableCell>{contact.email}</TableCell>
@@ -50,10 +73,18 @@ export function ContactsTable({ contacts, onEdit, onDelete }: ContactsTableProps
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex gap-1 justify-end">
-                    <Button variant="ghost" size="sm" onClick={() => onEdit(contact)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEdit(contact)}
+                    >
                       <Edit className="w-4 h-4 text-green-600" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => onDelete(contact)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(contact)}
+                    >
                       <Trash2 className="w-4 h-4 text-red-600" />
                     </Button>
                   </div>

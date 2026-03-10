@@ -1,5 +1,10 @@
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { useState, useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { toast } from "sonner";
 import { InvoicesFilters } from "../components/invoices/InvoicesFilters";
 import { InvoicesTable } from "../components/invoices/InvoicesTable";
@@ -9,12 +14,10 @@ import { EditStatusDialog } from "../components/invoices/EditStatusDialog";
 import {
   Invoice,
   LineItem,
-  mockInvoices,
+  fetchInvoices,
   filterInvoices,
   getStatusBadgeClass,
-  getLineItemsForInvoice,
-  deleteInvoice,
-  updateInvoiceStatus,
+  updateInvoicePaymentStatus,
   printInvoice,
   downloadInvoice,
 } from "../services/invoicesService";
@@ -26,18 +29,24 @@ export function Invoices() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
-  const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [lineItems] = useState<LineItem[]>([]);
   const [isEditStatusDialogOpen, setIsEditStatusDialogOpen] = useState(false);
   const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
   const [newPaymentStatus, setNewPaymentStatus] = useState("");
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [invoices, setInvoices] = useState<Invoice[]>(mockInvoices);
+  useEffect(() => {
+    fetchInvoices()
+      .then(setInvoices)
+      .catch(() => toast.error("Failed to load invoices"))
+      .finally(() => setIsLoading(false));
+  }, []);
+
   const filteredInvoices = filterInvoices(invoices, searchTerm, statusFilter);
 
   const handleViewInvoice = (invoice: Invoice) => {
     setSelectedInvoice(invoice);
-    const items = getLineItemsForInvoice(invoice.invoice_number);
-    setLineItems(items);
     setIsDialogOpen(true);
   };
 
@@ -58,11 +67,11 @@ export function Invoices() {
 
   const confirmDeleteInvoice = async () => {
     if (invoiceToDelete) {
-      await deleteInvoice(invoiceToDelete.invoice_number);
-      // Refresh invoices to reflect deletion
-      setInvoices([...mockInvoices]);
+      setInvoices((prev) =>
+        prev.filter((inv) => inv.id !== invoiceToDelete.id),
+      );
       toast.success(
-        `Invoice ${invoiceToDelete.invoice_number} deleted successfully`
+        `Invoice ${invoiceToDelete.invoice_number} deleted successfully`,
       );
       setIsDeleteDialogOpen(false);
       setInvoiceToDelete(null);
@@ -77,14 +86,27 @@ export function Invoices() {
 
   const confirmEditStatus = async () => {
     if (invoiceToEdit) {
-      await updateInvoiceStatus(invoiceToEdit.invoice_number, newPaymentStatus);
-      // Refresh invoices to show updated status
-      setInvoices([...mockInvoices]);
-      toast.success(
-        `Invoice ${invoiceToEdit.invoice_number} status updated to ${newPaymentStatus}`
-      );
-      setIsEditStatusDialogOpen(false);
-      setInvoiceToEdit(null);
+      try {
+        await updateInvoicePaymentStatus(invoiceToEdit.id, newPaymentStatus);
+        setInvoices((prev) =>
+          prev.map((inv) =>
+            inv.id === invoiceToEdit.id
+              ? { ...inv, payment_status: newPaymentStatus }
+              : inv,
+          ),
+        );
+        toast.success(
+          `Invoice ${invoiceToEdit.invoice_number} status updated to ${newPaymentStatus}`,
+        );
+        setIsEditStatusDialogOpen(false);
+        setInvoiceToEdit(null);
+      } catch (err) {
+        toast.error(
+          err instanceof Error
+            ? err.message
+            : "Failed to update invoice status",
+        );
+      }
     }
   };
 
@@ -103,13 +125,19 @@ export function Invoices() {
             onStatusChange={setStatusFilter}
           />
 
-          <InvoicesTable
-            invoices={filteredInvoices}
-            onViewInvoice={handleViewInvoice}
-            onEditStatus={handleEditStatus}
-            onDeleteInvoice={handleDeleteInvoice}
-            getStatusBadgeClass={getStatusBadgeClass}
-          />
+          {isLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Loading invoices...
+            </p>
+          ) : (
+            <InvoicesTable
+              invoices={filteredInvoices}
+              onViewInvoice={handleViewInvoice}
+              onEditStatus={handleEditStatus}
+              onDeleteInvoice={handleDeleteInvoice}
+              getStatusBadgeClass={getStatusBadgeClass}
+            />
+          )}
 
           <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
             <p>

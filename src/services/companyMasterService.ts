@@ -11,6 +11,8 @@ export interface Company {
   billing_reference_type: string;
   billing_reference_number: string;
   billing_address: string;
+  charge_h2_pop_fee: boolean;
+  h2_pop_fee_rate: number;
   active: boolean;
   created_by: number;
 }
@@ -24,6 +26,8 @@ type ApiCompany = {
   billing_ref: string | null;
   billing_ref_no: string | null;
   billing_address: string;
+  charge_h2_pop_fee?: boolean;
+  h2_pop_fee_rate?: string | number | null;
   active: boolean;
   created_by_id: number | null;
 };
@@ -40,6 +44,13 @@ const mapApiCompany = (company: ApiCompany): Company => ({
   billing_reference_type: company.billing_ref ?? "",
   billing_reference_number: company.billing_ref_no ?? "",
   billing_address: company.billing_address,
+  charge_h2_pop_fee: company.charge_h2_pop_fee ?? false,
+  h2_pop_fee_rate:
+    typeof company.h2_pop_fee_rate === "number"
+      ? company.h2_pop_fee_rate
+      : company.h2_pop_fee_rate
+        ? Number(company.h2_pop_fee_rate) || 0
+        : 0,
   active: company.active,
   created_by: company.created_by_id ?? 0,
 });
@@ -104,6 +115,8 @@ export const companyMasterService = {
         billing_ref: company.billing_reference_type,
         billing_ref_no: company.billing_reference_number,
         billing_address: company.billing_address,
+        charge_h2_pop_fee: company.charge_h2_pop_fee,
+        h2_pop_fee_rate: company.h2_pop_fee_rate,
         active: company.active,
       }),
     });
@@ -137,6 +150,8 @@ export const companyMasterService = {
         billing_ref: updatedCompany.billing_reference_type,
         billing_ref_no: updatedCompany.billing_reference_number,
         billing_address: updatedCompany.billing_address,
+        charge_h2_pop_fee: updatedCompany.charge_h2_pop_fee,
+        h2_pop_fee_rate: updatedCompany.h2_pop_fee_rate,
         active: updatedCompany.active,
       }),
     });

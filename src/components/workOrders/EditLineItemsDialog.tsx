@@ -34,6 +34,8 @@ interface EditLineItemsDialogProps {
   onOpenChange: (open: boolean) => void;
   order: WorkOrderWithId | null;
   lineItems: LineItem[];
+  miles: number;
+  ratePerMile: number;
   mileageFee: number;
   miscellaneousCharges: number;
   hourlyFee: number;
@@ -42,7 +44,8 @@ interface EditLineItemsDialogProps {
     field: keyof LineItem,
     value: string | number | boolean,
   ) => void;
-  onMileageFeeChange: (value: number) => void;
+  onMilesChange: (value: number) => void;
+  onRatePerMileChange: (value: number) => void;
   onMiscellaneousChargesChange: (value: number) => void;
   onHourlyFeeChange: (value: number) => void;
   onSave: () => void;
@@ -53,11 +56,14 @@ export function EditLineItemsDialog({
   onOpenChange,
   order,
   lineItems,
+  miles,
+  ratePerMile,
   mileageFee,
   miscellaneousCharges,
   hourlyFee,
   onLineItemChange,
-  onMileageFeeChange,
+  onMilesChange,
+  onRatePerMileChange,
   onMiscellaneousChargesChange,
   onHourlyFeeChange,
   onSave,
@@ -109,7 +115,7 @@ export function EditLineItemsDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[150px]">Cylinder #</TableHead>
+                    <TableHead className="w-[150px]">Area</TableHead>
                     <TableHead className="w-[120px]">Analysis #</TableHead>
                     <TableHead className="w-[200px]">Analysis Type</TableHead>
                     <TableHead className="w-[120px] text-right">
@@ -126,7 +132,7 @@ export function EditLineItemsDialog({
                       H2 Pop Fee
                     </TableHead>
                     <TableHead className="w-[120px] text-right">
-                      Spot Composite Fee
+                      Composite Fee
                     </TableHead>
                     <TableHead className="w-[120px] text-right">
                       Amount
@@ -138,7 +144,11 @@ export function EditLineItemsDialog({
                     <TableRow key={item.id}>
                       <TableCell>
                         <Input
-                          value={item.cylinder_number}
+                          value={
+                            item.area && item.area.trim() !== ""
+                              ? item.area
+                              : "—"
+                          }
                           className="h-9"
                           readOnly
                           disabled
@@ -260,6 +270,10 @@ export function EditLineItemsDialog({
                         <Input
                           type="number"
                           value={item.spot_composite_fee}
+                          disabled={
+                            (item.sample_type || "").toLowerCase() === "spot" ||
+                            item.customer_cylinder === true
+                          }
                           onChange={(e) =>
                             onLineItemChange(
                               item.id.toString(),
@@ -293,17 +307,44 @@ export function EditLineItemsDialog({
                   ${subtotal.toFixed(2)}
                 </span>
               </div>
-              <div className="flex justify-between items-center">
-                <Label className="text-muted-foreground">Mileage Fee:</Label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Label className="text-muted-foreground whitespace-nowrap">
+                  Miles:
+                </Label>
                 <Input
                   type="number"
-                  value={mileageFee}
+                  value={miles}
                   onChange={(e) =>
-                    onMileageFeeChange(parseFloat(e.target.value) || 0)
+                    onMilesChange(parseFloat(e.target.value) || 0)
                   }
-                  className="w-32 h-9 text-right"
+                  className="w-20 h-9 text-right"
+                  step="1"
+                  min="0"
+                  placeholder="0"
+                />
+                <Label className="text-muted-foreground whitespace-nowrap">
+                  Rate/Mile:
+                </Label>
+                <Input
+                  type="number"
+                  value={ratePerMile}
+                  onChange={(e) =>
+                    onRatePerMileChange(parseFloat(e.target.value) || 0)
+                  }
+                  className="w-20 h-9 text-right"
                   step="0.01"
                   min="0"
+                  placeholder="0.00"
+                />
+                <Label className="text-muted-foreground whitespace-nowrap">
+                  Mileage Fee:
+                </Label>
+                <Input
+                  type="number"
+                  value={mileageFee.toFixed(2)}
+                  readOnly
+                  disabled
+                  className="w-24 h-9 text-right bg-gray-50"
                   placeholder="0.00"
                 />
               </div>

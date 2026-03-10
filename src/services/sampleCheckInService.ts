@@ -114,6 +114,7 @@ export interface SampleCheckInPayload {
   scanned_tag_image: string | null;
   work_order_number: string;
   status: string;
+  h2_pop_fee?: number;
 }
 
 export interface UpdateWOLinePayload {

@@ -18,18 +18,26 @@ export interface WorkOrder {
   hourly_fee: number; // ✅ Added additional fees
   billing_reference_type: string; // ✅ Added billing reference
   billing_reference_number: string; // ✅ Added billing reference
+  location?: string;
+  miles?: number;
+  rate_per_mile?: number;
   created_by: number;
 }
 
 export interface OrderItem {
   id: number;
+  sample_checkin_id?: number;
   cylinder_number: string; // ✅ Changed from bottle_number
   analysis_number: string;
   analysis_type: string;
+  analysis_method?: string;
   meter_number: string;
   well_name: string;
   rushed: boolean;
   price: number; // ✅ Changed from rate/tax/total to simple price
+  applied_rate?: number;
+  sample_fee?: number;
+  h2_pop_fee?: number;
   created_by: number;
 }
 

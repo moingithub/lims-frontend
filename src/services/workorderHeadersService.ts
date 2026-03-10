@@ -3,6 +3,8 @@ import { authService } from "./authService";
 
 export interface WorkOrderHeaderPayload {
   work_order_number: string;
+  miles?: number;
+  rate_per_mile?: number;
   mileage_fee: number;
   miscellaneous_charges: number;
   hourly_fee: number;

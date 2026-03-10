@@ -70,6 +70,7 @@ export const authService = {
             access_level: permission.access_level || "Full",
             active: permission.active,
             created_by: permission.created_by_id ?? 0,
+            module_name: permission.module?.name,
           }))
         : [];
 
@@ -137,34 +138,30 @@ export const authService = {
     return permissions.some((p) => p.module_id === moduleId && p.active);
   },
 
-  // Check if current user has access to a module by name
+  // Check if current user has access to a module by stable backend name
   hasModuleAccessByName: (moduleName: string): boolean => {
     const permissions = authService.getCurrentUserPermissions();
-    // This would need to be enhanced to map module names to IDs
-    // For now, we'll use a simple mapping
+
+    // Normalize helper to match backend-style names, e.g. "cylinder_checkout"
+    const normalize = (name: string | undefined | null) =>
+      (name || "").toString().toLowerCase().replace(/-/g, "_").trim();
+
+    const target = normalize(moduleName);
+    if (!target) return false;
+
+    // Prefer matching by module_name coming from backend
+    const byName = permissions.some(
+      (p) => p.active && normalize(p.module_name) === target,
+    );
+    if (byName) return true;
+
+    // Fallback: in case some permissions don't yet include module_name,
+    // compare using known name->ID mapping where available.
     const moduleMap: { [key: string]: number } = {
-      Dashboard: 1,
-      "Cylinder Check-Out": 2,
-      "Sample Check-In": 3,
-      "Work Orders": 4,
-      "Generate Invoice": 5,
-      Invoices: 6,
-      "Analysis Pricing": 7,
-      "Cylinder Master": 8,
-      "Company Master": 9,
-      Contacts: 10,
-      "Company Areas": 11,
-      "Import Machine Report": 12,
-      "Cylinder Inventory": 13,
-      "Analysis Reports": 14,
-      "Pending Work Orders": 15,
-      Roles: 16,
-      Users: 17,
-      Modules: 18,
-      "Role Module": 19,
+      dashboard: 1,
     };
 
-    const moduleId = moduleMap[moduleName];
+    const moduleId = moduleMap[target];
     if (!moduleId) return false;
 
     return permissions.some((p) => p.module_id === moduleId && p.active);

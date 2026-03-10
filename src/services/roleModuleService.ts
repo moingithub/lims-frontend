@@ -9,6 +9,8 @@ export interface RoleModule {
   access_level: string;
   active: boolean;
   created_by: number;
+  // Optional backend module name (when included in API responses)
+  module_name?: string;
 }
 
 type ApiRoleModule = {
@@ -17,6 +19,10 @@ type ApiRoleModule = {
   module_id: number;
   active: boolean;
   created_by_id: number | null;
+  module?: {
+    id: number;
+    name: string;
+  } | null;
 };
 
 let permissionsCache: RoleModule[] = [];
@@ -29,6 +35,7 @@ const mapApiPermission = (permission: ApiRoleModule): RoleModule => ({
   active: permission.active,
   access_level: "Full",
   created_by: permission.created_by_id ?? 0,
+  module_name: permission.module?.name,
 });
 
 const buildAuthHeaders = (): HeadersInit => {

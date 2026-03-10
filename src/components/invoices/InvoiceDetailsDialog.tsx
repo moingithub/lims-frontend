@@ -62,16 +62,12 @@ export function InvoiceDetailsDialog({
               <p className="font-medium">{isoToUSDate(invoice.invoice_date)}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Work Order #</p>
-              <p className="font-medium">{invoice.work_order_id}</p>
-            </div>
-            <div>
               <p className="text-sm text-muted-foreground">Company</p>
-              <p className="font-medium">{invoice.customer}</p>
+              <p className="font-medium">{invoice.company_name}</p>
             </div>
             <div>
-              <p className="text-sm text-muted-foreground">Well/Facility Name</p>
-              <p className="font-medium">{invoice.well_name}</p>
+              <p className="text-sm text-muted-foreground">Amount</p>
+              <p className="font-medium">${invoice.amount}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Payment Status</p>
@@ -127,26 +123,9 @@ export function InvoiceDetailsDialog({
 
           {/* Financial Summary */}
           <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>{invoice.total_amount}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Mileage Fee</span>
-              <span>{invoice.mileage_fee}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Miscellaneous Fee</span>
-              <span>{invoice.miscellaneous_fee}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Hourly Fee</span>
-              <span>{invoice.hourly_fee}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between">
-              <span>Grand Total</span>
-              <span>{invoice.grand_total}</span>
+            <div className="flex justify-between font-medium">
+              <span>Amount</span>
+              <span>${invoice.amount}</span>
             </div>
           </div>
 

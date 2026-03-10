@@ -63,10 +63,15 @@ export function WorkOrdersTable({
           </TableHeader>
           <TableBody>
             {orders.map((order) => {
-              const linesTotal = order.items.reduce(
-                (sum, item) => sum + item.price,
-                0,
-              );
+              const linesTotal = order.items.reduce((sum, item) => {
+                const fieldSum =
+                  Number(item.applied_rate || 0) +
+                  Number(item.sample_fee || 0) +
+                  Number(item.h2_pop_fee || 0);
+                return (
+                  sum + (fieldSum > 0 ? fieldSum : Number(item.price || 0))
+                );
+              }, 0);
               const additionalFees =
                 Number(order.mileage_fee || 0) +
                 Number(order.miscellaneous_charges || 0) +

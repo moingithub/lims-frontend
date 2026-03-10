@@ -41,9 +41,21 @@ export function WorkOrders() {
     null,
   );
   const [lineItems, setLineItems] = useState<LineItem[]>([]);
+  const [miles, setMiles] = useState<number>(0);
+  const [ratePerMile, setRatePerMile] = useState<number>(0);
   const [mileageFee, setMileageFee] = useState<number>(0);
   const [miscellaneousCharges, setMiscellaneousCharges] = useState<number>(0);
   const [hourlyFee, setHourlyFee] = useState<number>(0);
+
+  const handleMilesChange = (value: number) => {
+    setMiles(value);
+    setMileageFee(value * ratePerMile);
+  };
+
+  const handleRatePerMileChange = (value: number) => {
+    setRatePerMile(value);
+    setMileageFee(miles * value);
+  };
 
   const [orders, setOrders] = useState<WorkOrderWithId[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -105,13 +117,34 @@ export function WorkOrders() {
     try {
       // Ensure analysis prices are loaded before opening dialog
       await analysisPricingService.fetchAnalysisPrices();
-      const details = await workOrdersService.fetchWorkOrderDetailsByNumber(
-        order.id,
-      );
+      const [details, header] = await Promise.all([
+        workOrdersService.fetchWorkOrderDetailsByNumber(order.id),
+        workorderHeadersService.getByNumber(order.id),
+      ]);
       setLineItems(details.lineItems);
-      setMileageFee(details.mileageFee);
-      setMiscellaneousCharges(details.miscCharges);
-      setHourlyFee(details.hourlyFee);
+      const loadedMiles =
+        header?.miles != null ? Number(header.miles) : details.miles;
+      const loadedRatePerMile =
+        header?.rate_per_mile != null
+          ? Number(header.rate_per_mile)
+          : details.ratePerMile;
+      setMiles(loadedMiles);
+      setRatePerMile(loadedRatePerMile);
+      setMileageFee(
+        header?.mileage_fee != null
+          ? Number(header.mileage_fee)
+          : details.mileageFee,
+      );
+      setMiscellaneousCharges(
+        header?.miscellaneous_charges != null
+          ? Number(header.miscellaneous_charges)
+          : details.miscCharges,
+      );
+      setHourlyFee(
+        header?.hourly_fee != null
+          ? Number(header.hourly_fee)
+          : details.hourlyFee,
+      );
       setIsEditDialogOpen(true);
     } catch (error) {
       const message =
@@ -155,6 +188,8 @@ export function WorkOrders() {
         company_id: selectedOrder.company_id,
         work_order_date: selectedOrder.date,
         work_order_number: selectedOrder.id,
+        miles,
+        rate_per_mile: ratePerMile,
         mileage_fee: mileageFee,
         miscellaneous_charges: miscellaneousCharges,
         hourly_fee: hourlyFee,
@@ -166,6 +201,8 @@ export function WorkOrders() {
         await workorderHeadersService.create(payload);
       } else {
         await workorderHeadersService.updateByNumber(selectedOrder.id, {
+          miles,
+          rate_per_mile: ratePerMile,
           mileage_fee: mileageFee,
           miscellaneous_charges: miscellaneousCharges,
           hourly_fee: hourlyFee,
@@ -240,6 +277,8 @@ export function WorkOrders() {
     setSelectedOrder(order);
     const mockLineItems = workOrdersService.getMockLineItemsForView(order.id);
     setLineItems(mockLineItems);
+    setMiles(0);
+    setRatePerMile(0);
     setMileageFee(0);
     setMiscellaneousCharges(0);
     setHourlyFee(0);
@@ -362,11 +401,14 @@ export function WorkOrders() {
             : null
         }
         lineItems={lineItems}
+        miles={miles}
+        ratePerMile={ratePerMile}
         mileageFee={mileageFee}
         miscellaneousCharges={miscellaneousCharges}
         hourlyFee={hourlyFee}
         onLineItemChange={handleLineItemChange}
-        onMileageFeeChange={setMileageFee}
+        onMilesChange={handleMilesChange}
+        onRatePerMileChange={handleRatePerMileChange}
         onMiscellaneousChargesChange={setMiscellaneousCharges}
         onHourlyFeeChange={setHourlyFee}
         onSave={handleSaveLineItems}

@@ -9,6 +9,8 @@ import { Button } from "../components/ui/button";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Contact, contactsService } from "../services/contactsService";
+import { companyAreaService } from "../services/companyAreaService";
+import { companyMasterService } from "../services/companyMasterService";
 import { SearchBar } from "../components/shared/SearchBar";
 import { ContactsTable } from "../components/contacts/ContactsTable";
 import { AddContactDialog } from "../components/contacts/AddContactDialog";
@@ -26,6 +28,7 @@ export function Contacts() {
   const [formData, setFormData] = useState<ContactFormData>({
     id: 0,
     company_id: 0,
+    company_area_id: null,
     name: "",
     phone: "",
     email: "",
@@ -42,7 +45,13 @@ export function Contacts() {
 
     const loadContacts = async () => {
       try {
-        const contacts = await contactsService.fetchContacts();
+        const [contacts, _areas, _companies] = await Promise.all([
+          contactsService.fetchContacts(),
+          companyAreaService.fetchCompanyAreas(),
+          companyMasterService.fetchCompanies(),
+        ]);
+        void _areas;
+        void _companies;
         if (isMounted) setContactData(contacts);
       } catch (error) {
         const message =
@@ -66,6 +75,7 @@ export function Contacts() {
     setFormData({
       id: 0,
       company_id: 0,
+      company_area_id: null,
       name: "",
       phone: "",
       email: "",
@@ -79,6 +89,7 @@ export function Contacts() {
     setFormData({
       id: contact.id,
       company_id: contact.company_id,
+      company_area_id: contact.company_area_id ?? null,
       name: contact.name,
       phone: contact.phone,
       email: contact.email,
@@ -101,6 +112,7 @@ export function Contacts() {
     try {
       const addedContact = await contactsService.addContact({
         company_id: formData.company_id,
+        company_area_id: formData.company_area_id ?? null,
         name: formData.name,
         phone: formData.phone,
         email: formData.email,
@@ -133,6 +145,7 @@ export function Contacts() {
         {
           id: selectedContact.id,
           company_id: formData.company_id,
+          company_area_id: formData.company_area_id ?? null,
           name: formData.name,
           phone: formData.phone,
           email: formData.email,

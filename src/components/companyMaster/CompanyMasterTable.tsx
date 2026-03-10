@@ -1,4 +1,11 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 import { Button } from "../ui/button";
 import { Edit, Trash2 } from "lucide-react";
 import { Company } from "../../services/companyMasterService";
@@ -9,7 +16,11 @@ interface CompanyMasterTableProps {
   onDelete: (company: Company) => void;
 }
 
-export function CompanyMasterTable({ companies, onEdit, onDelete }: CompanyMasterTableProps) {
+export function CompanyMasterTable({
+  companies,
+  onEdit,
+  onDelete,
+}: CompanyMasterTableProps) {
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
@@ -19,9 +30,7 @@ export function CompanyMasterTable({ companies, onEdit, onDelete }: CompanyMaste
             <TableHead>Company Name</TableHead>
             <TableHead>Phone#</TableHead>
             <TableHead>Email</TableHead>
-            <TableHead>Billing Ref</TableHead>
-            <TableHead>Billing Ref No</TableHead>
-            <TableHead>Billing Address</TableHead>
+            <TableHead>Charge H2 Pop Fee</TableHead>
             <TableHead>Active</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -29,7 +38,10 @@ export function CompanyMasterTable({ companies, onEdit, onDelete }: CompanyMaste
         <TableBody>
           {companies.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+              <TableCell
+                colSpan={7}
+                className="text-center text-muted-foreground py-8"
+              >
                 No companies found
               </TableCell>
             </TableRow>
@@ -40,9 +52,11 @@ export function CompanyMasterTable({ companies, onEdit, onDelete }: CompanyMaste
                 <TableCell>{company.company_name}</TableCell>
                 <TableCell>{company.phone}</TableCell>
                 <TableCell>{company.email}</TableCell>
-                <TableCell>{company.billing_reference_type}</TableCell>
-                <TableCell>{company.billing_reference_number}</TableCell>
-                <TableCell>{company.billing_address}</TableCell>
+                <TableCell>
+                  {company.charge_h2_pop_fee
+                    ? `Yes (${company.h2_pop_fee_rate})`
+                    : "No"}
+                </TableCell>
                 <TableCell>
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs ${
@@ -56,10 +70,18 @@ export function CompanyMasterTable({ companies, onEdit, onDelete }: CompanyMaste
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex gap-1 justify-end">
-                    <Button variant="ghost" size="sm" onClick={() => onEdit(company)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEdit(company)}
+                    >
                       <Edit className="w-4 h-4 text-green-600" />
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => onDelete(company)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(company)}
+                    >
                       <Trash2 className="w-4 h-4 text-red-600" />
                     </Button>
                   </div>

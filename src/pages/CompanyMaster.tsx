@@ -36,6 +36,8 @@ export function CompanyMaster() {
     billing_reference_type: "GL Code",
     billing_reference_number: "",
     billing_address: "",
+    charge_h2_pop_fee: false,
+    h2_pop_fee_rate: 0,
     active: true,
   });
 
@@ -82,6 +84,8 @@ export function CompanyMaster() {
       billing_reference_type: "GL Code",
       billing_reference_number: "",
       billing_address: "",
+      charge_h2_pop_fee: false,
+      h2_pop_fee_rate: 0,
       active: true,
     });
     setIsAddDialogOpen(true);
@@ -98,6 +102,8 @@ export function CompanyMaster() {
       billing_reference_type: company.billing_reference_type,
       billing_reference_number: company.billing_reference_number,
       billing_address: company.billing_address,
+      charge_h2_pop_fee: company.charge_h2_pop_fee,
+      h2_pop_fee_rate: company.h2_pop_fee_rate,
       active: company.active,
     });
     setIsEditDialogOpen(true);
@@ -123,6 +129,8 @@ export function CompanyMaster() {
         billing_reference_type: formData.billing_reference_type,
         billing_reference_number: formData.billing_reference_number,
         billing_address: formData.billing_address,
+        charge_h2_pop_fee: formData.charge_h2_pop_fee,
+        h2_pop_fee_rate: formData.h2_pop_fee_rate,
         active: formData.active,
       });
       const updatedCompanies = [...companies, createdCompany];
@@ -158,6 +166,8 @@ export function CompanyMaster() {
           billing_reference_type: formData.billing_reference_type,
           billing_reference_number: formData.billing_reference_number,
           billing_address: formData.billing_address,
+          charge_h2_pop_fee: formData.charge_h2_pop_fee,
+          h2_pop_fee_rate: formData.h2_pop_fee_rate,
           active: formData.active,
         },
       );

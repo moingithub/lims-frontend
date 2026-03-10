@@ -26,25 +26,86 @@ import { Invoices } from "./pages/Invoices";
 import { ImportMachineReport } from "./pages/ImportMachineReport";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
-import faviconImage from "figma:asset/da3a8019dc769c6ee77d3527d69202b460a32a75.png";
 
 function AppContent() {
-  const { isAuthenticated, logout, user } = useAuth();
-  const [activePage, setActivePage] = useState("dashboard");
+  const {
+    isAuthenticated,
+    logout,
+    user,
+    permissions,
+    hasModuleAccess,
+    hasModuleAccessByName,
+  } = useAuth();
+  const [activePage, setActivePage] = useState<string>("dashboard");
 
   useEffect(() => {
-    // Set favicon
-    const link =
-      (document.querySelector("link[rel~='icon']") as HTMLLinkElement) ||
-      document.createElement("link");
-    link.type = "image/png";
-    link.rel = "icon";
-    link.href = faviconImage;
-    document.getElementsByTagName("head")[0].appendChild(link);
-  }, []);
+    // On initial load, if authenticated, check if default page is accessible
+    if (isAuthenticated) {
+      // If dashboard is not accessible, redirect to first accessible module
+      if (!hasModuleAccessByName("dashboard")) {
+        // Find first accessible module from permissions
+        const firstModule = permissions.find((p) => p.active);
+        if (firstModule) {
+          // Map module_id to page name (keep in sync with backend IDs)
+          const moduleIdToPage: { [key: number]: string } = {
+            1: "dashboard",
+            2: "cylinder-checkout",
+            3: "sample-checkin",
+            4: "work-orders",
+            5: "sales-invoices",
+            6: "invoices",
+            7: "analysis-pricing",
+            8: "cylinder-master",
+            9: "company-master",
+            10: "contacts",
+            11: "company-area",
+            12: "import-machine-report",
+            13: "cylinder-inventory",
+            14: "analysis-reports",
+            15: "pending-orders",
+            16: "roles",
+            17: "users",
+            18: "modules",
+            19: "role-module",
+          };
+          const page = moduleIdToPage[firstModule.module_id] || "dashboard";
+          setActivePage(page);
+        }
+      }
+    }
+  }, [isAuthenticated, permissions, hasModuleAccess]);
 
   const handleLoginSuccess = () => {
-    // Just trigger a re-render, auth state is managed by context
+    // After login, redirect to first accessible module if dashboard is not accessible
+    if (!hasModuleAccessByName("dashboard")) {
+      const firstModule = permissions.find((p) => p.active);
+      if (firstModule) {
+        const moduleIdToPage: { [key: number]: string } = {
+          1: "dashboard",
+          2: "cylinder-checkout",
+          3: "sample-checkin",
+          4: "work-orders",
+          5: "sales-invoices",
+          6: "invoices",
+          7: "analysis-pricing",
+          8: "cylinder-master",
+          9: "company-master",
+          10: "contacts",
+          11: "company-area",
+          12: "import-machine-report",
+          13: "cylinder-inventory",
+          14: "analysis-reports",
+          15: "pending-orders",
+          16: "roles",
+          17: "users",
+          18: "modules",
+          19: "role-module",
+        };
+        const page = moduleIdToPage[firstModule.module_id] || "dashboard";
+        setActivePage(page);
+        return;
+      }
+    }
     setActivePage("dashboard");
   };
 
@@ -59,77 +120,77 @@ function AppContent() {
     switch (activePage) {
       case "dashboard":
         return (
-          <ProtectedRoute moduleId={1}>
+          <ProtectedRoute moduleName="dashboard">
             <Dashboard />
           </ProtectedRoute>
         );
 
       case "cylinder-checkout":
         return (
-          <ProtectedRoute moduleId={2}>
+          <ProtectedRoute moduleName="cylinder_checkout">
             <CylinderCheckOut currentUser={user} />
           </ProtectedRoute>
         );
 
       case "sample-checkin":
         return (
-          <ProtectedRoute moduleId={3}>
+          <ProtectedRoute moduleName="sample_checkin">
             <SampleCheckIn onNavigate={setActivePage} />
           </ProtectedRoute>
         );
 
       case "analysis-pricing":
         return (
-          <ProtectedRoute moduleId={7}>
+          <ProtectedRoute moduleName="analysis_pricing">
             <AnalysisPricing />
           </ProtectedRoute>
         );
 
       case "cylinder-master":
         return (
-          <ProtectedRoute moduleId={8}>
+          <ProtectedRoute moduleName="cylinder_master">
             <CylinderMaster currentUser={user} />
           </ProtectedRoute>
         );
 
       case "company-master":
         return (
-          <ProtectedRoute moduleId={9}>
+          <ProtectedRoute moduleName="company_master">
             <CompanyMaster />
           </ProtectedRoute>
         );
 
       case "contacts":
         return (
-          <ProtectedRoute moduleId={10}>
+          <ProtectedRoute moduleName="contacts">
             <Contacts />
           </ProtectedRoute>
         );
 
       case "cylinder-inventory":
         return (
-          <ProtectedRoute moduleId={13}>
+          <ProtectedRoute moduleName="cylinder_inventory">
             <CylinderInventory />
           </ProtectedRoute>
         );
 
       case "analysis-reports":
         return (
-          <ProtectedRoute moduleId={14}>
+          <ProtectedRoute moduleName="analysis_reports">
             <AnalysisReports />
           </ProtectedRoute>
         );
 
       case "pending-orders":
         return (
-          <ProtectedRoute moduleId={15}>
+          <ProtectedRoute moduleName="pending_work_orders">
             <PendingOrders />
           </ProtectedRoute>
         );
 
       case "open-checkouts":
         return (
-          <ProtectedRoute moduleId={13}>
+          <ProtectedRoute moduleName="open_checkouts">
             <Suspense fallback={<div>Loading...</div>}>
               <OpenCheckoutsLazy />
             </Suspense>
@@ -138,70 +199,70 @@ function AppContent() {
 
       case "work-orders":
         return (
-          <ProtectedRoute moduleId={4}>
+          <ProtectedRoute moduleName="work_orders">
             <WorkOrders />
           </ProtectedRoute>
         );
 
       case "sales-invoices":
         return (
-          <ProtectedRoute moduleId={5}>
+          <ProtectedRoute moduleName="generate_invoice">
             <GenerateInvoices />
           </ProtectedRoute>
         );
 
       case "invoices":
         return (
-          <ProtectedRoute moduleId={6}>
+          <ProtectedRoute moduleName="invoices">
             <Invoices />
           </ProtectedRoute>
         );
 
       case "users":
         return (
-          <ProtectedRoute moduleId={17}>
+          <ProtectedRoute moduleName="users">
             <Users />
           </ProtectedRoute>
         );
 
       case "roles":
         return (
-          <ProtectedRoute moduleId={16}>
+          <ProtectedRoute moduleName="roles">
             <Roles />
           </ProtectedRoute>
         );
 
       case "modules":
         return (
-          <ProtectedRoute moduleId={18}>
+          <ProtectedRoute moduleName="modules">
             <Modules />
           </ProtectedRoute>
         );
 
       case "role-module":
         return (
-          <ProtectedRoute moduleId={19}>
+          <ProtectedRoute moduleName="role_modules">
             <RoleModule />
           </ProtectedRoute>
         );
 
       case "company-area":
         return (
-          <ProtectedRoute moduleId={11}>
+          <ProtectedRoute moduleName="company_areas">
             <CompanyArea />
           </ProtectedRoute>
         );
 
       case "import-machine-report":
         return (
-          <ProtectedRoute moduleId={12}>
+          <ProtectedRoute moduleName="import_machine_report">
             <ImportMachineReport />
           </ProtectedRoute>
         );
 
       default:
         return (
-          <ProtectedRoute moduleId={1}>
+          <ProtectedRoute moduleName="dashboard">
             <Dashboard />
           </ProtectedRoute>
         );

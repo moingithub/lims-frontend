@@ -14,16 +14,14 @@ import { WorkOrdersTable } from "../components/generateInvoices/WorkOrdersTable"
 import { SelectedOrdersDetails } from "../components/generateInvoices/SelectedOrdersDetails";
 import { InvoiceSummary } from "../components/generateInvoices/InvoiceSummary";
 import {
-  getCustomers,
   getWorkOrders,
   getFilteredOrders,
   calculateInvoiceTotals,
-  generateInvoiceNumber,
   validateInvoiceGeneration,
   getFirstDayOfMonth,
   getCurrentDate,
   getCompanyNameById,
-  getCompanyEmailById,
+  createInvoice,
 } from "../services/generateInvoicesService";
 
 export function GenerateInvoices() {
@@ -33,6 +31,7 @@ export function GenerateInvoices() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Customers (companies) for filter dropdown
   const [customers, setCustomers] = useState([]);
@@ -113,48 +112,41 @@ export function GenerateInvoices() {
     }
   };
 
-  const handleGenerateInvoice = () => {
-    console.log("Generate Invoice clicked");
-    console.log("Selected orders:", selectedOrders);
-
+  const handleGenerateInvoice = async () => {
     // Get selected orders data
     const selectedOrdersData = filteredOrders.filter((order) =>
       selectedOrders.includes(order.id),
     );
 
-    console.log("Selected orders data:", selectedOrdersData);
-
     // Validate
     const validation = validateInvoiceGeneration(selectedOrdersData);
-    console.log("Validation result:", validation);
-
     if (!validation.valid) {
       toast.error(validation.error);
       return;
     }
 
-    // Generate invoice
-    const invoiceNumber = generateInvoiceNumber();
-    const companyId = selectedOrdersData[0].company_id;
-    const companyName = getCompanyNameById(companyId);
-    const companyEmail = getCompanyEmailById(companyId);
-
-    console.log("Invoice details:", {
-      invoiceNumber,
-      companyId,
-      companyName,
-      companyEmail,
-    });
-
-    toast.success(
-      `Invoice ${invoiceNumber} generated successfully for ${companyName} (${companyEmail}) with ${selectedOrders.length} work order(s)!`,
-    );
-
-    // Reset the form
-    setSelectedOrders([]);
-    setSelectedCompanyId(null);
-    setDateFrom("");
-    setDateTo("");
+    setIsGenerating(true);
+    try {
+      await createInvoice(selectedOrdersData);
+      const companyName = getCompanyNameById(
+        selectedOrdersData[0].company_id,
+        selectedOrdersData[0].company_name,
+      );
+      toast.success(
+        `Invoice created successfully for ${companyName} with ${selectedOrders.length} work order(s)!`,
+      );
+      // Reset form and refresh work orders
+      setSelectedOrders([]);
+      setSelectedCompanyId(null);
+      setDateFrom("");
+      setDateTo("");
+      const orders = await getWorkOrders();
+      setAllWorkOrders(orders);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create invoice");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // Get selected orders and calculate totals
@@ -216,12 +208,12 @@ export function GenerateInvoices() {
                   {/* Generate Invoice Button */}
                   <Button
                     onClick={handleGenerateInvoice}
-                    disabled={selectedOrders.length === 0}
+                    disabled={selectedOrders.length === 0 || isGenerating}
                     size="lg"
                     className="w-full md:w-auto"
                   >
                     <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    Generate Invoice
+                    {isGenerating ? "Generating..." : "Generate Invoice"}
                   </Button>
                 </>
               )}

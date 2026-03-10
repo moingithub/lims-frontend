@@ -81,8 +81,8 @@ export function LoginForm({
               <Checkbox
                 id="remember"
                 checked={formData.remember_me}
-                onCheckedChange={(checked) =>
-                  onFormChange({ ...formData, remember_me: checked as boolean })
+                onCheckedChange={(checked: boolean) =>
+                  onFormChange({ ...formData, remember_me: checked })
                 }
                 disabled={isLoading}
               />
@@ -93,14 +93,14 @@ export function LoginForm({
                 Remember me
               </label>
             </div>
-            <Button
-              variant="link"
-              className="px-0 h-auto"
-              type="button"
-              onClick={onForgotPassword}
-            >
-              Forgot password?
-            </Button>
+            {/* <Button
+               variant="link"
+               className="px-0 h-auto"
+               type="button"
+               onClick={onForgotPassword}
+             >
+               Forgot password?
+             </Button> */}
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>

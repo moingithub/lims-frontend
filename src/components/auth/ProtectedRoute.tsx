@@ -7,18 +7,21 @@ import { Button } from "../ui/button";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  moduleId?: number;
+  // Prefer moduleName (stable backend key, e.g. "cylinder_checkout").
+  // moduleId is kept only for backward compatibility.
   moduleName?: string;
+  moduleId?: number;
   requireAuth?: boolean;
 }
 
 export function ProtectedRoute({
   children,
-  moduleId,
   moduleName,
+  moduleId,
   requireAuth = true,
 }: ProtectedRouteProps) {
-  const { isAuthenticated, hasModuleAccess, hasModuleAccessByName, user } = useAuth();
+  const { isAuthenticated, hasModuleAccess, hasModuleAccessByName, user } =
+    useAuth();
 
   // Check if authentication is required
   if (requireAuth && !isAuthenticated) {
@@ -35,8 +38,8 @@ export function ProtectedRoute({
     );
   }
 
-  // Check module access if moduleId or moduleName is provided
-  if (moduleId && !hasModuleAccess(moduleId)) {
+  // Check module access, preferring moduleName when provided
+  if (moduleName && !hasModuleAccessByName(moduleName)) {
     return (
       <div className="flex items-center justify-center min-h-screen p-4">
         <Alert className="max-w-md border-destructive">
@@ -44,7 +47,8 @@ export function ProtectedRoute({
           <AlertTitle>Access Denied</AlertTitle>
           <AlertDescription className="space-y-3">
             <p>
-              You do not have permission to access this module.
+              You do not have permission to access{" "}
+              <span className="font-semibold">{moduleName}</span>.
             </p>
             <p className="text-sm text-muted-foreground">
               Role: <span className="font-semibold">{user?.role_name}</span>
@@ -55,16 +59,14 @@ export function ProtectedRoute({
     );
   }
 
-  if (moduleName && !hasModuleAccessByName(moduleName)) {
+  if (moduleId && !hasModuleAccess(moduleId)) {
     return (
       <div className="flex items-center justify-center min-h-screen p-4">
         <Alert className="max-w-md border-destructive">
           <ShieldAlert className="h-4 w-4 text-destructive" />
           <AlertTitle>Access Denied</AlertTitle>
           <AlertDescription className="space-y-3">
-            <p>
-              You do not have permission to access <span className="font-semibold">{moduleName}</span>.
-            </p>
+            <p>You do not have permission to access this module.</p>
             <p className="text-sm text-muted-foreground">
               Role: <span className="font-semibold">{user?.role_name}</span>
             </p>

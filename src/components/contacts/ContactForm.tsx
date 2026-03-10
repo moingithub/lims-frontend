@@ -8,11 +8,16 @@ import {
   SelectValue,
 } from "../ui/select";
 import { companyMasterService } from "../../services/companyMasterService";
+import {
+  companyAreaService,
+  CompanyArea,
+} from "../../services/companyAreaService";
 import { ActiveSelect } from "../shared/ActiveSelect";
 
 export interface ContactFormData {
   id: number;
   company_id: number;
+  company_area_id: number | null;
   name: string;
   phone: string;
   email: string;
@@ -27,6 +32,11 @@ interface ContactFormProps {
 export function ContactForm({ formData, onChange }: ContactFormProps) {
   // Get active companies only from companyMasterService
   const companies = companyMasterService.getActiveCompanies();
+  const allAreas: CompanyArea[] = companyAreaService.getActiveCompanyAreas();
+
+  const filteredAreas = formData.company_id
+    ? allAreas.filter((area) => area.company_id === formData.company_id)
+    : [];
 
   return (
     <div className="space-y-4 py-4">
@@ -48,6 +58,40 @@ export function ContactForm({ formData, onChange }: ContactFormProps) {
             {companies.map((company) => (
               <SelectItem key={company.id} value={company.id.toString()}>
                 {company.company_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label>Area</Label>
+        <Select
+          value={
+            formData.company_area_id != null
+              ? formData.company_area_id.toString()
+              : ""
+          }
+          onValueChange={(val: string) =>
+            onChange({
+              ...formData,
+              company_area_id: val ? parseInt(val) : null,
+            })
+          }
+          disabled={!formData.company_id}
+        >
+          <SelectTrigger>
+            <SelectValue
+              placeholder={
+                formData.company_id
+                  ? "Select area (optional)"
+                  : "Select company first"
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {filteredAreas.map((area) => (
+              <SelectItem key={area.id} value={area.id.toString()}>
+                {area.area} ({area.region})
               </SelectItem>
             ))}
           </SelectContent>

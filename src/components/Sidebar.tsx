@@ -36,11 +36,11 @@ interface MenuItem {
   label: string;
   icon: React.ReactNode;
   section?: string;
-  moduleId: number; // Module ID for permission check
+  moduleName: string; // Stable backend module name, e.g. "cylinder_checkout"
 }
 
 export function Sidebar({ activePage, onNavigate }: SidebarProps) {
-  const { hasModuleAccess } = useAuth();
+  const { hasModuleAccessByName } = useAuth();
   const [expandedSections, setExpandedSections] = useState<string[]>([
     "masters",
     "reports",
@@ -63,19 +63,19 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
       id: "dashboard",
       label: "Dashboard",
       icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />,
-      moduleId: 1,
+      moduleName: "dashboard",
     },
     {
       id: "cylinder-checkout",
       label: "Cylinder Check-Out",
       icon: <PackagePlus className="w-5 h-5 text-green-500" />,
-      moduleId: 2,
+      moduleName: "cylinder_checkout",
     },
     {
       id: "sample-checkin",
       label: "Sample Check-In",
       icon: <PackageCheck className="w-5 h-5 text-purple-500" />,
-      moduleId: 3,
+      moduleName: "sample_checkin",
     },
   ];
 
@@ -85,35 +85,36 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
       label: "Analysis Pricing",
       icon: <Database className="w-5 h-5 text-cyan-500" />,
       section: "masters",
-      moduleId: 7,
+      moduleName: "analysis_pricing",
     },
     {
       id: "cylinder-master",
       label: "Cylinder Master",
       icon: <Cylinder className="w-5 h-5 text-indigo-500" />,
       section: "masters",
-      moduleId: 8,
+      moduleName: "cylinder_master",
     },
     {
       id: "company-master",
       label: "Company Master",
       icon: <Users className="w-5 h-5 text-pink-500" />,
       section: "masters",
-      moduleId: 9,
+      moduleName: "company_master",
+    },
+
+    {
+      id: "company-area",
+      label: "Company Area",
+      icon: <MapPin className="w-5 h-5 text-rose-500" />,
+      section: "masters",
+      moduleName: "company_areas",
     },
     {
       id: "contacts",
       label: "Contacts",
       icon: <UserCircle className="w-5 h-5 text-orange-500" />,
       section: "masters",
-      moduleId: 10,
-    },
-    {
-      id: "company-area",
-      label: "Company Area",
-      icon: <MapPin className="w-5 h-5 text-rose-500" />,
-      section: "masters",
-      moduleId: 11,
+      moduleName: "contacts",
     },
   ];
 
@@ -123,7 +124,7 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
       label: "Import Machine Report",
       icon: <FileInput className="w-5 h-5 text-lime-500" />,
       section: "imports",
-      moduleId: 12,
+      moduleName: "import_machine_report",
     },
   ];
 
@@ -133,28 +134,22 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
       label: "Cylinder Inventory",
       icon: <ClipboardList className="w-5 h-5 text-teal-500" />,
       section: "reports",
-      moduleId: 13,
+      moduleName: "cylinder_inventory",
     },
     {
       id: "analysis-reports",
       label: "Analysis Reports",
       icon: <FileText className="w-5 h-5 text-amber-500" />,
       section: "reports",
-      moduleId: 14,
+      moduleName: "analysis_reports",
     },
-    {
-      id: "pending-orders",
-      label: "Pending Work Orders",
-      icon: <ClipboardList className="w-5 h-5 text-red-500" />,
-      section: "reports",
-      moduleId: 15,
-    },
+    // Pending Work Orders menu hidden
     {
       id: "open-checkouts",
       label: "Open Checkouts",
       icon: <PackageCheck className="w-5 h-5 text-blue-500" />,
       section: "reports",
-      moduleId: 13,
+      moduleName: "open_checkouts",
     },
   ];
 
@@ -164,21 +159,21 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
       label: "Work Orders",
       icon: <ShoppingCart className="w-5 h-5 text-emerald-500" />,
       section: "orders",
-      moduleId: 4,
+      moduleName: "work_orders",
     },
     {
       id: "sales-invoices",
       label: "Generate Invoice",
       icon: <FileSpreadsheet className="w-5 h-5 text-blue-500" />,
       section: "orders",
-      moduleId: 5,
+      moduleName: "generate_invoice",
     },
     {
       id: "invoices",
       label: "Invoices",
       icon: <Receipt className="w-5 h-5 text-violet-500" />,
       section: "orders",
-      moduleId: 6,
+      moduleName: "invoices",
     },
   ];
 
@@ -188,34 +183,34 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
       label: "Roles",
       icon: <Shield className="w-5 h-5 text-rose-500" />,
       section: "users",
-      moduleId: 16,
+      moduleName: "roles",
     },
     {
       id: "users",
       label: "Users",
       icon: <Users className="w-5 h-5 text-sky-500" />,
       section: "users",
-      moduleId: 17,
+      moduleName: "users",
     },
     {
       id: "modules",
       label: "Modules",
       icon: <Layout className="w-5 h-5 text-fuchsia-500" />,
       section: "users",
-      moduleId: 18,
+      moduleName: "modules",
     },
     {
       id: "role-module",
       label: "Role Module",
       icon: <Shield className="w-5 h-5 text-yellow-500" />,
       section: "users",
-      moduleId: 19,
+      moduleName: "role_modules",
     },
   ];
 
   // Filter menu items based on user permissions
   const filterByPermission = (items: MenuItem[]) => {
-    return items.filter((item) => hasModuleAccess(item.moduleId));
+    return items.filter((item) => hasModuleAccessByName(item.moduleName));
   };
 
   const menuItems = filterByPermission(allMenuItems);

@@ -253,7 +253,20 @@ export function SampleCheckIn({
 
   const handleContactSelect = (contactIdString: string) => {
     setSelectedContact(contactIdString);
-    setSelectedContactId(parseInt(contactIdString));
+    const contactId = parseInt(contactIdString);
+    setSelectedContactId(contactId);
+
+    // Auto-select Area based on the contact's company_area_id, if available
+    const contact = contacts.find((c) => c.id === contactId);
+    if (contact && contact.company_area_id != null) {
+      const linkedArea = companyAreas.find(
+        (areaItem) =>
+          areaItem.id === contact.company_area_id && areaItem.active,
+      );
+      if (linkedArea) {
+        setArea(linkedArea.area);
+      }
+    }
   };
 
   const handleAddCompanyConfirm = () => {
@@ -654,6 +667,11 @@ export function SampleCheckIn({
         lines,
       });
 
+      const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
+      const h2PopFee = selectedCompany?.charge_h2_pop_fee
+        ? selectedCompany.h2_pop_fee_rate || 0
+        : 0;
+
       const payloads = samplesForWorkOrder.map((sample) => {
         const payload = sampleCheckInService.serializeCheckInForPost(sample);
         return {
@@ -662,6 +680,7 @@ export function SampleCheckIn({
           invoice_ref_value: header.work_order_number,
           work_order_number: header.work_order_number,
           status: "Pending",
+          h2_pop_fee: h2PopFee,
         };
       });
 

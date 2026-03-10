@@ -64,6 +64,8 @@ export interface LineItem {
   cc_number: string;
   analysis_type: string;
   rushed: boolean;
+  sample_type?: string;
+  area?: string;
   well_name: string;
   meter_number: string;
   applied_rate: number;
@@ -72,6 +74,7 @@ export interface LineItem {
   h2_pop_fee: number;
   spot_composite_fee: number;
   amount: number;
+  customer_cylinder?: boolean;
 }
 
 // Import analysisPricingService for price calculations
@@ -106,6 +109,8 @@ type ApiWorkOrderLineItem = {
   cc_number?: string;
   analysis_type?: string;
   rushed?: boolean;
+  sample_type?: string;
+  area?: string;
   well_name?: string;
   meter_number?: string;
   applied_rate?: number | string | null;
@@ -114,18 +119,23 @@ type ApiWorkOrderLineItem = {
   h2_pop_fee?: number | string | null;
   spot_composite_fee?: number | string | null;
   amount?: number | string | null;
+  customer_cylinder?: boolean;
 };
 
 type ApiWorkOrderDetails = {
   work_order_number?: string;
   work_order?: {
     work_order_number?: string;
+    miles?: number | string | null;
+    rate_per_mile?: number | string | null;
     mileage_fee?: number | string | null;
     miscellaneous_charges?: number | string | null;
     misc_fee?: number | string | null;
     hourly_fee?: number | string | null;
   };
   line_items?: ApiWorkOrderLineItem[];
+  miles?: number | string | null;
+  rate_per_mile?: number | string | null;
   mileage_fee?: number | string | null;
   miscellaneous_charges?: number | string | null;
   misc_fee?: number | string | null;
@@ -184,6 +194,8 @@ const normalizeLineItem = (
     cc_number: item.cc_number ?? "",
     analysis_type: item.analysis_type ?? "",
     rushed: Boolean(item.rushed),
+    sample_type: item.sample_type,
+    area: item.area ?? "",
     well_name: item.well_name ?? "",
     meter_number: item.meter_number ?? "",
     applied_rate,
@@ -192,6 +204,7 @@ const normalizeLineItem = (
     h2_pop_fee: h2PopFee,
     spot_composite_fee: spotCompositeFee,
     amount: applied_rate + sampleFee + h2PopFee + spotCompositeFee,
+    customer_cylinder: item.customer_cylinder,
   };
 };
 
@@ -292,6 +305,8 @@ export const workOrdersService = {
   ): Promise<{
     workOrderNumber: string;
     lineItems: LineItem[];
+    miles: number;
+    ratePerMile: number;
     mileageFee: number;
     miscCharges: number;
     hourlyFee: number;
@@ -325,6 +340,10 @@ export const workOrdersService = {
       ? data.line_items.map(normalizeLineItem)
       : [];
 
+    const miles = toNumber(data.miles ?? data.work_order?.miles);
+    const ratePerMile = toNumber(
+      data.rate_per_mile ?? data.work_order?.rate_per_mile,
+    );
     const mileageFee = toNumber(
       data.mileage_fee ?? data.work_order?.mileage_fee,
     );
@@ -339,6 +358,8 @@ export const workOrdersService = {
     return {
       workOrderNumber: resolvedNumber,
       lineItems,
+      miles,
+      ratePerMile,
       mileageFee,
       miscCharges,
       hourlyFee,

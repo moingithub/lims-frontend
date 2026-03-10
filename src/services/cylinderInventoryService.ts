@@ -24,9 +24,9 @@ export interface CylinderInventoryItem {
 export type CylinderInventory = CylinderInventoryItem;
 
 const cylinderInventoryService = {
-  // New implementation: fetch inventory from /cylinder-inventory endpoint using API_BASE_URL and auth headers
+  // New implementation: fetch inventory from /cylinder_inventory endpoint using API_BASE_URL and auth headers
   getInventory: async (): Promise<CylinderInventoryItem[]> => {
-    const response = await fetch(`${API_BASE_URL}/cylinder-inventory`, {
+    const response = await fetch(`${API_BASE_URL}/cylinder_inventory`, {
       method: "GET",
       headers: buildAuthHeaders(),
     });

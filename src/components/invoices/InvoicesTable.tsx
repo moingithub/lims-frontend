@@ -34,9 +34,7 @@ export function InvoicesTable({
           <TableRow>
             <TableHead>Date</TableHead>
             <TableHead>Company</TableHead>
-            <TableHead>Work Order #</TableHead>
             <TableHead>Invoice #</TableHead>
-            <TableHead>Well/Facility Name</TableHead>
             <TableHead className="text-right">Amount</TableHead>
             <TableHead>Payment Status</TableHead>
             <TableHead className="text-right">Actions</TableHead>
@@ -46,13 +44,9 @@ export function InvoicesTable({
           {invoices.map((invoice) => (
             <TableRow key={invoice.invoice_number}>
               <TableCell>{isoToUSDate(invoice.invoice_date)}</TableCell>
-              <TableCell>{invoice.customer}</TableCell>
-              <TableCell>{invoice.work_order_id}</TableCell>
+              <TableCell>{invoice.company_name}</TableCell>
               <TableCell>{invoice.invoice_number}</TableCell>
-              <TableCell>{invoice.well_name}</TableCell>
-              <TableCell className="text-right">
-                {invoice.total_amount}
-              </TableCell>
+              <TableCell className="text-right">${invoice.amount}</TableCell>
               <TableCell>
                 <Badge
                   className={getStatusBadgeClass(invoice.payment_status)}

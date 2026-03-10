@@ -7,6 +7,8 @@ import {
 import { API_BASE_URL } from "../config/api";
 import { authService } from "./authService";
 import { companyMasterService } from "./companyMasterService";
+import { workorderHeadersService } from "./workorderHeadersService";
+import { sampleCheckInService } from "./sampleCheckInService";
 
 // Get customers from Company Master Service
 export const getCustomers = (): Customer[] => {
@@ -99,10 +101,13 @@ export const calculateInvoiceTotals = (
 ): InvoiceTotals => {
   const subtotal = selectedOrders.reduce((sum, order) => {
     // Sum of all line items
-    const linesTotal = order.items.reduce(
-      (lineSum, item) => lineSum + item.price,
-      0,
-    );
+    const linesTotal = order.items.reduce((lineSum, item) => {
+      const fieldSum =
+        Number(item.applied_rate || 0) +
+        Number(item.sample_fee || 0) +
+        Number(item.h2_pop_fee || 0);
+      return lineSum + (fieldSum > 0 ? fieldSum : Number(item.price || 0));
+    }, 0);
     return sum + linesTotal;
   }, 0);
 
@@ -182,4 +187,127 @@ export const getCompanyNameById = (
 export const getCompanyEmailById = (companyId: number): string => {
   const company = companyMasterService.getCompanyById(companyId);
   return company?.email || "";
+};
+
+// Build invoice payload from selected work orders
+const buildInvoicePayload = (selectedOrders: WorkOrder[]) => {
+  const companyId = selectedOrders[0].company_id;
+  const today = new Date().toISOString().split("T")[0];
+
+  // Service date range: min/max of order dates
+  const dates = selectedOrders.map((o) => o.date).sort();
+  const serviceStartDate = dates[0];
+  const serviceEndDate = dates[dates.length - 1];
+
+  // PO number from first order that has a PO reference
+  const poOrder = selectedOrders.find((o) => o.billing_reference_type === "PO");
+  const poNumber = poOrder?.billing_reference_number || "";
+
+  const location = selectedOrders[0].location || "";
+
+  // Miles: sum across orders
+  const miles = selectedOrders.reduce(
+    (sum, o) => sum + Number(o.miles || 0),
+    0,
+  );
+
+  // Fee totals
+  const mileageFee = selectedOrders.reduce(
+    (sum, o) => sum + Number(o.mileage_fee || 0),
+    0,
+  );
+  const ratePerMile = miles > 0 ? mileageFee / miles : 0;
+  const miscellaneousCharges = selectedOrders.reduce(
+    (sum, o) => sum + Number(o.miscellaneous_charges || 0),
+    0,
+  );
+  const hourlyFee = selectedOrders.reduce(
+    (sum, o) => sum + Number(o.hourly_fee || 0),
+    0,
+  );
+
+  // Subtotal: sum of all line item prices
+  const subtotal = selectedOrders.reduce(
+    (sum, o) =>
+      sum +
+      o.items.reduce((lineSum, item) => lineSum + Number(item.price || 0), 0),
+    0,
+  );
+  const totalAmount = subtotal + mileageFee + miscellaneousCharges + hourlyFee;
+
+  // Invoice lines from all selected order items
+  const invoiceLines = selectedOrders.flatMap((order) =>
+    order.items.map((item) => ({
+      sample_checkin_id: item.sample_checkin_id ?? item.id,
+      analysis_number: item.analysis_number,
+      description: item.analysis_type,
+      service_date: order.date,
+      analysis_method: item.analysis_method || item.analysis_type,
+      quantity: 1,
+      unit_price: Number(item.price || 0),
+      amount: Number(item.price || 0),
+    })),
+  );
+
+  return {
+    company_id: companyId,
+    invoice_date: today,
+    service_start_date: serviceStartDate,
+    service_end_date: serviceEndDate,
+    po_number: poNumber,
+    location,
+    miles,
+    rate_per_mile: ratePerMile,
+    mileage_fee: mileageFee,
+    miscellaneous_charges: miscellaneousCharges,
+    hourly_fee: hourlyFee,
+    subtotal,
+    tax_amount: 0,
+    total_amount: totalAmount,
+    invoiceLines,
+  };
+};
+
+// Create invoice via POST /invoices
+export const createInvoice = async (
+  selectedOrders: WorkOrder[],
+): Promise<any> => {
+  const authState = authService.getAuthState();
+  const token = authState?.token;
+  const payload = buildInvoicePayload(selectedOrders);
+
+  const response = await fetch(`${API_BASE_URL}/invoices`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response
+      .json()
+      .catch(() => ({ message: "Failed to create invoice" }));
+    throw new Error(errorData.message || "Failed to create invoice");
+  }
+
+  const result = await response.json();
+
+  // Mark all selected work orders as "Invoiced" in both tables
+  await Promise.all(
+    selectedOrders.flatMap((order) => [
+      workorderHeadersService.updateByNumber(order.work_order_number, {
+        status: "Invoiced",
+      }),
+      sampleCheckInService.updateStatusByWorkOrderNumber(
+        order.work_order_number,
+        {
+          status: "Invoiced",
+        },
+      ),
+    ]),
+  );
+
+  return result;
 };
