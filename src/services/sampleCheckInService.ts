@@ -52,7 +52,7 @@ export interface CheckedInSample {
   field_h2s: string;
   cost_code: string;
   remarks: string;
-  check_in_type: "Cylinder" | "Sample";
+  check_in_type: "Cylinder" | "Bottle" | "CP Cylinder";
   checkin_type?: string;
   sample_type?: string;
   pressure_unit?: string;
@@ -112,7 +112,7 @@ export interface SampleCheckInPayload {
   invoice_ref_value: string;
   remarks: string;
   scanned_tag_image: string | null;
-  work_order_number: string;
+  work_order_number?: string;
   status: string;
   h2_pop_fee?: number;
 }
@@ -402,6 +402,69 @@ export const sampleCheckInService = {
     };
   },
 
+  uploadTagImage: async (file: File): Promise<string> => {
+    if (!file.type.startsWith("image/")) {
+      throw new Error("Only image files are supported for tag upload");
+    }
+
+    let token = authService.getAuthState().token;
+
+    // Fallback to localStorage parse if auth state token is missing
+    if (!token) {
+      const stored = localStorage.getItem("natty_gas_auth");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          token = parsed?.token || parsed?.accessToken || "";
+        } catch {
+          // ignore
+        }
+      }
+    }
+
+    if (!token) {
+      throw new Error(
+        "Missing Authorization token. Please log in before uploading OCR images.",
+      );
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${API_BASE_URL}/sample_checkin/ocr`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const responseBody = await response.text();
+      throw new Error(
+        `OCR upload failed: ${response.status} ${response.statusText} - ${responseBody}`,
+      );
+    }
+
+    const result = await response.json();
+    if (!result) {
+      throw new Error(
+        `OCR upload failed: invalid response from server: ${JSON.stringify(result)}`,
+      );
+    }
+
+    const filePath =
+      result.filePath ?? result.file_path ?? result.path ?? result.url ?? "";
+
+    if (!filePath) {
+      throw new Error(
+        `OCR upload failed: invalid response from server: ${JSON.stringify(result)}`,
+      );
+    }
+
+    return filePath;
+  },
+
   calculatePrice: (
     analysisType: string,
     rushed: boolean,
@@ -678,12 +741,12 @@ export const sampleCheckInService = {
         sample.invoice_ref_value ?? sample.billing_reference_number,
       remarks: sample.remarks,
       scanned_tag_image: sample.scanned_tag_image ?? sample.tag_image ?? null,
-      work_order_number: sample.work_order_number ?? "",
+      // Do not include work_order_number; API will generate it
       status: sample.status ?? "Pending",
     };
   },
 
-  postSampleCheckIn: async (payload: SampleCheckInPayload): Promise<void> => {
+  postSampleCheckIn: async (payload: SampleCheckInPayload): Promise<any> => {
     const response = await fetch(`${API_BASE_URL}/sample_checkin`, {
       method: "POST",
       headers: buildAuthHeaders(),
@@ -698,17 +761,20 @@ export const sampleCheckInService = {
       throw new Error(message);
     }
 
+    const responseData = await response.json();
     sampleCheckInApiCacheLoaded = false;
+    return responseData;
   },
 
   postSampleCheckIns: async (
     payloads: SampleCheckInPayload[],
-  ): Promise<void> => {
-    await Promise.all(
+  ): Promise<any[]> => {
+    const createdRecords = await Promise.all(
       payloads.map((payload) =>
         sampleCheckInService.postSampleCheckIn(payload),
       ),
     );
+    return createdRecords;
   },
 
   getCheckedInSamples: (): CheckedInSample[] => {

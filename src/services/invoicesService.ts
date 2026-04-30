@@ -1,7 +1,8 @@
 import { API_BASE_URL } from "../config/api";
 import { authService } from "./authService";
+import { downloadInvoicePdf } from "../components/invoices/Invoice";
 
-export interface Invoice {
+export interface InvoiceListItem {
   id: number;
   invoice_number: string;
   invoice_date: string;
@@ -10,21 +11,50 @@ export interface Invoice {
   payment_status: string;
 }
 
-export interface LineItem {
+export interface Invoice {
   id: number;
-  item_id: string;
-  cylinder_number: string;
-  analysis_type: string;
-  well_name: string;
-  meter_number: string;
-  rate: number;
-  tax: number;
-  amount: number;
-  created_by: number;
+  company_id: number;
+  invoice_number: string;
+  invoice_date: string;
+  service_start_date: string;
+  service_end_date: string;
+  po_number: string;
+  location: string;
+  miles: string;
+  rate_per_mile: string;
+  mileage_fee: string;
+  miscellaneous_charges: string;
+  hourly_fee: string;
+  subtotal: string;
+  tax_amount: string;
+  total_amount: string;
+  status: string;
+  payment_status: string;
+  authorized_by: string | null;
+  created_at: string;
+  company: {
+    id: number;
+    name: string;
+  };
+  invoiceLines: InvoiceLine[];
+}
+
+export interface InvoiceLine {
+  id: number;
+  invoice_id: number;
+  sample_checkin_id: number;
+  analysis_number: string;
+  description: string;
+  service_date: string;
+  report_number: string | null;
+  analysis_method: string;
+  quantity: string;
+  unit_price: string;
+  amount: string;
 }
 
 // API
-export async function fetchInvoices(): Promise<Invoice[]> {
+export async function fetchInvoices(): Promise<InvoiceListItem[]> {
   const token = authService.getAuthState().token;
   const response = await fetch(`${API_BASE_URL}/invoices/list`, {
     headers: {
@@ -37,12 +67,25 @@ export async function fetchInvoices(): Promise<Invoice[]> {
   return response.json();
 }
 
+export async function fetchInvoiceById(id: number): Promise<Invoice> {
+  const token = authService.getAuthState().token;
+  const response = await fetch(`${API_BASE_URL}/invoices/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!response.ok) {
+    throw new Error("Failed to fetch invoice");
+  }
+  return response.json();
+}
+
 // Business logic
 export function filterInvoices(
-  invoices: Invoice[],
+  invoices: InvoiceListItem[],
   searchTerm: string,
   statusFilter: string,
-): Invoice[] {
+): InvoiceListItem[] {
   return invoices.filter((invoice) => {
     const matchesSearch =
       invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -93,6 +136,11 @@ export function printInvoice(invoiceId: string): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 500));
 }
 
-export function downloadInvoice(invoiceId: string): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 500));
+export async function downloadInvoice(invoice: Invoice): Promise<void> {
+  try {
+    await downloadInvoicePdf(invoice);
+  } catch (error) {
+    console.error("Failed to generate PDF:", error);
+    throw error;
+  }
 }

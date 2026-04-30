@@ -37,7 +37,7 @@ interface CylinderDetails {
   field_h2s: string;
   cost_code: string;
   remarks: string;
-  check_in_type: "Cylinder" | "Sample";
+  check_in_type: "Cylinder" | "Bottle" | "CP Cylinder";
   check_in_time: string;
   rushed: boolean;
   tag_image: string;

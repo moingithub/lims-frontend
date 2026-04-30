@@ -8,11 +8,11 @@ import {
   DialogFooter,
 } from "../ui/dialog";
 import { Trash2 } from "lucide-react";
-import { Invoice } from "../../services/invoicesService";
+import { InvoiceListItem } from "../../services/invoicesService";
 
 interface DeleteInvoiceDialogProps {
   open: boolean;
-  invoice: Invoice | null;
+  invoice: InvoiceListItem | null;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 }
@@ -29,8 +29,8 @@ export function DeleteInvoiceDialog({
         <DialogHeader>
           <DialogTitle>Confirm Delete Invoice</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete invoice {invoice?.invoice_number}? This
-            action cannot be undone.
+            Are you sure you want to delete invoice {invoice?.invoice_number}?
+            This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

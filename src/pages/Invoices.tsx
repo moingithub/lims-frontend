@@ -13,8 +13,9 @@ import { DeleteInvoiceDialog } from "../components/invoices/DeleteInvoiceDialog"
 import { EditStatusDialog } from "../components/invoices/EditStatusDialog";
 import {
   Invoice,
-  LineItem,
+  InvoiceListItem,
   fetchInvoices,
+  fetchInvoiceById,
   filterInvoices,
   getStatusBadgeClass,
   updateInvoicePaymentStatus,
@@ -28,12 +29,14 @@ export function Invoices() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
-  const [lineItems] = useState<LineItem[]>([]);
+  const [invoiceToDelete, setInvoiceToDelete] =
+    useState<InvoiceListItem | null>(null);
   const [isEditStatusDialogOpen, setIsEditStatusDialogOpen] = useState(false);
-  const [invoiceToEdit, setInvoiceToEdit] = useState<Invoice | null>(null);
+  const [invoiceToEdit, setInvoiceToEdit] = useState<InvoiceListItem | null>(
+    null,
+  );
   const [newPaymentStatus, setNewPaymentStatus] = useState("");
-  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -45,9 +48,14 @@ export function Invoices() {
 
   const filteredInvoices = filterInvoices(invoices, searchTerm, statusFilter);
 
-  const handleViewInvoice = (invoice: Invoice) => {
-    setSelectedInvoice(invoice);
-    setIsDialogOpen(true);
+  const handleViewInvoice = async (invoice: InvoiceListItem) => {
+    try {
+      const fullInvoice = await fetchInvoiceById(invoice.id);
+      setSelectedInvoice(fullInvoice);
+      setIsDialogOpen(true);
+    } catch (error) {
+      toast.error("Failed to load invoice details");
+    }
   };
 
   const handlePrintInvoice = async (invoice: Invoice) => {
@@ -55,12 +63,17 @@ export function Invoices() {
     toast.success(`Printing invoice ${invoice.invoice_number}...`);
   };
 
-  const handleDownloadInvoice = async (invoice: Invoice) => {
-    await downloadInvoice(invoice.invoice_number);
-    toast.success(`Downloading invoice ${invoice.invoice_number}...`);
+  const handleDownloadInvoice = async (invoice: InvoiceListItem) => {
+    try {
+      const fullInvoice = await fetchInvoiceById(invoice.id);
+      await downloadInvoice(fullInvoice);
+      toast.success(`Invoice ${invoice.invoice_number} downloaded as PDF`);
+    } catch (error) {
+      toast.error("Failed to download invoice as PDF");
+    }
   };
 
-  const handleDeleteInvoice = (invoice: Invoice) => {
+  const handleDeleteInvoice = (invoice: InvoiceListItem) => {
     setInvoiceToDelete(invoice);
     setIsDeleteDialogOpen(true);
   };
@@ -78,7 +91,7 @@ export function Invoices() {
     }
   };
 
-  const handleEditStatus = (invoice: Invoice) => {
+  const handleEditStatus = (invoice: InvoiceListItem) => {
     setInvoiceToEdit(invoice);
     setNewPaymentStatus(invoice.payment_status);
     setIsEditStatusDialogOpen(true);
@@ -135,6 +148,7 @@ export function Invoices() {
               onViewInvoice={handleViewInvoice}
               onEditStatus={handleEditStatus}
               onDeleteInvoice={handleDeleteInvoice}
+              onDownloadInvoice={handleDownloadInvoice}
               getStatusBadgeClass={getStatusBadgeClass}
             />
           )}
@@ -151,7 +165,6 @@ export function Invoices() {
       <InvoiceDetailsDialog
         open={isDialogOpen}
         invoice={selectedInvoice}
-        lineItems={lineItems}
         onOpenChange={setIsDialogOpen}
         onPrint={handlePrintInvoice}
         onDownload={handleDownloadInvoice}

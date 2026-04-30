@@ -16,11 +16,11 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Pencil } from "lucide-react";
-import { Invoice } from "../../services/invoicesService";
+import { InvoiceListItem } from "../../services/invoicesService";
 
 interface EditStatusDialogProps {
   open: boolean;
-  invoice: Invoice | null;
+  invoice: InvoiceListItem | null;
   newStatus: string;
   onOpenChange: (open: boolean) => void;
   onStatusChange: (status: string) => void;

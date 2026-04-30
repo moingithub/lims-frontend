@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type ChangeEvent } from "react";
 import { Button } from "../components/ui/button";
 import {
   Card,
@@ -84,6 +84,8 @@ export function SampleCheckIn({
       billing_reference_type: "NA",
       billing_reference_number: "",
       billing_address: "",
+      charge_h2_pop_fee: false,
+      h2_pop_fee_rate: 0,
       active: true,
     },
   );
@@ -92,6 +94,7 @@ export function SampleCheckIn({
   const [contactFormData, setContactFormData] = useState<ContactFormData>({
     id: 0,
     company_id: 0,
+    company_area_id: null,
     name: "",
     phone: "",
     email: "",
@@ -116,9 +119,9 @@ export function SampleCheckIn({
 
   // Form fields for scanned data
   const [analysisType, setAnalysisType] = useState(getDefaultAnalysisType());
-  const [checkInType, setCheckInType] = useState<"Cylinder" | "Bottle">(
-    "Cylinder",
-  );
+  const [checkInType, setCheckInType] = useState<
+    "Cylinder" | "Bottle" | "CP Cylinder"
+  >("Cylinder");
   const [customerCylinder, setCustomerCylinder] = useState(false);
   const [rushed, setRushed] = useState(false);
   const [invoiceRefName, setInvoiceRefName] = useState("NA");
@@ -139,15 +142,17 @@ export function SampleCheckIn({
   const [cylinderNumber, setCylinderNumber] = useState("");
   const [remarks, setRemarks] = useState("");
   const [scannedTagImage, setScannedTagImage] = useState("");
+  const [uploadedTagImagePath, setUploadedTagImagePath] = useState("");
   const [sampledByNatty, setSampledByNatty] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Checked-in cylinders and work order
   const [checkedInCylinders, setCheckedInCylinders] = useState<
-    CheckedInCylinder[]
+    CheckedInSample[]
   >([]);
   const [workOrderNumber, setWorkOrderNumber] = useState("");
   const [lastWorkOrderCylinders, setLastWorkOrderCylinders] = useState<
-    CheckedInCylinder[]
+    CheckedInSample[]
   >([]);
   const [selectedTagImage, setSelectedTagImage] = useState<string | null>(null);
 
@@ -290,6 +295,8 @@ export function SampleCheckIn({
       billing_reference_type: companyFormData.billing_reference_type,
       billing_reference_number: companyFormData.billing_reference_number,
       billing_address: companyFormData.billing_address,
+      charge_h2_pop_fee: companyFormData.charge_h2_pop_fee,
+      h2_pop_fee_rate: companyFormData.h2_pop_fee_rate,
       active: companyFormData.active,
       created_by: 1, // TODO: Replace with actual logged-in user ID
     };
@@ -312,6 +319,8 @@ export function SampleCheckIn({
           billing_reference_type: "NA",
           billing_reference_number: "",
           billing_address: "",
+          charge_h2_pop_fee: false,
+          h2_pop_fee_rate: 0,
           active: true,
         });
 
@@ -367,6 +376,7 @@ export function SampleCheckIn({
         setContactFormData({
           id: 0,
           company_id: 0,
+          company_area_id: null,
           name: "",
           phone: "",
           email: "",
@@ -418,6 +428,61 @@ export function SampleCheckIn({
     setFieldH2S("10");
     setCylinderNumber(mockTagNumber);
     setRemarks("Sample collected from field");
+  };
+
+  const handleUploadedImage = async (file: File) => {
+    if (!customerCode) {
+      toast.error("Please select a company before uploading");
+      return;
+    }
+
+    if (!selectedContactId) {
+      toast.error("Please select a contact before uploading");
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    try {
+      const savedPath = await sampleCheckInService.uploadTagImage(file);
+      setUploadedTagImagePath(savedPath);
+      setScannedTagImage(savedPath);
+      setSelectedTagImage(savedPath);
+
+      const parsedData = sampleCheckInService.parseOCRTag(savedPath);
+      setDate(parsedData.date || getCurrentDateUS());
+      setProducer(parsedData.producer || "");
+      setArea(parsedData.area || "NA");
+      setWellName(parsedData.well_name || "");
+      setMeterNumber(parsedData.meter_number || "");
+      setCylinderNumber(parsedData.analysis_number || "");
+
+      toast.success(
+        `Image uploaded and saved to path ${savedPath}. OCR data populated in form.`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload failed";
+      toast.error(message);
+    }
+  };
+
+  const handleImageInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    await handleUploadedImage(file);
+
+    // Reset input to allow re-uploading same file if needed
+    e.target.value = "";
+  };
+
+  const triggerImageUpload = () => {
+    fileInputRef.current?.click();
   };
 
   const handleAddCylinder = async () => {
@@ -551,8 +616,8 @@ export function SampleCheckIn({
       checkin_type: checkInType,
       check_in_time: new Date().toLocaleString("en-US"),
       rushed: rushed,
-      tag_image: scannedTagImage,
-      scanned_tag_image: scannedTagImage || null,
+      tag_image: uploadedTagImagePath || "",
+      scanned_tag_image: uploadedTagImagePath || null,
       billing_reference_type: companyFormData.billing_reference_type,
       billing_reference_number: companyFormData.billing_reference_number,
       invoice_ref_name: invoiceRefName,
@@ -678,13 +743,19 @@ export function SampleCheckIn({
           ...payload,
           invoice_ref_name: "WO",
           invoice_ref_value: header.work_order_number,
-          work_order_number: header.work_order_number,
+          // Do not pass work_order_number; the API should generate it
           status: "Pending",
           h2_pop_fee: h2PopFee,
         };
       });
 
-      await sampleCheckInService.postSampleCheckIns(payloads);
+      const createdCheckIns =
+        await sampleCheckInService.postSampleCheckIns(payloads);
+
+      const generatedWorkOrderNumber =
+        createdCheckIns?.[0]?.work_order_number || header.work_order_number;
+
+      setWorkOrderNumber(generatedWorkOrderNumber);
 
       const cylinderIdsToReturn = samplesForWorkOrder
         .filter(
@@ -711,8 +782,7 @@ export function SampleCheckIn({
         }
       }
 
-      // Set the work order number for display
-      setWorkOrderNumber(header.work_order_number);
+      // Set the work order number for display (API-generated value is already applied)
       setLastWorkOrderCylinders(samplesForWorkOrder);
       toast.success("Work order generated and sample check-ins submitted");
       setCheckedInCylinders([]);
@@ -777,10 +847,35 @@ export function SampleCheckIn({
 
               <Separator />
 
-              <Button onClick={handleOCRScan} className="w-full">
-                <ScanText className="w-4 h-4 mr-2" />
-                OCR Scan
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button onClick={handleOCRScan} className="flex-1">
+                  <ScanText className="w-4 h-4 mr-2" />
+                  OCR Scan
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={triggerImageUpload}
+                  className="flex-1"
+                >
+                  <FileCheck className="w-4 h-4 mr-2" />
+                  Upload Image
+                </Button>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageInputChange}
+                />
+              </div>
+
+              {uploadedTagImagePath && (
+                <div className="text-sm text-gray-500">
+                  Uploaded image path: <code>{uploadedTagImagePath}</code>
+                </div>
+              )}
 
               <Separator />
             </div>
