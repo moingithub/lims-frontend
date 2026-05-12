@@ -447,22 +447,29 @@ export function SampleCheckIn({
     }
 
     try {
-      const savedPath = await sampleCheckInService.uploadTagImage(file);
-      setUploadedTagImagePath(savedPath);
-      setScannedTagImage(savedPath);
-      setSelectedTagImage(savedPath);
+      const { filePath, ocrData } =
+        await sampleCheckInService.uploadTagImage(file);
+      setUploadedTagImagePath(filePath);
+      setScannedTagImage(filePath);
+      setSelectedTagImage(filePath);
 
-      const parsedData = sampleCheckInService.parseOCRTag(savedPath);
-      setDate(parsedData.date || getCurrentDateUS());
-      setProducer(parsedData.producer || "");
-      setArea(parsedData.area || "NA");
-      setWellName(parsedData.well_name || "");
-      setMeterNumber(parsedData.meter_number || "");
-      setCylinderNumber(parsedData.analysis_number || "");
+      // Populate form fields with OCR extracted data
+      setDate(ocrData.date || getCurrentDateUS());
+      setProducer(ocrData.producer || "");
+      setArea(ocrData.area || "NA");
+      setWellName(ocrData.well_name || "");
+      setMeterNumber(ocrData.meter_number || "");
+      setFlowRate(ocrData.flow_rate || "");
+      setPressure(ocrData.pressure || "");
+      setTemperature(ocrData.temperature || "");
+      setFieldH2S(ocrData.field_h2s || "");
+      setCylinderNumber(ocrData.cylinder_number || "");
 
-      toast.success(
-        `Image uploaded and saved to path ${savedPath}. OCR data populated in form.`,
-      );
+      // toast.success(
+      //   `Image uploaded and saved to path ${filePath}. OCR data populated in form.`,
+      // );
+
+      toast.success(`OCR data populated in form & Image saved!`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed";
       toast.error(message);
@@ -871,13 +878,13 @@ export function SampleCheckIn({
                 />
               </div>
 
-              {uploadedTagImagePath && (
+              {/* {uploadedTagImagePath && (
                 <div className="text-sm text-gray-500">
                   Uploaded image path: <code>{uploadedTagImagePath}</code>
                 </div>
               )}
 
-              <Separator />
+              <Separator /> */}
             </div>
 
             {/* Sample Tag Details Form - Always visible */}

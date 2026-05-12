@@ -402,7 +402,102 @@ export const sampleCheckInService = {
     };
   },
 
-  uploadTagImage: async (file: File): Promise<string> => {
+  /**
+   * Parse OCR text extracted from sample tag image
+   * Extracts structured data from the OCR text response
+   */
+  parseOCRText: (ocrText: string): Partial<CheckedInSample> => {
+    const extracted: Partial<CheckedInSample> = {};
+
+    // Producer: "Producer: ABC Energy" or "Producer. ABC Energy"
+    const producerMatch = ocrText.match(/Producer[:.]\s*([^\n]*)/i);
+    if (producerMatch) {
+      extracted.producer = producerMatch[1].trim();
+    }
+
+    // Sampled By: "Sampled By: John Smith"
+    const sampledByMatch = ocrText.match(/Sampled By[:\s]+([^\n]*)/i);
+    if (sampledByMatch) {
+      // Can be stored in remarks or as additional metadata
+      // extracted.sampled_by = sampledByMatch[1].trim();
+    }
+
+    // Company: "Company: Acme Corporation"
+    const companyMatch = ocrText.match(/Company[:\s]+([^\n]*)/i);
+    if (companyMatch) {
+      // Company info could be used to lookup company_id
+      // extracted.company = companyMatch[1].trim();
+    }
+
+    // Area: "Area: Area1" or "Area! Area1"
+    const areaMatch = ocrText.match(/Area[!:\s]+([^\n]*)/i);
+    if (areaMatch) {
+      extracted.area = areaMatch[1].trim();
+    }
+
+    // Well/Facility Name: "WellFaciity Name: Well 123" or "Well Facility Name: Well 123"
+    const wellMatch = ocrText.match(/Well[.\s]*Fac[^:]*Name[:\s]+([^\n]*)/i);
+    if (wellMatch) {
+      extracted.well_name = wellMatch[1].trim();
+    }
+
+    // Meter Number: "Meter # MTR 456" or "Meter #: MTR 456"
+    const meterMatch = ocrText.match(/Meter\s*#[:\s]*([^\n]*)/i);
+    if (meterMatch) {
+      extracted.meter_number = meterMatch[1].trim();
+    }
+
+    // Sample Type: "Sample Type: Spot" or "Sample Type: Composite"
+    const sampleTypeMatch = ocrText.match(/Sample Type[:\s]+([^\n]*)/i);
+    if (sampleTypeMatch) {
+      extracted.sample_type = sampleTypeMatch[1].trim();
+    }
+
+    // Flow Rate: "Flow Rate: 1500 MCFD"
+    const flowRateMatch = ocrText.match(/Flow Rate[:\s]+([^\n]*)/i);
+    if (flowRateMatch) {
+      extracted.flow_rate = flowRateMatch[1].trim();
+    }
+
+    // Pressure: "Pressure: 250 PSI"
+    const pressureMatch = ocrText.match(/Pressure[:\s]+([^\n]*)/i);
+    if (pressureMatch) {
+      extracted.pressure = pressureMatch[1].trim();
+    }
+
+    // Temperature: "Temp: 75 F" or "Temperature: 75 F"
+    const tempMatch = ocrText.match(/Temp(?:erature)?[:\s]+([^\n]*)/i);
+    if (tempMatch) {
+      extracted.temperature = tempMatch[1].trim();
+    }
+
+    // Field H2S: "Field H25: 10 PPM" or "Field H2S: 10 PPM"
+    const h2sMatch = ocrText.match(/Field H2[S5][:\s]+([^\n]*)/i);
+    if (h2sMatch) {
+      extracted.field_h2s = h2sMatch[1].trim();
+    }
+
+    // Bottle/Cylinder Number: "Botte: TAG7604" or "Bottle: TAG7604" or "Bottle #: TAG7604"
+    const bottleMatch = ocrText.match(/Bott(?:le)?[#:\s]*([^\n]*)/i);
+    if (bottleMatch) {
+      extracted.cylinder_number = bottleMatch[1].trim();
+    }
+
+    // Date: "Date: 041032026"
+    const dateMatch = ocrText.match(/Date[:\s]+([^\n]*)/i);
+    if (dateMatch) {
+      extracted.date = dateMatch[1].trim();
+    }
+
+    return extracted;
+  },
+
+  uploadTagImage: async (
+    file: File,
+  ): Promise<{
+    filePath: string;
+    ocrData: Partial<CheckedInSample>;
+  }> => {
     if (!file.type.startsWith("image/")) {
       throw new Error("Only image files are supported for tag upload");
     }
@@ -462,7 +557,14 @@ export const sampleCheckInService = {
       );
     }
 
-    return filePath;
+    // Parse OCR text and extract field values
+    const ocrText = result.ocrText ?? "";
+    const ocrData = sampleCheckInService.parseOCRText(ocrText);
+
+    return {
+      filePath,
+      ocrData,
+    };
   },
 
   calculatePrice: (
