@@ -465,6 +465,16 @@ export const sampleCheckInService = {
       extracted.pressure = pressureMatch[1].trim();
     }
 
+    // Pressure Unit: "PSIA" or "PSIG"
+    const pressureUnitMatch = ocrText.match(
+      /Pressure[:\s]+[^(]*\(?([Pp][Ss][Ii][AaGg])/,
+    );
+    if (pressureUnitMatch) {
+      const unit = pressureUnitMatch[1].toUpperCase();
+      extracted.pressure_unit =
+        unit === "PSIA" || unit === "PSI-A" ? "PSIA" : "PSIG";
+    }
+
     // Temperature: "Temp: 75 F" or "Temperature: 75 F"
     const tempMatch = ocrText.match(/Temp(?:erature)?[:\s]+([^\n]*)/i);
     if (tempMatch) {
@@ -492,10 +502,69 @@ export const sampleCheckInService = {
     return extracted;
   },
 
+  mapOCRDataToFormFields: (
+    ocrApiData: Record<string, unknown>,
+  ): Partial<CheckedInSample> => {
+    const mapped: Partial<CheckedInSample> = {};
+
+    // Map fields according to API response structure
+    if (ocrApiData.Date) {
+      mapped.date = String(ocrApiData.Date);
+    }
+    if (ocrApiData.Producer) {
+      mapped.producer = String(ocrApiData.Producer);
+    }
+    if (ocrApiData.Area) {
+      mapped.area = String(ocrApiData.Area);
+    }
+    if (ocrApiData.Well_Lease) {
+      mapped.well_name = String(ocrApiData.Well_Lease);
+    }
+    if (ocrApiData.Meter_Number) {
+      mapped.meter_number = String(ocrApiData.Meter_Number);
+    }
+    if (ocrApiData.Sample_Type) {
+      const sampleType = String(ocrApiData.Sample_Type).toLowerCase();
+      // Default to 'spot' if not explicitly 'composite'
+      mapped.sample_type = sampleType === "composite" ? "composite" : "spot";
+    } else {
+      mapped.sample_type = "spot"; // Default to spot
+    }
+    if (ocrApiData.Pressure) {
+      mapped.pressure = String(ocrApiData.Pressure);
+    }
+    if (ocrApiData.Pressure_Unit) {
+      const unit = String(ocrApiData.Pressure_Unit).toUpperCase();
+      mapped.pressure_unit =
+        unit === "PSIA" || unit === "PSI-A" ? "PSIA" : "PSIG";
+    }
+    if (ocrApiData.Temperature) {
+      mapped.temperature = String(ocrApiData.Temperature);
+    }
+    if (ocrApiData.Flow_Rate) {
+      mapped.flow_rate = String(ocrApiData.Flow_Rate);
+    }
+    if (ocrApiData.Field_H2S) {
+      mapped.field_h2s = String(ocrApiData.Field_H2S);
+    }
+    if (ocrApiData.Cylinder_Number) {
+      mapped.cylinder_number = String(ocrApiData.Cylinder_Number);
+    }
+    if (ocrApiData.Remarks) {
+      mapped.remarks = String(ocrApiData.Remarks);
+    }
+    if (ocrApiData.Cost_Code) {
+      mapped.cost_code = String(ocrApiData.Cost_Code);
+    }
+
+    return mapped;
+  },
+
   uploadTagImage: async (
     file: File,
   ): Promise<{
     filePath: string;
+    filename: string;
     ocrData: Partial<CheckedInSample>;
   }> => {
     if (!file.type.startsWith("image/")) {
@@ -526,7 +595,15 @@ export const sampleCheckInService = {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch(`${API_BASE_URL}/sample_checkin/ocr`, {
+    // const response = await fetch(`${API_BASE_URL}/sample_checkin/ocr`, {
+    //   method: "POST",
+    //   headers: {
+    //     Authorization: `Bearer ${token}`,
+    //   },
+    //   body: formData,
+    // });
+
+    const response = await fetch(`${API_BASE_URL}/sample_checkin/ocr_ai`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -548,8 +625,17 @@ export const sampleCheckInService = {
       );
     }
 
+    // Handle both file path sources
     const filePath =
-      result.filePath ?? result.file_path ?? result.path ?? result.url ?? "";
+      result.originalName ??
+      result.filePath ??
+      result.file_path ??
+      result.path ??
+      result.url ??
+      "";
+
+    // Extract filename (prefer filename field, fallback to originalName)
+    const filename = result.filename ?? result.originalName ?? "";
 
     if (!filePath) {
       throw new Error(
@@ -557,12 +643,20 @@ export const sampleCheckInService = {
       );
     }
 
-    // Parse OCR text and extract field values
-    const ocrText = result.ocrText ?? "";
-    const ocrData = sampleCheckInService.parseOCRText(ocrText);
+    // Map OCR data from the API response
+    // Try new structured format first (data object), fall back to parsing ocrText
+    let ocrData: Partial<CheckedInSample>;
+    if (result.data && typeof result.data === "object") {
+      ocrData = sampleCheckInService.mapOCRDataToFormFields(result.data);
+    } else {
+      // Fallback to text parsing for backward compatibility
+      const ocrText = result.ocrText ?? "";
+      ocrData = sampleCheckInService.parseOCRText(ocrText);
+    }
 
     return {
       filePath,
+      filename,
       ocrData,
     };
   },

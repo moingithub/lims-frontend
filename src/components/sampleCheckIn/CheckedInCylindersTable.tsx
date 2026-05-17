@@ -18,12 +18,13 @@ interface CheckedInCylinder {
   rushed: boolean;
   check_in_time: string;
   tag_image: string;
+  scanned_tag_image?: string | null;
 }
 
 interface CheckedInCylindersTableProps {
   cylinders: CheckedInCylinder[];
   onRemove: (index: number) => void;
-  onViewImage: (imageUrl: string) => void;
+  onViewImage: (imageUrl: string, filename?: string) => void;
 }
 
 export function CheckedInCylindersTable({
@@ -75,7 +76,12 @@ export function CheckedInCylindersTable({
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => onViewImage(cylinder.tag_image)}
+                        onClick={() =>
+                          onViewImage(
+                            cylinder.scanned_tag_image || cylinder.tag_image,
+                            cylinder.tag_image,
+                          )
+                        }
                       >
                         <Image className="w-4 h-4 text-blue-600" />
                       </Button>

@@ -143,6 +143,7 @@ export function SampleCheckIn({
   const [remarks, setRemarks] = useState("");
   const [scannedTagImage, setScannedTagImage] = useState("");
   const [uploadedTagImagePath, setUploadedTagImagePath] = useState("");
+  const [uploadedTagImageFilename, setUploadedTagImageFilename] = useState("");
   const [sampledByNatty, setSampledByNatty] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -155,6 +156,10 @@ export function SampleCheckIn({
     CheckedInSample[]
   >([]);
   const [selectedTagImage, setSelectedTagImage] = useState<string | null>(null);
+  const [selectedTagImageFilename, setSelectedTagImageFilename] = useState<
+    string | null
+  >(null);
+  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
 
   // Data - Load from Company Master and Contacts services
   const [companies, setCompanies] = useState<Company[]>(
@@ -424,6 +429,7 @@ export function SampleCheckIn({
     setSampleType("spot");
     setFlowRate("1500");
     setPressure("250");
+    setPressureUnit("PSIG");
     setTemperature("75");
     setFieldH2S("10");
     setCylinderNumber(mockTagNumber);
@@ -446,10 +452,12 @@ export function SampleCheckIn({
       return;
     }
 
+    setIsProcessingOCR(true);
     try {
-      const { filePath, ocrData } =
+      const { filePath, filename, ocrData } =
         await sampleCheckInService.uploadTagImage(file);
       setUploadedTagImagePath(filePath);
+      setUploadedTagImageFilename(filename);
       setScannedTagImage(filePath);
       setSelectedTagImage(filePath);
 
@@ -459,11 +467,17 @@ export function SampleCheckIn({
       setArea(ocrData.area || "NA");
       setWellName(ocrData.well_name || "");
       setMeterNumber(ocrData.meter_number || "");
+      setSampleType(ocrData.sample_type || "spot");
       setFlowRate(ocrData.flow_rate || "");
       setPressure(ocrData.pressure || "");
+      setPressureUnit(
+        ocrData.pressure_unit?.toUpperCase() === "PSIA" ? "PSIA" : "PSIG",
+      );
       setTemperature(ocrData.temperature || "");
       setFieldH2S(ocrData.field_h2s || "");
       setCylinderNumber(ocrData.cylinder_number || "");
+      setRemarks(ocrData.remarks || "");
+      setCostCode(ocrData.cost_code || "");
 
       // toast.success(
       //   `Image uploaded and saved to path ${filePath}. OCR data populated in form.`,
@@ -473,6 +487,8 @@ export function SampleCheckIn({
     } catch (error) {
       const message = error instanceof Error ? error.message : "Upload failed";
       toast.error(message);
+    } finally {
+      setIsProcessingOCR(false);
     }
   };
 
@@ -623,7 +639,7 @@ export function SampleCheckIn({
       checkin_type: checkInType,
       check_in_time: new Date().toLocaleString("en-US"),
       rushed: rushed,
-      tag_image: uploadedTagImagePath || "",
+      tag_image: uploadedTagImageFilename || "",
       scanned_tag_image: uploadedTagImagePath || null,
       billing_reference_type: companyFormData.billing_reference_type,
       billing_reference_number: companyFormData.billing_reference_number,
@@ -672,10 +688,13 @@ export function SampleCheckIn({
     setCylinderNumber("");
     setRemarks("");
     setScannedTagImage("");
+    setUploadedTagImagePath("");
+    setUploadedTagImageFilename("");
   };
 
-  const handleViewTagImage = (imageUrl: string) => {
+  const handleViewTagImage = (imageUrl: string, filename?: string) => {
     setSelectedTagImage(imageUrl);
+    setSelectedTagImageFilename(filename || null);
     setIsImageDialogOpen(true);
   };
 
@@ -855,7 +874,11 @@ export function SampleCheckIn({
               <Separator />
 
               <div className="flex items-center gap-2">
-                <Button onClick={handleOCRScan} className="flex-1">
+                <Button
+                  onClick={handleOCRScan}
+                  className="flex-1"
+                  disabled={isProcessingOCR}
+                >
                   <ScanText className="w-4 h-4 mr-2" />
                   OCR Scan
                 </Button>
@@ -864,9 +887,10 @@ export function SampleCheckIn({
                   variant="outline"
                   onClick={triggerImageUpload}
                   className="flex-1"
+                  disabled={isProcessingOCR}
                 >
                   <FileCheck className="w-4 h-4 mr-2" />
-                  Upload Image
+                  {isProcessingOCR ? "Processing Image…" : "Upload Image"}
                 </Button>
 
                 <input
@@ -875,8 +899,14 @@ export function SampleCheckIn({
                   accept="image/*"
                   className="hidden"
                   onChange={handleImageInputChange}
+                  disabled={isProcessingOCR}
                 />
               </div>
+              {isProcessingOCR && (
+                <div className="text-sm text-gray-500">
+                  Processing image upload and OCR, please wait...
+                </div>
+              )}
 
               {/* {uploadedTagImagePath && (
                 <div className="text-sm text-gray-500">
@@ -969,6 +999,7 @@ export function SampleCheckIn({
         open={isImageDialogOpen}
         onOpenChange={setIsImageDialogOpen}
         imageUrl={selectedTagImage}
+        filename={selectedTagImageFilename}
       />
 
       {/* Add Company Dialog */}
