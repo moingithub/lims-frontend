@@ -10,6 +10,7 @@ import { Separator } from "../components/ui/separator";
 import { ScanText, Plus, FileCheck } from "lucide-react";
 import { toast } from "sonner";
 import { getCurrentDateUS } from "../utils/dateUtils";
+import { validateImageFileForOCR } from "../utils/imageValidation";
 import {
   CheckedInSample,
   sampleCheckInService,
@@ -447,10 +448,14 @@ export function SampleCheckIn({
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
+    const validation = await validateImageFileForOCR(file);
+    if (!validation.valid) {
+      validation.errors.forEach((error) => toast.error(error));
+      validation.warnings.forEach((warning) => toast.warning(warning));
       return;
     }
+
+    validation.warnings.forEach((warning) => toast.warning(warning));
 
     setIsProcessingOCR(true);
     try {
