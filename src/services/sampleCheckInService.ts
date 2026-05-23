@@ -937,7 +937,6 @@ export const sampleCheckInService = {
         sample.invoice_ref_value ?? sample.billing_reference_number,
       remarks: sample.remarks,
       scanned_tag_image: sample.scanned_tag_image ?? sample.tag_image ?? null,
-      // Do not include work_order_number; API will generate it
       status: sample.status ?? "Pending",
     };
   },
@@ -962,14 +961,42 @@ export const sampleCheckInService = {
     return responseData;
   },
 
+  /**
+   * Creates sample check-ins sequentially so all rows share one work order.
+   * The first POST omits work_order_number (API generates it); subsequent POSTs
+   * reuse the work_order_number from the first response.
+   */
   postSampleCheckIns: async (
     payloads: SampleCheckInPayload[],
   ): Promise<any[]> => {
-    const createdRecords = await Promise.all(
-      payloads.map((payload) =>
-        sampleCheckInService.postSampleCheckIn(payload),
-      ),
-    );
+    const createdRecords: Awaited<
+      ReturnType<typeof sampleCheckInService.postSampleCheckIn>
+    >[] = [];
+    let workOrderNumber: string | undefined;
+
+    for (const payload of payloads) {
+      // Never send a stale/local work_order_number on the first POST — only the API
+      // should assign WO-YYYY-####. Billing ref values (e.g. PO "P00001") must not
+      // be used as work_order_number.
+      const { work_order_number: _ignored, ...payloadBase } = payload;
+
+      const toPost: SampleCheckInPayload = workOrderNumber
+        ? {
+            ...payloadBase,
+            work_order_number: workOrderNumber,
+            invoice_ref_name: "WO",
+            invoice_ref_value: workOrderNumber,
+          }
+        : payloadBase;
+
+      const created = await sampleCheckInService.postSampleCheckIn(toPost);
+      createdRecords.push(created);
+
+      if (!workOrderNumber && created?.work_order_number) {
+        workOrderNumber = String(created.work_order_number).trim();
+      }
+    }
+
     return createdRecords;
   },
 

@@ -227,17 +227,6 @@ export function SampleDetailsForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Cost Code</Label>
-          <Input
-            value={costCode}
-            onChange={(e) => onCostCodeChange(e.target.value)}
-            placeholder="Cost code"
-          />
-        </div>
-
-        {/* ...existing code... */}
-
-        <div className="space-y-2">
           <Label>Billing Ref</Label>
           <Select
             value={billingReferenceType}
@@ -261,6 +250,15 @@ export function SampleDetailsForm({
             value={billingReferenceNumber}
             onChange={(e) => onBillingReferenceNumberChange(e.target.value)}
             placeholder="Enter reference value"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Cost Code</Label>
+          <Input
+            value={costCode}
+            onChange={(e) => onCostCodeChange(e.target.value)}
+            placeholder="Cost code"
           />
         </div>
       </div>

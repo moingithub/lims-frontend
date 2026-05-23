@@ -120,7 +120,7 @@ const S = StyleSheet.create({
     color: "#1a1a1a",
     marginBottom: 2,
   },
-  billToLocation: { fontSize: 8, color: "#555555" },
+  billToDetail: { fontSize: 8, color: "#555555", lineHeight: 1.45 },
 
   detailsSection: { alignItems: "flex-end" },
   detailRow: {
@@ -192,11 +192,13 @@ const S = StyleSheet.create({
   tableCellRight: { fontSize: 7.5, color: "#1a1a1a", textAlign: "right" },
 
   // Column widths (must sum to 100%)
-  colAnalysis: { width: "12%" },
-  colDescription: { width: "26%" },
-  colDate: { width: "12%" },
-  colMethod: { width: "16%" },
-  colQty: { width: "8%" },
+  colAnalysis: { width: "10%" },
+  colDescription: { width: "20%" },
+  colDate: { width: "10%" },
+  colMethod: { width: "12%" },
+  colCostCode: { width: "8%" },
+  colArea: { width: "8%" },
+  colQty: { width: "6%" },
   colUnitPrice: { width: "13%" },
   colAmount: { width: "13%" },
 
@@ -307,8 +309,17 @@ function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
           <View style={S.billToSection}>
             <Text style={S.billToLabel}>Bill To</Text>
             <Text style={S.billToCompany}>{invoice.company.name}</Text>
+            {invoice.company.billing_address && (
+              <Text style={S.billToDetail}>{invoice.company.billing_address}</Text>
+            )}
+            {invoice.company.email && (
+              <Text style={S.billToDetail}>{invoice.company.email}</Text>
+            )}
+            {invoice.company.phone && (
+              <Text style={S.billToDetail}>{invoice.company.phone}</Text>
+            )}
             {invoice.location && (
-              <Text style={S.billToLocation}>{invoice.location}</Text>
+              <Text style={S.billToDetail}>{invoice.location}</Text>
             )}
           </View>
 
@@ -336,6 +347,16 @@ function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
               <Text style={S.detailLabel}>Status</Text>
               <Text style={S.detailValue}>{invoice.payment_status}</Text>
             </View>
+            {(invoice.company.billing_ref || invoice.company.billing_ref_no) && (
+              <View style={S.detailRow}>
+                <Text style={S.detailLabel}>
+                  {invoice.company.billing_ref || "Billing Ref"}
+                </Text>
+                <Text style={S.detailValue}>
+                  {invoice.company.billing_ref_no || ""}
+                </Text>
+              </View>
+            )}
             <View style={[S.detailRow, { marginTop: 6 }]}>
               <Text style={S.detailLabel}>Authorized By</Text>
               <View style={S.authorizedLine} />
@@ -354,6 +375,8 @@ function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
             </Text>
             <Text style={[S.tableHeaderCell, S.colDate]}>Svc Date</Text>
             <Text style={[S.tableHeaderCell, S.colMethod]}>Method</Text>
+            <Text style={[S.tableHeaderCell, S.colCostCode]}>Cost Code</Text>
+            <Text style={[S.tableHeaderCell, S.colArea]}>Area</Text>
             <Text style={[S.tableHeaderCell, S.colQty, { textAlign: "right" }]}>
               Qty
             </Text>
@@ -398,6 +421,12 @@ function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
                 </Text>
                 <Text style={[S.tableCell, S.colMethod]}>
                   {line.analysis_method}
+                </Text>
+                <Text style={[S.tableCell, S.colCostCode]}>
+                  {line.sample_checkin?.cost_code || ""}
+                </Text>
+                <Text style={[S.tableCell, S.colArea]}>
+                  {line.sample_checkin?.company_area?.area || ""}
                 </Text>
                 <Text style={[S.tableCellRight, S.colQty]}>
                   {line.quantity}
@@ -562,12 +591,13 @@ export function InvoiceDetailsDialog({
         .invoice-meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-bottom:8mm; }
         .invoice-bill-to h2 { font-size:7.5pt; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888; margin:0 0 3px; }
         .invoice-bill-to .company-name { font-size:11pt; font-weight:700; margin:0 0 2px; }
+        .invoice-bill-to .bill-detail { font-size:8.5pt; color:#555; margin:0 0 1px; line-height:1.45; }
         .invoice-bill-to .location { font-size:8.5pt; color:#555; margin:0; }
+        .invoice-table { width:100%; border-collapse:collapse; font-size:7.8pt; margin-bottom:8mm; table-layout:fixed; }
         .invoice-detail-row { display:flex; justify-content:flex-end; gap:10px; margin-bottom:3px; font-size:8.5pt; }
         .invoice-detail-row .label { color:#888; min-width:90px; text-align:right; font-size:7.5pt; text-transform:uppercase; letter-spacing:0.08em; }
         .invoice-detail-row .value { font-weight:600; min-width:100px; text-align:right; }
         .invoice-services-title { font-size:7.5pt; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888; margin:0 0 4px; }
-        .invoice-table { width:100%; border-collapse:collapse; font-size:8.2pt; margin-bottom:8mm; }
         .invoice-table thead tr { background:#1a1a1a; color:#fff; }
         .invoice-table thead th { padding:5px 8px; text-align:left; font-weight:600; letter-spacing:0.06em; font-size:7.5pt; text-transform:uppercase; white-space:nowrap; }
         .invoice-table thead th.text-right, .invoice-table tbody td.text-right { text-align:right; }
@@ -642,6 +672,15 @@ export function InvoiceDetailsDialog({
                 <div className="invoice-bill-to">
                   <h2>Bill To</h2>
                   <p className="company-name">{invoice.company.name}</p>
+                  {invoice.company.billing_address && (
+                    <p className="bill-detail">{invoice.company.billing_address}</p>
+                  )}
+                  {invoice.company.email && (
+                    <p className="bill-detail">{invoice.company.email}</p>
+                  )}
+                  {invoice.company.phone && (
+                    <p className="bill-detail">{invoice.company.phone}</p>
+                  )}
                   {invoice.location && (
                     <p className="location">{invoice.location}</p>
                   )}
@@ -688,6 +727,17 @@ export function InvoiceDetailsDialog({
                       </span>
                     </span>
                   </div>
+                  {(invoice.company.billing_ref ||
+                    invoice.company.billing_ref_no) && (
+                    <div className="invoice-detail-row">
+                      <span className="label">
+                        {invoice.company.billing_ref || "Billing Ref"}
+                      </span>
+                      <span className="value">
+                        {invoice.company.billing_ref_no || ""}
+                      </span>
+                    </div>
+                  )}
                   <div
                     className="invoice-detail-row"
                     style={{ marginTop: "8px" }}
@@ -715,6 +765,8 @@ export function InvoiceDetailsDialog({
                     <th>Description</th>
                     <th>Service Date</th>
                     <th>Method</th>
+                    <th>Cost Code</th>
+                    <th>Area</th>
                     <th className="text-right">Qty</th>
                     <th className="text-right">Unit Price</th>
                     <th className="text-right">Amount</th>
@@ -729,6 +781,8 @@ export function InvoiceDetailsDialog({
                         {isoToUSDate(line.service_date)}
                       </td>
                       <td>{line.analysis_method}</td>
+                      <td>{line.sample_checkin?.cost_code || ""}</td>
+                      <td>{line.sample_checkin?.company_area?.area || ""}</td>
                       <td className="text-right">{line.quantity}</td>
                       <td className="text-right">
                         ${parseFloat(line.unit_price).toFixed(2)}

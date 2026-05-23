@@ -27,7 +27,6 @@ import {
 } from "../services/companyAreaService";
 import { cylinderMasterService } from "../services/cylinderMasterService";
 import { cylinderCheckOutService } from "../services/cylinderCheckOutService";
-import { workOrdersService } from "../services/workOrdersService";
 import { CompanyMasterFormData } from "../components/companyMaster/CompanyMasterForm";
 import { CompanyContactSelector } from "../components/sampleCheckIn/CompanyContactSelector";
 import { AnalysisOptionsForm } from "../components/sampleCheckIn/AnalysisOptionsForm";
@@ -247,6 +246,12 @@ export function SampleCheckIn({
     }
   };
 
+  const applyCompanyBillingRefs = (company: Company) => {
+    const billingRef = company.billing_reference_type?.trim() || "NA";
+    setInvoiceRefName(billingRef);
+    setInvoiceRefValue(company.billing_reference_number?.trim() || "");
+  };
+
   const handleCustomerSelect = (code: string) => {
     const company = companies.find((c) => c.company_code === code);
     if (company) {
@@ -254,6 +259,7 @@ export function SampleCheckIn({
       setCustomerName(company.company_name);
       setSelectedContact(""); // Reset contact when customer changes
       setSelectedCompanyId(company.id);
+      applyCompanyBillingRefs(company);
     }
   };
 
@@ -314,6 +320,7 @@ export function SampleCheckIn({
         setCustomerCode(companyFormData.company_code.toUpperCase());
         setCustomerName(companyFormData.company_name);
         setSelectedCompanyId(addedCompany.id);
+        applyCompanyBillingRefs(addedCompany);
 
         // Reset form data
         setCompanyFormData({
@@ -646,11 +653,11 @@ export function SampleCheckIn({
       rushed: rushed,
       tag_image: uploadedTagImageFilename || "",
       scanned_tag_image: uploadedTagImagePath || null,
-      billing_reference_type: companyFormData.billing_reference_type,
-      billing_reference_number: companyFormData.billing_reference_number,
+      billing_reference_type: invoiceRefName,
+      billing_reference_number: invoiceRefValue,
       invoice_ref_name: invoiceRefName,
       invoice_ref_value: invoiceRefValue,
-      work_order_number: workOrderNumber || invoiceRefValue || "",
+      work_order_number: "",
       status: "Pending",
     };
 
@@ -676,8 +683,15 @@ export function SampleCheckIn({
     setAnalysisType(getDefaultAnalysisType());
     setCustomerCylinder(false);
     setRushed(false);
-    setInvoiceRefName("NA");
-    setInvoiceRefValue("");
+    const selectedCompany = selectedCompanyId
+      ? companies.find((c) => c.id === selectedCompanyId)
+      : undefined;
+    if (selectedCompany) {
+      applyCompanyBillingRefs(selectedCompany);
+    } else {
+      setInvoiceRefName("NA");
+      setInvoiceRefValue("");
+    }
     setDate("");
     setProducer("");
     setCompany("");
@@ -747,44 +761,26 @@ export function SampleCheckIn({
         setCheckedInCylinders(samplesForWorkOrder);
       }
 
-      const { header, lines } = workOrdersService.createWorkOrder(
-        selectedCompanyId,
-        selectedContactId,
-        samplesForWorkOrder,
-        1, // TODO: Replace with actual logged-in user ID
-      );
-
-      console.log("Work Order Created Successfully:", {
-        workOrderNumber: header.work_order_number,
-        companyId: header.company_id,
-        contactId: header.contact_id,
-        totalLines: lines.length,
-        header,
-        lines,
-      });
-
       const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
       const h2PopFee = selectedCompany?.charge_h2_pop_fee
         ? selectedCompany.h2_pop_fee_rate || 0
         : 0;
 
-      const payloads = samplesForWorkOrder.map((sample) => {
-        const payload = sampleCheckInService.serializeCheckInForPost(sample);
-        return {
-          ...payload,
-          invoice_ref_name: "WO",
-          invoice_ref_value: header.work_order_number,
-          // Do not pass work_order_number; the API should generate it
-          status: "Pending",
-          h2_pop_fee: h2PopFee,
-        };
-      });
+      const payloads = samplesForWorkOrder.map((sample) => ({
+        ...sampleCheckInService.serializeCheckInForPost(sample),
+        status: "Pending",
+        h2_pop_fee: h2PopFee,
+      }));
 
       const createdCheckIns =
         await sampleCheckInService.postSampleCheckIns(payloads);
 
       const generatedWorkOrderNumber =
-        createdCheckIns?.[0]?.work_order_number || header.work_order_number;
+        createdCheckIns[0]?.work_order_number?.trim() || "";
+
+      if (!generatedWorkOrderNumber) {
+        throw new Error("API did not return a work order number");
+      }
 
       setWorkOrderNumber(generatedWorkOrderNumber);
 
@@ -813,8 +809,16 @@ export function SampleCheckIn({
         }
       }
 
-      // Set the work order number for display (API-generated value is already applied)
-      setLastWorkOrderCylinders(samplesForWorkOrder);
+      setLastWorkOrderCylinders(
+        samplesForWorkOrder.map((sample, index) => ({
+          ...sample,
+          work_order_number:
+            createdCheckIns[index]?.work_order_number ??
+            generatedWorkOrderNumber,
+          invoice_ref_name: "WO",
+          invoice_ref_value: generatedWorkOrderNumber,
+        })),
+      );
       toast.success("Work order generated and sample check-ins submitted");
       setCheckedInCylinders([]);
       clearForm();

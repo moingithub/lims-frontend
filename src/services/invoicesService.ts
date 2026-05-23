@@ -35,6 +35,11 @@ export interface Invoice {
   company: {
     id: number;
     name: string;
+    phone?: string;
+    email?: string;
+    billing_address?: string;
+    billing_ref?: string | null;
+    billing_ref_no?: string | null;
   };
   invoiceLines: InvoiceLine[];
 }
@@ -51,6 +56,12 @@ export interface InvoiceLine {
   quantity: string;
   unit_price: string;
   amount: string;
+  sample_checkin?: {
+    cost_code: string;
+    company_area: {
+      area: string;
+    } | null;
+  };
 }
 
 // API
