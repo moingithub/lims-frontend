@@ -60,13 +60,15 @@ export default defineConfig({
     target: "esnext",
     outDir: "build",
   },
+  // Proxy applies only to `npm run dev` — not to the production build on :8088.
+  // Production uses VITE_API_BASE_URL from .env.production (see src/config/api.ts).
   server: {
     port: 3000,
     open: true,
     proxy: {
       "/api": {
         target: "http://localhost:4000",
-        // target: "http://14.140.202.214:5000",
+        // target: "http://47.29.134.42:5000",
         changeOrigin: true,
       },
     },

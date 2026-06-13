@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { Eye, Trash2, Edit, FileText } from "lucide-react";
+import { Eye, Trash2, Edit } from "lucide-react";
 import { isoToUSDate } from "../../utils/dateUtils";
 import { InvoiceListItem } from "../../services/invoicesService";
 
@@ -17,7 +17,6 @@ interface InvoicesTableProps {
   onViewInvoice: (invoice: InvoiceListItem) => void;
   onEditStatus: (invoice: InvoiceListItem) => void;
   onDeleteInvoice: (invoice: InvoiceListItem) => void;
-  onDownloadInvoice: (invoice: InvoiceListItem) => void;
   getStatusBadgeClass: (status: string) => string;
 }
 
@@ -26,7 +25,6 @@ export function InvoicesTable({
   onViewInvoice,
   onEditStatus,
   onDeleteInvoice,
-  onDownloadInvoice,
   getStatusBadgeClass,
 }: InvoicesTableProps) {
   return (
@@ -65,13 +63,6 @@ export function InvoicesTable({
                     onClick={() => onViewInvoice(invoice)}
                   >
                     <Eye className="w-4 h-4 text-blue-600" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDownloadInvoice(invoice)}
-                  >
-                    <FileText className="w-4 h-4 text-purple-600" />
                   </Button>
                   <Button
                     variant="ghost"

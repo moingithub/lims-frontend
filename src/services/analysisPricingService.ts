@@ -61,6 +61,21 @@ const buildAuthHeaders = (): HeadersInit => {
   };
 };
 
+const parseApiError = async (
+  response: Response,
+  fallback: string,
+): Promise<string> => {
+  try {
+    const body = (await response.json()) as { error?: string; detail?: string };
+    return body.error || body.detail || fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const isValidRate = (value: number | undefined): boolean =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0;
+
 export const analysisPricingService = {
   // ========== CRUD Operations ==========
 
@@ -79,11 +94,9 @@ export const analysisPricingService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to load analysis pricing";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to load analysis pricing"),
+      );
     }
 
     const data: ApiAnalysisPrice[] = await response.json();
@@ -116,11 +129,9 @@ export const analysisPricingService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to create analysis pricing";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to create analysis pricing"),
+      );
     }
 
     const data: ApiAnalysisPrice = await response.json();
@@ -148,11 +159,9 @@ export const analysisPricingService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to update analysis pricing";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to update analysis pricing"),
+      );
     }
 
     const data: ApiAnalysisPrice = await response.json();
@@ -172,11 +181,9 @@ export const analysisPricingService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to delete analysis pricing";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to delete analysis pricing"),
+      );
     }
 
     analysisCache = analysisCache.filter((analysis) => analysis.id !== id);
@@ -208,17 +215,17 @@ export const analysisPricingService = {
     if (!analysisPrice.description || analysisPrice.description.trim() === "") {
       return { valid: false, error: "Description is required" };
     }
-    if (
-      analysisPrice.standard_rate === undefined ||
-      analysisPrice.standard_rate < 0
-    ) {
+    if (!isValidRate(analysisPrice.standard_rate)) {
       return { valid: false, error: "Valid standard rate is required" };
     }
-    if (
-      analysisPrice.rushed_rate === undefined ||
-      analysisPrice.rushed_rate < 0
-    ) {
+    if (!isValidRate(analysisPrice.rushed_rate)) {
       return { valid: false, error: "Valid rushed rate is required" };
+    }
+    if (
+      analysisPrice.sample_fee !== undefined &&
+      !isValidRate(analysisPrice.sample_fee)
+    ) {
+      return { valid: false, error: "Sample fee must be a valid number" };
     }
     return { valid: true };
   },

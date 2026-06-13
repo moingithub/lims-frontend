@@ -123,14 +123,25 @@ export function CylinderCheckOut({ currentUser }: CylinderCheckOutProps) {
     }
   }, [isAddContactOpen, selectedCompanyId]);
 
+  const selectFirstContactForCompany = (companyId: number) => {
+    const companyContacts = contacts.filter((c) => c.company_id === companyId);
+    const firstContact = companyContacts[0];
+    if (firstContact) {
+      setSelectedContact(firstContact.id.toString());
+      setSelectedContactId(firstContact.id);
+    } else {
+      setSelectedContact("");
+      setSelectedContactId(null);
+    }
+  };
+
   const handleCustomerSelect = (code: string) => {
     const company = companies.find((c) => c.company_code === code);
     if (company) {
       setCustomerCode(code);
       setCustomerName(company.company_name);
-      setSelectedContact(""); // Reset contact when customer changes
       setSelectedCompanyId(company.id);
-      setSelectedContactId(null); // Reset contact ID
+      selectFirstContactForCompany(company.id);
     }
   };
 
@@ -165,6 +176,7 @@ export function CylinderCheckOut({ currentUser }: CylinderCheckOutProps) {
       setCustomerCode(addedCompany.company_code);
       setCustomerName(addedCompany.company_name);
       setSelectedCompanyId(addedCompany.id);
+      selectFirstContactForCompany(addedCompany.id);
 
       // Reset form data
       setCompanyFormData({

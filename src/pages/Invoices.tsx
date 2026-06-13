@@ -17,6 +17,7 @@ import {
   fetchInvoices,
   fetchInvoiceById,
   filterInvoices,
+  sortInvoicesByNumber,
   getStatusBadgeClass,
   updateInvoicePaymentStatus,
   printInvoice,
@@ -63,16 +64,6 @@ export function Invoices() {
     toast.success(`Printing invoice ${invoice.invoice_number}...`);
   };
 
-  const handleDownloadInvoiceFromList = async (invoice: InvoiceListItem) => {
-    try {
-      const fullInvoice = await fetchInvoiceById(invoice.id);
-      await downloadInvoice(fullInvoice);
-      toast.success(`Invoice ${invoice.invoice_number} downloaded as PDF`);
-    } catch (error) {
-      toast.error("Failed to download invoice as PDF");
-    }
-  };
-
   const handleDownloadInvoice = async (invoice: Invoice) => {
     try {
       await downloadInvoice(invoice);
@@ -111,10 +102,12 @@ export function Invoices() {
       try {
         await updateInvoicePaymentStatus(invoiceToEdit.id, newPaymentStatus);
         setInvoices((prev) =>
-          prev.map((inv) =>
-            inv.id === invoiceToEdit.id
-              ? { ...inv, payment_status: newPaymentStatus }
-              : inv,
+          sortInvoicesByNumber(
+            prev.map((inv) =>
+              inv.id === invoiceToEdit.id
+                ? { ...inv, payment_status: newPaymentStatus }
+                : inv,
+            ),
           ),
         );
         toast.success(
@@ -157,7 +150,6 @@ export function Invoices() {
               onViewInvoice={handleViewInvoice}
               onEditStatus={handleEditStatus}
               onDeleteInvoice={handleDeleteInvoice}
-              onDownloadInvoice={handleDownloadInvoiceFromList}
               getStatusBadgeClass={getStatusBadgeClass}
             />
           )}

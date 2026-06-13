@@ -7,7 +7,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
-import { ScanText, Plus, FileCheck } from "lucide-react";
+import { Plus, FileCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getCurrentDateUS } from "../utils/dateUtils";
 import { validateImageFileForOCR } from "../utils/imageValidation";
@@ -408,42 +408,6 @@ export function SampleCheckIn({
     void createContact();
   };
 
-  const handleOCRScan = async () => {
-    if (!customerCode) {
-      toast.error("Please select a company before scanning");
-      return;
-    }
-
-    if (!selectedContactId) {
-      toast.error("Please select a contact before scanning");
-      return;
-    }
-
-    // Simulate OCR scanning of sample tag
-    const mockTagNumber = `TAG-${Math.floor(Math.random() * 10000)}`;
-    const mockTagImage = sampleCheckInService.generateMockSampleTag(
-      mockTagNumber,
-      getCurrentDateUS(),
-    );
-    setScannedTagImage(mockTagImage);
-
-    await ensureNextAnalysisSequence();
-    setDate(getCurrentDateUS());
-    setProducer("ABC Energy");
-    setCompany("Acme Corporation");
-    setCurrentCustomer("Acme Corporation");
-    setWellName("Well-123");
-    setMeterNumber("MTR-456");
-    setSampleType("spot");
-    setFlowRate("1500");
-    setPressure("250");
-    setPressureUnit("PSIG");
-    setTemperature("75");
-    setFieldH2S("10");
-    setCylinderNumber(mockTagNumber);
-    setRemarks("Sample collected from field");
-  };
-
   const handleUploadedImage = async (file: File) => {
     if (!customerCode) {
       toast.error("Please select a company before uploading");
@@ -466,12 +430,12 @@ export function SampleCheckIn({
 
     setIsProcessingOCR(true);
     try {
-      const { filePath, filename, ocrData } =
+      const { path, filename, ocrData } =
         await sampleCheckInService.uploadTagImage(file);
-      setUploadedTagImagePath(filePath);
+      setUploadedTagImagePath(path);
       setUploadedTagImageFilename(filename);
-      setScannedTagImage(filePath);
-      setSelectedTagImage(filePath);
+      setScannedTagImage(path);
+      setSelectedTagImage(path);
 
       // Populate form fields with OCR extracted data
       setDate(ocrData.date || getCurrentDateUS());
@@ -882,25 +846,29 @@ export function SampleCheckIn({
 
               <Separator />
 
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={handleOCRScan}
-                  className="flex-1"
-                  disabled={isProcessingOCR}
-                >
-                  <ScanText className="w-4 h-4 mr-2" />
-                  OCR Scan
-                </Button>
-
-                <Button
-                  variant="outline"
-                  onClick={triggerImageUpload}
-                  className="flex-1"
-                  disabled={isProcessingOCR}
-                >
-                  <FileCheck className="w-4 h-4 mr-2" />
-                  {isProcessingOCR ? "Processing Image…" : "Upload Image"}
-                </Button>
+              <div className="w-full">
+                {isProcessingOCR ? (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="flex h-10 w-full items-center justify-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 text-sm font-medium text-blue-600 pointer-events-none"
+                  >
+                    <Loader2
+                      className="h-4 w-4 shrink-0 animate-spin"
+                      color="#2563eb"
+                    />
+                    Processing Image…
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={triggerImageUpload}
+                    className="h-10 w-full bg-blue-600 text-white"
+                  >
+                    <FileCheck className="h-4 w-4 mr-2" />
+                    Upload Sample Tag Image
+                  </Button>
+                )}
 
                 <input
                   ref={fileInputRef}
@@ -911,12 +879,6 @@ export function SampleCheckIn({
                   disabled={isProcessingOCR}
                 />
               </div>
-              {isProcessingOCR && (
-                <div className="text-sm text-gray-500">
-                  Processing image upload and OCR, please wait...
-                </div>
-              )}
-
               {/* {uploadedTagImagePath && (
                 <div className="text-sm text-gray-500">
                   Uploaded image path: <code>{uploadedTagImagePath}</code>

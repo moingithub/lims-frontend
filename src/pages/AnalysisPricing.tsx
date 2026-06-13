@@ -47,7 +47,7 @@ export function AnalysisPricing() {
 
     const loadAnalysis = async () => {
       try {
-        const data = await analysisPricingService.fetchAnalysisPrices();
+        const data = await analysisPricingService.fetchAnalysisPrices(true);
         if (isMounted) setAnalysisData(data);
       } catch (error) {
         const message =

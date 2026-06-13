@@ -1,3 +1,5 @@
-// API Configuration
-// export const API_BASE_URL = "http://47.29.134.42:5000/api"; // For production
-export const API_BASE_URL = "/api"; // For development (proxy to backend server)
+// API base URL — set per environment via Vite env files:
+//   .env.development  → /api (Vite dev proxy → backend)
+//   .env.production   → full backend URL (e.g. http://host:5000/api)
+export const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL?.trim() || "/api";

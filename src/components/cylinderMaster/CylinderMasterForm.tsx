@@ -1,7 +1,11 @@
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { cylinderTypes, trackInventoryOptions, locationOptions } from "../../services/cylinderMasterService";
+import {
+  cylinderTypes,
+  trackInventoryOptions,
+  DEFAULT_CYLINDER_LOCATION,
+} from "../../services/cylinderMasterService";
 
 export interface CylinderFormData {
   id: number;
@@ -73,19 +77,14 @@ export function CylinderMasterForm({ formData, onChange }: CylinderMasterFormPro
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="location">Location *</Label>
-          <Select
-            value={formData.location}
-            onValueChange={(val) => onChange({ ...formData, location: val })}
-          >
+          <Select value={DEFAULT_CYLINDER_LOCATION} disabled>
             <SelectTrigger id="location">
-              <SelectValue placeholder="Select location" />
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {locationOptions.map((location) => (
-                <SelectItem key={location} value={location}>
-                  {location}
-                </SelectItem>
-              ))}
+              <SelectItem value={DEFAULT_CYLINDER_LOCATION}>
+                {DEFAULT_CYLINDER_LOCATION}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>

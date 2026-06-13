@@ -34,6 +34,14 @@ interface InvoiceDetailsDialogProps {
   getStatusBadgeClass: (status: string) => string;
 }
 
+function getInvoiceServiceArea(invoice: Invoice): string {
+  for (const line of invoice.invoiceLines) {
+    const area = line.sample_checkin?.company_area?.area?.trim();
+    if (area) return area;
+  }
+  return "";
+}
+
 // ---------------------------------------------------------------------------
 // @react-pdf/renderer StyleSheet
 // Sizes in pt. A4 = 595 x 842 pt. Margins = 45pt (~16mm) each side.
@@ -147,8 +155,9 @@ const S = StyleSheet.create({
   authorizedLine: {
     borderBottomWidth: 0.75,
     borderBottomColor: "#aaaaaa",
-    width: 110,
-    height: 13,
+    minWidth: 95,
+    height: 12,
+    alignSelf: "center",
   },
 
   // ── Section label ────────────────────────────────────────────────────────
@@ -193,14 +202,13 @@ const S = StyleSheet.create({
 
   // Column widths (must sum to 100%)
   colAnalysis: { width: "10%" },
-  colDescription: { width: "20%" },
+  colDescription: { width: "28%" },
   colDate: { width: "10%" },
-  colMethod: { width: "12%" },
-  colCostCode: { width: "8%" },
-  colArea: { width: "8%" },
+  colMethod: { width: "14%" },
+  colCostCode: { width: "10%" },
   colQty: { width: "6%" },
-  colUnitPrice: { width: "13%" },
-  colAmount: { width: "13%" },
+  colUnitPrice: { width: "11%" },
+  colAmount: { width: "11%" },
 
   // ── Totals ────────────────────────────────────────────────────────────────
   totalsWrapper: {
@@ -278,6 +286,7 @@ const S = StyleSheet.create({
 // ---------------------------------------------------------------------------
 function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
   const fmt = (val: string) => `$${parseFloat(val).toFixed(2)}`;
+  const serviceArea = getInvoiceServiceArea(invoice);
 
   return (
     <Document
@@ -310,7 +319,9 @@ function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
             <Text style={S.billToLabel}>Bill To</Text>
             <Text style={S.billToCompany}>{invoice.company.name}</Text>
             {invoice.company.billing_address && (
-              <Text style={S.billToDetail}>{invoice.company.billing_address}</Text>
+              <Text style={S.billToDetail}>
+                {invoice.company.billing_address}
+              </Text>
             )}
             {invoice.company.email && (
               <Text style={S.billToDetail}>{invoice.company.email}</Text>
@@ -333,31 +344,32 @@ function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
             <View style={S.detailRow}>
               <Text style={S.detailLabel}>Service Period</Text>
               <Text style={S.detailValue}>
-                {isoToUSDate(invoice.service_start_date)} –{" "}
-                {isoToUSDate(invoice.service_end_date)}
+                {invoice.service_start_date && invoice.service_end_date
+                  ? `${isoToUSDate(invoice.service_start_date)} – ${isoToUSDate(invoice.service_end_date)}`
+                  : ""}
               </Text>
             </View>
-            {invoice.po_number && (
-              <View style={S.detailRow}>
-                <Text style={S.detailLabel}>PO Number</Text>
-                <Text style={S.detailValue}>{invoice.po_number}</Text>
-              </View>
-            )}
             <View style={S.detailRow}>
-              <Text style={S.detailLabel}>Status</Text>
-              <Text style={S.detailValue}>{invoice.payment_status}</Text>
+              <Text style={S.detailLabel}>PO Number</Text>
+              <Text style={S.detailValue}>{invoice.po_number || ""}</Text>
             </View>
-            {(invoice.company.billing_ref || invoice.company.billing_ref_no) && (
-              <View style={S.detailRow}>
-                <Text style={S.detailLabel}>
-                  {invoice.company.billing_ref || "Billing Ref"}
-                </Text>
-                <Text style={S.detailValue}>
-                  {invoice.company.billing_ref_no || ""}
-                </Text>
-              </View>
-            )}
-            <View style={[S.detailRow, { marginTop: 6 }]}>
+            <View style={S.detailRow}>
+              <Text style={S.detailLabel}>Area</Text>
+              <Text style={S.detailValue}>{serviceArea}</Text>
+            </View>
+            <View style={S.detailRow}>
+              <Text style={S.detailLabel}>Payment Status</Text>
+              <Text style={S.detailValue}>{invoice.payment_status || ""}</Text>
+            </View>
+            <View style={S.detailRow}>
+              <Text style={S.detailLabel}>
+                {invoice.company.billing_ref || ""}
+              </Text>
+              <Text style={S.detailValue}>
+                {invoice.company.billing_ref_no || ""}
+              </Text>
+            </View>
+            <View style={S.detailRow}>
               <Text style={S.detailLabel}>Authorized By</Text>
               <View style={S.authorizedLine} />
             </View>
@@ -376,7 +388,6 @@ function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
             <Text style={[S.tableHeaderCell, S.colDate]}>Svc Date</Text>
             <Text style={[S.tableHeaderCell, S.colMethod]}>Method</Text>
             <Text style={[S.tableHeaderCell, S.colCostCode]}>Cost Code</Text>
-            <Text style={[S.tableHeaderCell, S.colArea]}>Area</Text>
             <Text style={[S.tableHeaderCell, S.colQty, { textAlign: "right" }]}>
               Qty
             </Text>
@@ -424,9 +435,6 @@ function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
                 </Text>
                 <Text style={[S.tableCell, S.colCostCode]}>
                   {line.sample_checkin?.cost_code || ""}
-                </Text>
-                <Text style={[S.tableCell, S.colArea]}>
-                  {line.sample_checkin?.company_area?.area || ""}
                 </Text>
                 <Text style={[S.tableCellRight, S.colQty]}>
                   {line.quantity}
@@ -527,6 +535,7 @@ export function InvoiceDetailsDialog({
   if (!invoice) return null;
 
   const printInvoice = () => window.print();
+  const serviceArea = getInvoiceServiceArea(invoice);
 
   /**
    * Uses @react-pdf/renderer to produce a proper vector PDF.
@@ -594,9 +603,10 @@ export function InvoiceDetailsDialog({
         .invoice-bill-to .bill-detail { font-size:8.5pt; color:#555; margin:0 0 1px; line-height:1.45; }
         .invoice-bill-to .location { font-size:8.5pt; color:#555; margin:0; }
         .invoice-table { width:100%; border-collapse:collapse; font-size:7.8pt; margin-bottom:8mm; table-layout:fixed; }
-        .invoice-detail-row { display:flex; justify-content:flex-end; gap:10px; margin-bottom:3px; font-size:8.5pt; }
+        .invoice-detail-row { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-bottom:3px; font-size:8.5pt; }
         .invoice-detail-row .label { color:#888; min-width:90px; text-align:right; font-size:7.5pt; text-transform:uppercase; letter-spacing:0.08em; }
         .invoice-detail-row .value { font-weight:600; min-width:100px; text-align:right; }
+        .invoice-detail-row .value.authorized-by-line { border-bottom:1px solid #aaa; min-height:14px; }
         .invoice-services-title { font-size:7.5pt; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888; margin:0 0 4px; }
         .invoice-table thead tr { background:#1a1a1a; color:#fff; }
         .invoice-table thead th { padding:5px 8px; text-align:left; font-weight:600; letter-spacing:0.06em; font-size:7.5pt; text-transform:uppercase; white-space:nowrap; }
@@ -673,7 +683,9 @@ export function InvoiceDetailsDialog({
                   <h2>Bill To</h2>
                   <p className="company-name">{invoice.company.name}</p>
                   {invoice.company.billing_address && (
-                    <p className="bill-detail">{invoice.company.billing_address}</p>
+                    <p className="bill-detail">
+                      {invoice.company.billing_address}
+                    </p>
                   )}
                   {invoice.company.email && (
                     <p className="bill-detail">{invoice.company.email}</p>
@@ -695,64 +707,53 @@ export function InvoiceDetailsDialog({
                   <div className="invoice-detail-row">
                     <span className="label">Service Period</span>
                     <span className="value">
-                      {isoToUSDate(invoice.service_start_date)} –{" "}
-                      {isoToUSDate(invoice.service_end_date)}
+                      {invoice.service_start_date && invoice.service_end_date
+                        ? `${isoToUSDate(invoice.service_start_date)} – ${isoToUSDate(invoice.service_end_date)}`
+                        : ""}
                     </span>
                   </div>
-                  {invoice.po_number && (
-                    <div className="invoice-detail-row">
-                      <span className="label">PO Number</span>
-                      <span className="value">{invoice.po_number}</span>
-                    </div>
-                  )}
-                  <div
-                    className="invoice-detail-row"
-                    style={{ marginTop: "4px" }}
-                  >
-                    <span className="label">Status</span>
+                  <div className="invoice-detail-row">
+                    <span className="label">PO Number</span>
+                    <span className="value">{invoice.po_number || ""}</span>
+                  </div>
+                  <div className="invoice-detail-row">
+                    <span className="label">Area</span>
+                    <span className="value">{serviceArea}</span>
+                  </div>
+                  <div className="invoice-detail-row">
+                    <span className="label">Payment Status</span>
                     <span className="value">
-                      <span className="no-print">
-                        <Badge
-                          className={getStatusBadgeClass(
-                            invoice.payment_status,
-                          )}
-                          variant="outline"
-                          style={{ fontSize: "7.5pt" }}
-                        >
-                          {invoice.payment_status}
-                        </Badge>
-                      </span>
-                      <span className="print-only status-badge-print">
-                        {invoice.payment_status}
-                      </span>
+                      {invoice.payment_status ? (
+                        <>
+                          <span className="no-print">
+                            <Badge
+                              className={getStatusBadgeClass(
+                                invoice.payment_status,
+                              )}
+                              variant="outline"
+                              style={{ fontSize: "7.5pt" }}
+                            >
+                              {invoice.payment_status}
+                            </Badge>
+                          </span>
+                          <span className="print-only status-badge-print">
+                            {invoice.payment_status}
+                          </span>
+                        </>
+                      ) : null}
                     </span>
                   </div>
-                  {(invoice.company.billing_ref ||
-                    invoice.company.billing_ref_no) && (
-                    <div className="invoice-detail-row">
-                      <span className="label">
-                        {invoice.company.billing_ref || "Billing Ref"}
-                      </span>
-                      <span className="value">
-                        {invoice.company.billing_ref_no || ""}
-                      </span>
-                    </div>
-                  )}
-                  <div
-                    className="invoice-detail-row"
-                    style={{ marginTop: "8px" }}
-                  >
-                    <span className="label">Authorized By</span>
-                    <span
-                      className="value"
-                      style={{
-                        borderBottom: "1px solid #aaa",
-                        minWidth: "120px",
-                        display: "inline-block",
-                      }}
-                    >
-                      &nbsp;
+                  <div className="invoice-detail-row">
+                    <span className="label">
+                      {invoice.company.billing_ref || ""}
                     </span>
+                    <span className="value">
+                      {invoice.company.billing_ref_no || ""}
+                    </span>
+                  </div>
+                  <div className="invoice-detail-row">
+                    <span className="label">Authorized By</span>
+                    <span className="value authorized-by-line" />
                   </div>
                 </div>
               </div>
@@ -766,7 +767,6 @@ export function InvoiceDetailsDialog({
                     <th>Service Date</th>
                     <th>Method</th>
                     <th>Cost Code</th>
-                    <th>Area</th>
                     <th className="text-right">Qty</th>
                     <th className="text-right">Unit Price</th>
                     <th className="text-right">Amount</th>
@@ -782,7 +782,6 @@ export function InvoiceDetailsDialog({
                       </td>
                       <td>{line.analysis_method}</td>
                       <td>{line.sample_checkin?.cost_code || ""}</td>
-                      <td>{line.sample_checkin?.company_area?.area || ""}</td>
                       <td className="text-right">{line.quantity}</td>
                       <td className="text-right">
                         ${parseFloat(line.unit_price).toFixed(2)}

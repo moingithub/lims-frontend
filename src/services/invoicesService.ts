@@ -75,7 +75,16 @@ export async function fetchInvoices(): Promise<InvoiceListItem[]> {
   if (!response.ok) {
     throw new Error("Failed to fetch invoices");
   }
-  return response.json();
+  const invoices: InvoiceListItem[] = await response.json();
+  return sortInvoicesByNumber(invoices);
+}
+
+export function sortInvoicesByNumber(
+  invoices: InvoiceListItem[],
+): InvoiceListItem[] {
+  return [...invoices].sort((a, b) =>
+    b.invoice_number.localeCompare(a.invoice_number),
+  );
 }
 
 export async function fetchInvoiceById(id: number): Promise<Invoice> {
@@ -97,7 +106,7 @@ export function filterInvoices(
   searchTerm: string,
   statusFilter: string,
 ): InvoiceListItem[] {
-  return invoices.filter((invoice) => {
+  const filtered = invoices.filter((invoice) => {
     const matchesSearch =
       invoice.invoice_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
       invoice.company_name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -108,6 +117,7 @@ export function filterInvoices(
 
     return matchesSearch && matchesStatus;
   });
+  return sortInvoicesByNumber(filtered);
 }
 
 export function getStatusBadgeClass(status: string): string {

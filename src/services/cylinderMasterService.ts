@@ -46,6 +46,7 @@ const buildAuthHeaders = (): HeadersInit => {
 export const cylinderTypes = ["Gas", "Liquid"];
 export const trackInventoryOptions = ["True", "False"];
 export const locationOptions = ["Clean Cylinder", "Checked Out", "Checked In"];
+export const DEFAULT_CYLINDER_LOCATION = "Clean Cylinder";
 
 export const cylinderMasterService = {
   // ========== CRUD Operations ==========

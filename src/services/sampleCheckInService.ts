@@ -563,7 +563,7 @@ export const sampleCheckInService = {
   uploadTagImage: async (
     file: File,
   ): Promise<{
-    filePath: string;
+    path: string;
     filename: string;
     ocrData: Partial<CheckedInSample>;
   }> => {
@@ -625,21 +625,13 @@ export const sampleCheckInService = {
       );
     }
 
-    // Handle both file path sources
-    const filePath =
-      result.originalName ??
-      result.filePath ??
-      result.file_path ??
-      result.path ??
-      result.url ??
-      "";
+    const path = result.path ?? "";
 
-    // Extract filename (prefer filename field, fallback to originalName)
     const filename = result.filename ?? result.originalName ?? "";
 
-    if (!filePath) {
+    if (!path) {
       throw new Error(
-        `OCR upload failed: invalid response from server: ${JSON.stringify(result)}`,
+        `OCR upload failed: missing path in server response: ${JSON.stringify(result)}`,
       );
     }
 
@@ -655,7 +647,7 @@ export const sampleCheckInService = {
     }
 
     return {
-      filePath,
+      path,
       filename,
       ocrData,
     };
