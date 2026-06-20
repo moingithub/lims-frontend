@@ -33,7 +33,7 @@ export function ImportRecordsTable({
         </TableHeader>
         <TableBody>
           {records.map((record) => (
-            <TableRow key={record.import_id}>
+            <TableRow key={record.id}>
               <TableCell>{record.import_id}</TableCell>
               <TableCell>{record.source_machine}</TableCell>
               <TableCell>{record.file_name}</TableCell>

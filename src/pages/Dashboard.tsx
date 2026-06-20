@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { dashboardService } from "../services/dashboardService";
+import { importMachineReportService } from "../services/importMachineReportService";
 import { StatsCards } from "../components/dashboard/StatsCards";
 import { DateRangeFilter } from "../components/dashboard/DateRangeFilter";
 import { PendingWorkOrdersCard } from "../components/dashboard/PendingWorkOrdersCard";
@@ -19,19 +20,36 @@ export function Dashboard() {
   const [dailyActivityData, setDailyActivityData] = useState(dashboardService.getDailyActivityData());
 
   useEffect(() => {
-    // Refresh all dashboard data with filters (auto-refresh on filter change)
-    const filters = {
-      dateFrom,
-      dateTo,
-      analysisType: selectedAnalysisType,
+    let isMounted = true;
+
+    const refreshDashboard = async () => {
+      try {
+        await importMachineReportService.fetchImportRecords();
+      } catch {
+        // Dashboard still renders other stats if import records fail to load
+      }
+
+      if (!isMounted) return;
+
+      const filters = {
+        dateFrom,
+        dateTo,
+        analysisType: selectedAnalysisType,
+      };
+
+      setStats(dashboardService.getStats(filters));
+      setAnalysisTypeData(dashboardService.getAnalysisTypeData(filters));
+      setMonthlyTrendData(dashboardService.getMonthlyTrendData(filters));
+      setPendingWorkOrders(dashboardService.getPendingWorkOrders(filters));
+      setTopCustomersData(dashboardService.getTopCustomersData(filters));
+      setDailyActivityData(dashboardService.getDailyActivityData(filters));
     };
-    
-    setStats(dashboardService.getStats(filters));
-    setAnalysisTypeData(dashboardService.getAnalysisTypeData(filters));
-    setMonthlyTrendData(dashboardService.getMonthlyTrendData(filters));
-    setPendingWorkOrders(dashboardService.getPendingWorkOrders(filters));
-    setTopCustomersData(dashboardService.getTopCustomersData(filters));
-    setDailyActivityData(dashboardService.getDailyActivityData(filters));
+
+    refreshDashboard();
+
+    return () => {
+      isMounted = false;
+    };
   }, [dateFrom, dateTo, selectedAnalysisType]);
 
   return (

@@ -15,6 +15,7 @@ interface ImportUploadFormProps {
   onSourceMachineChange: (value: string) => void;
   onFileChange: (file: File | null) => void;
   onUpload: () => void;
+  isUploading?: boolean;
 }
 
 export function ImportUploadForm({
@@ -23,6 +24,7 @@ export function ImportUploadForm({
   onSourceMachineChange,
   onFileChange,
   onUpload,
+  isUploading = false,
 }: ImportUploadFormProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
@@ -50,15 +52,15 @@ export function ImportUploadForm({
           <Input
             id="file-upload"
             type="file"
-            accept=".xlsx,.xls,.csv"
+            accept=".xlsx,.xls,.csv,.json,.fusion-data"
             onChange={handleFileChange}
             className="border-2 border-black cursor-pointer"
           />
         </div>
         <div>
-          <Button onClick={onUpload} className="w-full">
+          <Button onClick={onUpload} className="w-full" disabled={isUploading}>
             <Upload className="w-4 h-4 mr-2" />
-            Upload File
+            {isUploading ? "Uploading..." : "Upload File"}
           </Button>
         </div>
       </div>

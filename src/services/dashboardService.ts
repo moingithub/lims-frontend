@@ -115,7 +115,7 @@ export const dashboardService = {
         });
 
         importRecords = importRecords.filter(record => {
-          const recordDate = new Date(record.imported_at);
+          const recordDate = new Date(record.imported_date_time);
           if (fromDate && recordDate < fromDate) return false;
           if (toDate && recordDate > toDate) return false;
           return true;

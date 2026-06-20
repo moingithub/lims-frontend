@@ -1,3 +1,6 @@
+import { API_BASE_URL } from "../config/api";
+import { authService } from "./authService";
+
 export interface ImportRecord {
   id: number;
   import_id: string;
@@ -9,59 +12,50 @@ export interface ImportRecord {
   created_by: number;
 }
 
-const initialRecords: ImportRecord[] = [
-  {
-    id: 1,
-    import_id: "IMP-001",
-    source_machine: "Inficon",
-    status: "Validated",
-    file_name: "Inficon 1.2.xlsx",
-    uploaded_by: "Admin User",
-    imported_date_time: "2025-11-21T10:30:00",
-    created_by: 1,
-  },
-  {
-    id: 2,
-    import_id: "IMP-002",
-    source_machine: "GC",
-    status: "Imported",
-    file_name: "GC 1.2.xlsx",
-    uploaded_by: "Admin User",
-    imported_date_time: "2025-11-21T11:45:00",
-    created_by: 1,
-  },
-  {
-    id: 3,
-    import_id: "IMP-003",
-    source_machine: "Inficon",
-    status: "Error",
-    file_name: "Inficon 1.3.xlsx",
-    uploaded_by: "John Doe",
-    imported_date_time: "2025-11-20T14:20:00",
-    created_by: 2,
-  },
-  {
-    id: 4,
-    import_id: "IMP-004",
-    source_machine: "GC",
-    status: "Archived",
-    file_name: "GC 1.1.xlsx",
-    uploaded_by: "Jane Smith",
-    imported_date_time: "2025-11-19T09:15:00",
-    created_by: 3,
-  },
-];
+let importRecordsCache: ImportRecord[] = [];
+
+const buildAuthHeaders = (includeJson = false): HeadersInit => {
+  const token = authService.getAuthState().token;
+  return {
+    ...(includeJson ? { "Content-Type": "application/json" } : {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
+async function parseApiError(
+  response: Response,
+  fallback: string,
+): Promise<string> {
+  const body = await response.json().catch(() => ({}));
+  return body?.error || body?.message || fallback;
+}
 
 export const importMachineReportService = {
-  getImportRecords: (): ImportRecord[] => {
-    return initialRecords;
+  getImportRecords: (): ImportRecord[] => importRecordsCache,
+
+  setImportRecords: (records: ImportRecord[]): void => {
+    importRecordsCache = records;
+  },
+
+  fetchImportRecords: async (): Promise<ImportRecord[]> => {
+    const response = await fetch(`${API_BASE_URL}/import_machine_reports`, {
+      headers: buildAuthHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(await parseApiError(response, "Failed to load import records"));
+    }
+    const records: ImportRecord[] = await response.json();
+    importRecordsCache = records;
+    return records;
   },
 
   searchRecords: (records: ImportRecord[], searchTerm: string): ImportRecord[] => {
-    return records.filter(record =>
-      Object.values(record).some(value =>
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      )
+    if (!searchTerm.trim()) return records;
+    const term = searchTerm.toLowerCase();
+    return records.filter((record) =>
+      Object.values(record).some((value) =>
+        String(value).toLowerCase().includes(term),
+      ),
     );
   },
 
@@ -82,6 +76,7 @@ export const importMachineReportService = {
 
   formatDateTime: (dateString: string): string => {
     const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return "";
     const day = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const year = date.getFullYear();
@@ -100,13 +95,30 @@ export const importMachineReportService = {
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "application/vnd.ms-excel",
       "text/csv",
+      "application/csv",
+      "application/json",
+      "text/json",
+      "application/octet-stream",
     ];
+    const validExtensions = [".xlsx", ".xls", ".csv", ".json", ".fusion-data"];
+    const lowerName = file.name.toLowerCase();
+    const extension = file.name.includes(".")
+      ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
+      : "";
 
-    if (!validTypes.includes(file.type)) {
-      return { valid: false, error: "Invalid file type. Please upload Excel or CSV files only." };
+    if (
+      !validTypes.includes(file.type) &&
+      !validExtensions.includes(extension) &&
+      !lowerName.endsWith(".fusion-data")
+    ) {
+      return {
+        valid: false,
+        error:
+          "Invalid file type. Please upload Excel, CSV, JSON, or FUSION-DATA (.fusion-data) files only.",
+      };
     }
 
-    const maxSize = 10 * 1024 * 1024; // 10MB
+    const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
       return { valid: false, error: "File size exceeds 10MB limit." };
     }
@@ -114,28 +126,75 @@ export const importMachineReportService = {
     return { valid: true };
   },
 
-  uploadFile: (file: File, sourceMachine: string, currentUserId: number = 1): ImportRecord => {
-    const newRecord: ImportRecord = {
-      id: Date.now(), // Generate unique ID
-      import_id: `IMP-${Date.now()}`,
-      source_machine: sourceMachine,
-      status: "Imported",
-      file_name: file.name,
-      uploaded_by: "Current User",
-      imported_date_time: new Date().toISOString(),
-      created_by: currentUserId,
-    };
+  uploadFile: async (
+    file: File,
+    sourceMachine: string,
+  ): Promise<ImportRecord> => {
+    const validation = importMachineReportService.validateFile(file);
+    if (!validation.valid) {
+      throw new Error(validation.error || "Invalid file");
+    }
 
-    return newRecord;
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("source_machine", sourceMachine);
+
+    const response = await fetch(`${API_BASE_URL}/import_machine_reports`, {
+      method: "POST",
+      headers: buildAuthHeaders(),
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(await parseApiError(response, "Failed to upload file"));
+    }
+
+    const created: ImportRecord = await response.json();
+    importRecordsCache = [created, ...importRecordsCache];
+    return created;
   },
 
-  archiveRecord: (recordId: string): boolean => {
-    console.log(`Archiving record ${recordId}`);
-    return true;
+  updateStatus: async (
+    id: number,
+    status: ImportRecord["status"],
+  ): Promise<ImportRecord> => {
+    const response = await fetch(
+      `${API_BASE_URL}/import_machine_reports/${id}/status`,
+      {
+        method: "PUT",
+        headers: buildAuthHeaders(true),
+        body: JSON.stringify({ status }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        await parseApiError(response, "Failed to update import record"),
+      );
+    }
+
+    const updated: ImportRecord = await response.json();
+    importRecordsCache = importRecordsCache.map((record) =>
+      record.id === id ? updated : record,
+    );
+    return updated;
   },
 
-  deleteRecord: (recordId: string): boolean => {
-    console.log(`Deleting record ${recordId}`);
-    return true;
+  deleteRecord: async (id: number): Promise<void> => {
+    const response = await fetch(
+      `${API_BASE_URL}/import_machine_reports/${id}`,
+      {
+        method: "DELETE",
+        headers: buildAuthHeaders(),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        await parseApiError(response, "Failed to delete import record"),
+      );
+    }
+
+    importRecordsCache = importRecordsCache.filter((record) => record.id !== id);
   },
 };
