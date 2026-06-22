@@ -34,7 +34,7 @@ interface CylinderDetails {
   flow_rate: string;
   pressure: string;
   temperature: string;
-  field_h2s: string;
+  field_h2s: number;
   cost_code: string;
   remarks: string;
   check_in_type: "Cylinder" | "Bottle" | "CP Cylinder";
@@ -95,7 +95,7 @@ function generateMockCylinders(order: WorkOrder): CylinderDetails[] {
       flow_rate: "1000 MCFD",
       pressure: "1000 PSI",
       temperature: "60 F",
-      field_h2s: "10 PPM",
+      field_h2s: 10,
       cost_code: "N/A",
       remarks: "N/A",
       check_in_type: "Cylinder",
@@ -594,7 +594,7 @@ export function WorkOrderReportDialog({
                     <div>
                       <p className="text-xs text-muted-foreground">Field H2S</p>
                       <p className="text-sm">
-                        {cylinder.field_h2s
+                        {cylinder.field_h2s != null
                           ? `${cylinder.field_h2s} PPM`
                           : "N/A"}
                       </p>

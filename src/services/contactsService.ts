@@ -183,17 +183,17 @@ export const contactsService = {
     if (!contact.name || contact.name.trim() === "") {
       return { valid: false, error: "Name is required" };
     }
-    if (!contact.phone || contact.phone.trim() === "") {
-      return { valid: false, error: "Phone is required" };
+
+    const phone = contact.phone?.trim() ?? "";
+    if (phone && !contactsService.isValidPhone(phone)) {
+      return { valid: false, error: "Invalid phone format" };
     }
-    if (!contact.email || contact.email.trim() === "") {
-      return { valid: false, error: "Email is required" };
-    }
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(contact.email)) {
+
+    const email = contact.email?.trim() ?? "";
+    if (email && !contactsService.isValidEmail(email)) {
       return { valid: false, error: "Invalid email format" };
     }
+
     return { valid: true };
   },
 

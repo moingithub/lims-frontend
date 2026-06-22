@@ -1,16 +1,16 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { Download } from "lucide-react";
+import { Eye } from "lucide-react";
 import { AnalysisReport, analysisReportsService } from "../../services/analysisReportsService";
 import { isoToUSDate } from "../../utils/dateUtils";
 
 interface AnalysisReportsTableProps {
   reports: AnalysisReport[];
-  onDownload: (analysisNumber: string, customer: string) => void;
+  onViewReport: (report: AnalysisReport) => void;
 }
 
-export function AnalysisReportsTable({ reports, onDownload }: AnalysisReportsTableProps) {
+export function AnalysisReportsTable({ reports, onViewReport }: AnalysisReportsTableProps) {
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
@@ -55,10 +55,10 @@ export function AnalysisReportsTable({ reports, onDownload }: AnalysisReportsTab
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => onDownload(report.analysis_number, report.customer)}
-                    title="Download Report"
+                    onClick={() => onViewReport(report)}
+                    title="View Report"
                   >
-                    <Download className="w-4 h-4 text-blue-600" />
+                    <Eye className="w-4 h-4 text-blue-600" />
                   </Button>
                 </TableCell>
               </TableRow>

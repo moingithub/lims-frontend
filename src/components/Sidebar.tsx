@@ -126,6 +126,13 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
       section: "imports",
       moduleName: "import_machine_report",
     },
+    {
+      id: "map-analysis-position",
+      label: "Map Analysis Position",
+      icon: <MapPin className="w-5 h-5 text-indigo-500" />,
+      section: "imports",
+      moduleName: "import_machine_report",
+    },
   ];
 
   const allReportItems: MenuItem[] = [

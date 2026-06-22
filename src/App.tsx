@@ -24,6 +24,7 @@ import { WorkOrders } from "./pages/WorkOrders";
 import { GenerateInvoices } from "./pages/GenerateInvoices";
 import { Invoices } from "./pages/Invoices";
 import { ImportMachineReport } from "./pages/ImportMachineReport";
+import { MapAnalysisPosition } from "./pages/MapAnalysisPosition";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
@@ -257,6 +258,13 @@ function AppContent() {
         return (
           <ProtectedRoute moduleName="import_machine_report">
             <ImportMachineReport />
+          </ProtectedRoute>
+        );
+
+      case "map-analysis-position":
+        return (
+          <ProtectedRoute moduleName="import_machine_report">
+            <MapAnalysisPosition />
           </ProtectedRoute>
         );
 

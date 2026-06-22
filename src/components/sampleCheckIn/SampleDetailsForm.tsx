@@ -221,7 +221,13 @@ export function SampleDetailsForm({
           <Label>Field H2S (PPM)</Label>
           <Input
             value={fieldH2S}
-            onChange={(e) => onFieldH2SChange(e.target.value)}
+            inputMode="decimal"
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === "" || /^\d*\.?\d*$/.test(value)) {
+                onFieldH2SChange(value);
+              }
+            }}
             placeholder="Field H2S"
           />
         </div>

@@ -106,12 +106,12 @@ export const cylinderCheckOutService = {
     // Normalize barcode to uppercase for validation
     const normalizedBarcode = barcode.trim().toUpperCase();
 
-    if (normalizedBarcode.length < 3) {
-      return {
-        valid: false,
-        error: "Invalid barcode format (minimum 3 characters)",
-      };
-    }
+    // if (normalizedBarcode.length < 3) {
+    //   return {
+    //     valid: false,
+    //     error: "Invalid barcode format (minimum 3 characters)",
+    //   };
+    // }
 
     // Check if the barcode matches a serial number in Cylinder Master (case-insensitive)
     const cylinder =
@@ -417,8 +417,16 @@ export const cylinderCheckOutService = {
     return data;
   },
 
-  isCylinderCheckedOut: async (cylinder_id: number): Promise<boolean> => {
-    const records = await cylinderCheckOutService.fetchCheckOutRecords();
+  invalidateCheckOutCache: (): void => {
+    checkOutApiCacheLoaded = false;
+  },
+
+  isCylinderCheckedOut: async (
+    cylinder_id: number,
+    forceRefresh = false,
+  ): Promise<boolean> => {
+    const records =
+      await cylinderCheckOutService.fetchCheckOutRecords(forceRefresh);
     return records.some(
       (record) => record.cylinder_id === cylinder_id && !record.is_returned,
     );
@@ -426,8 +434,10 @@ export const cylinderCheckOutService = {
 
   getActiveCheckOutRecord: async (
     cylinder_id: number,
+    forceRefresh = false,
   ): Promise<CylinderCheckOutApiRecord | undefined> => {
-    const records = await cylinderCheckOutService.fetchCheckOutRecords();
+    const records =
+      await cylinderCheckOutService.fetchCheckOutRecords(forceRefresh);
     return records.find(
       (record) => record.cylinder_id === cylinder_id && !record.is_returned,
     );
@@ -474,16 +484,7 @@ export const cylinderCheckOutService = {
       }),
     );
 
-    checkOutApiCache = checkOutApiCache.map((record) =>
-      uniqueIds.includes(record.cylinder_id)
-        ? {
-            ...record,
-            is_returned: true,
-            returned_at: record.returned_at ?? returnedAt,
-          }
-        : record,
-    );
-    checkOutApiCacheLoaded = true;
+    checkOutApiCacheLoaded = false;
   },
 
   submitCheckOutRecords: async (

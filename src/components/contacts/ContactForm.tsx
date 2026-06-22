@@ -110,10 +110,7 @@ export function ContactForm({ formData, onChange }: ContactFormProps) {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>
-            Phone
-            <span style={{ color: "red", marginLeft: 2 }}>*</span>
-          </Label>
+          <Label>Phone</Label>
           <Input
             placeholder="Enter phone number"
             value={formData.phone}
@@ -121,10 +118,7 @@ export function ContactForm({ formData, onChange }: ContactFormProps) {
           />
         </div>
         <div className="space-y-2">
-          <Label>
-            Email
-            <span style={{ color: "red", marginLeft: 2 }}>*</span>
-          </Label>
+          <Label>Email</Label>
           <Input
             type="email"
             placeholder="Enter email"

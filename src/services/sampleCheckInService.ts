@@ -49,7 +49,7 @@ export interface CheckedInSample {
   flow_rate: string;
   pressure: string;
   temperature: string;
-  field_h2s: string;
+  field_h2s: number;
   cost_code: string;
   remarks: string;
   check_in_type: "Cylinder" | "Bottle" | "CP Cylinder";
@@ -105,7 +105,7 @@ export interface SampleCheckInPayload {
   pressure: string;
   pressure_unit: string;
   temperature: string;
-  field_h2s: string;
+  field_h2s: number;
   cost_code: string;
   checkin_type: string;
   invoice_ref_name: string;
@@ -242,7 +242,7 @@ let checkedInSamples: CheckedInSample[] = [
     flow_rate: "1500",
     pressure: "850",
     temperature: "72",
-    field_h2s: "5",
+    field_h2s: 5,
     cost_code: "CC-001",
     remarks: "Standard sample",
     check_in_type: "Cylinder",
@@ -270,7 +270,7 @@ let checkedInSamples: CheckedInSample[] = [
     flow_rate: "2000",
     pressure: "900",
     temperature: "75",
-    field_h2s: "10",
+    field_h2s: 10,
     cost_code: "CC-002",
     remarks: "Rushed analysis required",
     check_in_type: "Cylinder",
@@ -298,7 +298,7 @@ let checkedInSamples: CheckedInSample[] = [
     flow_rate: "1800",
     pressure: "875",
     temperature: "70",
-    field_h2s: "8",
+    field_h2s: 8,
     cost_code: "CC-003",
     remarks: "Monthly analysis",
     check_in_type: "Cylinder",
@@ -326,7 +326,7 @@ let checkedInSamples: CheckedInSample[] = [
     flow_rate: "1600",
     pressure: "860",
     temperature: "73",
-    field_h2s: "6",
+    field_h2s: 6,
     cost_code: "CC-004",
     remarks: "Extended analysis for compliance",
     check_in_type: "Cylinder",
@@ -354,7 +354,7 @@ let checkedInSamples: CheckedInSample[] = [
     flow_rate: "1700",
     pressure: "880",
     temperature: "74",
-    field_h2s: "7",
+    field_h2s: 7,
     cost_code: "CC-005",
     remarks: "Routine sample",
     check_in_type: "Cylinder",
@@ -484,7 +484,10 @@ export const sampleCheckInService = {
     // Field H2S: "Field H25: 10 PPM" or "Field H2S: 10 PPM"
     const h2sMatch = ocrText.match(/Field H2[S5][:\s]+([^\n]*)/i);
     if (h2sMatch) {
-      extracted.field_h2s = h2sMatch[1].trim();
+      const parsed = parseFloat(h2sMatch[1].trim());
+      if (!Number.isNaN(parsed)) {
+        extracted.field_h2s = parsed;
+      }
     }
 
     // Bottle/Cylinder Number: "Botte: TAG7604" or "Bottle: TAG7604" or "Bottle #: TAG7604"
@@ -544,8 +547,11 @@ export const sampleCheckInService = {
     if (ocrApiData.Flow_Rate) {
       mapped.flow_rate = String(ocrApiData.Flow_Rate);
     }
-    if (ocrApiData.Field_H2S) {
-      mapped.field_h2s = String(ocrApiData.Field_H2S);
+    if (ocrApiData.Field_H2S != null && ocrApiData.Field_H2S !== "") {
+      const parsed = Number(ocrApiData.Field_H2S);
+      if (!Number.isNaN(parsed)) {
+        mapped.field_h2s = parsed;
+      }
     }
     if (ocrApiData.Cylinder_Number) {
       mapped.cylinder_number = String(ocrApiData.Cylinder_Number);
@@ -874,7 +880,7 @@ export const sampleCheckInService = {
       flow_rate: sample.flow_rate || "",
       pressure: sample.pressure || "",
       temperature: sample.temperature || "",
-      field_h2s: sample.field_h2s || "",
+      field_h2s: sample.field_h2s ?? 0,
       cost_code: sample.cost_code || "",
       remarks: sample.remarks || "",
       check_in_type: sample.check_in_type || "Cylinder",
@@ -920,7 +926,7 @@ export const sampleCheckInService = {
       pressure: sample.pressure,
       pressure_unit: sample.pressure_unit ?? "",
       temperature: sample.temperature,
-      field_h2s: sample.field_h2s,
+      field_h2s: sample.field_h2s ?? 0,
       cost_code: sample.cost_code,
       checkin_type: sample.checkin_type ?? sample.check_in_type,
       invoice_ref_name:

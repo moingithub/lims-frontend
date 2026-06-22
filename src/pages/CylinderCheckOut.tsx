@@ -271,14 +271,25 @@ export function CylinderCheckOut({ currentUser }: CylinderCheckOutProps) {
   };
 
   const handleScanBarcode = async (barcode: string) => {
-    const validation = cylinderCheckOutService.validateBarcode(barcode);
-    if (!validation.valid) {
-      toast.error(validation.error || "Invalid barcode");
+    if (!customerCode) {
+      toast.error("Please select company first");
       return;
     }
 
-    if (!customerCode) {
-      toast.error("Please select company first");
+    try {
+      await cylinderMasterService.fetchCylinders(true);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to refresh cylinder data";
+      toast.error(message);
+      return;
+    }
+
+    const validation = cylinderCheckOutService.validateBarcode(barcode);
+    if (!validation.valid) {
+      toast.error(validation.error || "Invalid barcode");
       return;
     }
 
@@ -308,7 +319,7 @@ export function CylinderCheckOut({ currentUser }: CylinderCheckOutProps) {
 
     try {
       const isCheckedOut =
-        await cylinderCheckOutService.isCylinderCheckedOut(cylinderId);
+        await cylinderCheckOutService.isCylinderCheckedOut(cylinderId, true);
       if (isCheckedOut) {
         toast.error(
           `Cylinder Number "${normalizedBarcode}" is already checked out`,

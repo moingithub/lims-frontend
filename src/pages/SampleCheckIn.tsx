@@ -450,7 +450,9 @@ export function SampleCheckIn({
         ocrData.pressure_unit?.toUpperCase() === "PSIA" ? "PSIA" : "PSIG",
       );
       setTemperature(ocrData.temperature || "");
-      setFieldH2S(ocrData.field_h2s || "");
+      setFieldH2S(
+        ocrData.field_h2s != null ? String(ocrData.field_h2s) : "",
+      );
       setCylinderNumber(ocrData.cylinder_number || "");
       setRemarks(ocrData.remarks || "");
       setCostCode(ocrData.cost_code || "");
@@ -539,7 +541,10 @@ export function SampleCheckIn({
       if (cylinder.id) {
         try {
           const checkoutRecord =
-            await cylinderCheckOutService.getActiveCheckOutRecord(cylinder.id);
+            await cylinderCheckOutService.getActiveCheckOutRecord(
+              cylinder.id,
+              true,
+            );
           if (!checkoutRecord) {
             toast.error(
               "Invalid Check-In: The cylinder is currently not in “Checked-Out” status. Please check out the cylinder before attempting to check it in.",
@@ -608,7 +613,7 @@ export function SampleCheckIn({
       pressure,
       pressure_unit: pressureUnit,
       temperature,
-      field_h2s: fieldH2S,
+      field_h2s: fieldH2S.trim() ? parseFloat(fieldH2S) : 0,
       cost_code: costCode,
       remarks,
       check_in_type: checkInType,
@@ -764,6 +769,7 @@ export function SampleCheckIn({
           await cylinderCheckOutService.markCylindersReturned(
             cylinderIdsToReturn,
           );
+          await cylinderMasterService.fetchCylinders(true);
         } catch (error) {
           const message =
             error instanceof Error

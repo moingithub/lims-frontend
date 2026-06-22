@@ -1,30 +1,88 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { FileDown } from "lucide-react";
 import { toast } from "sonner@2.0.3";
-import { analysisReportsService } from "../services/analysisReportsService";
+import {
+  analysisReportsService,
+  AnalysisReport,
+  GasAnalysisReport,
+} from "../services/analysisReportsService";
 import { SearchBar } from "../components/shared/SearchBar";
 import { AnalysisReportsTable } from "../components/analysisReports/AnalysisReportsTable";
 import { AnalysisReportsFilters } from "../components/analysisReports/AnalysisReportsFilters";
+import { GasAnalysisReportDialog } from "../components/analysisReports/GasAnalysisReportDialog";
+import { companyMasterService } from "../services/companyMasterService";
 
 export function AnalysisReports() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [customerFilter, setCustomerFilter] = useState("all");
+  const [analysisData, setAnalysisData] = useState<AnalysisReport[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedReport, setSelectedReport] = useState<GasAnalysisReport | null>(
+    null,
+  );
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isReportLoading, setIsReportLoading] = useState(false);
 
-  const analysisData = analysisReportsService.getReports();
+  const loadReports = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      await companyMasterService.fetchCompanies();
+      const data = await analysisReportsService.fetchReports();
+      setAnalysisData(data);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to load analysis reports",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadReports();
+  }, [loadReports]);
+
   const statuses = analysisReportsService.getUniqueStatuses(analysisData);
   const customers = analysisReportsService.getUniqueCustomers(analysisData);
 
-  // Apply filters
-  let filteredData = analysisReportsService.searchReports(analysisData, searchTerm);
-  filteredData = analysisReportsService.filterByCustomer(filteredData, customerFilter);
-  filteredData = analysisReportsService.filterByStatus(filteredData, statusFilter);
+  let filteredData = analysisReportsService.searchReports(
+    analysisData,
+    searchTerm,
+  );
+  filteredData = analysisReportsService.filterByCustomer(
+    filteredData,
+    customerFilter,
+  );
+  filteredData = analysisReportsService.filterByStatus(
+    filteredData,
+    statusFilter,
+  );
 
-  const handleDownloadReport = (analysisId: string, customer: string) => {
-    analysisReportsService.downloadReport(analysisId, customer);
-    toast.success(`Downloading report ${analysisId} for ${customer}`);
+  const handleViewReport = async (report: AnalysisReport) => {
+    setIsDialogOpen(true);
+    setSelectedReport(null);
+    setIsReportLoading(true);
+
+    try {
+      const data = await analysisReportsService.fetchGasAnalysisReport(
+        report.sample_checkin_id,
+      );
+      setSelectedReport(data);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to load gas analysis report",
+      );
+      setIsDialogOpen(false);
+    } finally {
+      setIsReportLoading(false);
+    }
   };
 
   const handleExportAll = () => {
@@ -33,7 +91,10 @@ export function AnalysisReports() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `analysis_reports_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute(
+      "download",
+      `analysis_reports_${new Date().toISOString().split("T")[0]}.csv`,
+    );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -55,7 +116,7 @@ export function AnalysisReports() {
                 onChange={setSearchTerm}
                 placeholder="Search reports..."
               />
-              <Button onClick={handleExportAll}>
+              <Button onClick={handleExportAll} disabled={isLoading}>
                 <FileDown className="w-4 h-4 mr-2" />
                 Export All
               </Button>
@@ -70,16 +131,29 @@ export function AnalysisReports() {
             />
           </div>
 
-          <AnalysisReportsTable
-            reports={filteredData}
-            onDownload={handleDownloadReport}
-          />
+          {isLoading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              Loading analysis reports...
+            </p>
+          ) : (
+            <AnalysisReportsTable
+              reports={filteredData}
+              onViewReport={handleViewReport}
+            />
+          )}
 
           <div className="mt-4 text-sm text-muted-foreground">
             Showing {filteredData.length} of {analysisData.length} reports
           </div>
         </CardContent>
       </Card>
+
+      <GasAnalysisReportDialog
+        open={isDialogOpen}
+        report={selectedReport}
+        isLoading={isReportLoading}
+        onOpenChange={setIsDialogOpen}
+      />
     </div>
   );
 }

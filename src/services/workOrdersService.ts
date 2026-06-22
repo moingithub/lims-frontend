@@ -42,7 +42,7 @@ export interface WorkOrderLine {
   flow_rate: string;
   pressure: string;
   temperature: string;
-  field_h2s: string;
+  field_h2s: number;
   cost_code: string;
   cylinder_number: string; // ✅ Changed from bottle_number
   remarks: string;
@@ -240,7 +240,7 @@ let workOrderLines: WorkOrderLine[] = [
     flow_rate: "1500 MCFD",
     pressure: "850 PSI",
     temperature: "75 F",
-    field_h2s: "0 PPM",
+    field_h2s: 0,
     cost_code: "CC-001",
     cylinder_number: "BTL-001", // ✅ Changed from bottle_number
     remarks: "Normal sample",
@@ -268,7 +268,7 @@ let workOrderLines: WorkOrderLine[] = [
     flow_rate: "2000 MCFD",
     pressure: "900 PSI",
     temperature: "76 F",
-    field_h2s: "0 PPM",
+    field_h2s: 0,
     cost_code: "CC-001",
     cylinder_number: "BTL-002", // ✅ Changed from bottle_number
     remarks: "Rushed analysis",
@@ -695,7 +695,7 @@ export const workOrdersService = {
         flow_rate: cylinder.flow_rate || "",
         pressure: cylinder.pressure || "",
         temperature: cylinder.temperature || "",
-        field_h2s: cylinder.field_h2s || "",
+        field_h2s: cylinder.field_h2s ?? 0,
         cost_code: cylinder.cost_code || "",
         cylinder_number: cylinder.cylinder_number, // ✅ Now reads cylinder_number
         remarks: cylinder.remarks || "",
