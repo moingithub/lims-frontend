@@ -48,7 +48,7 @@ function InfoField({ label, value }: { label: string; value: string }) {
   return (
     <div className="gar-info-field">
       <span className="gar-info-label">{label}</span>
-      <span className="gar-info-value">{value}</span>
+      <span className="gar-info-value gar-lab-num">{value}</span>
     </div>
   );
 }
@@ -57,7 +57,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="invoice-detail-row">
       <span className="label">{label}</span>
-      <span className="value">{value}</span>
+      <span className="value gar-lab-num">{value}</span>
     </div>
   );
 }
@@ -72,10 +72,10 @@ function ConditionTableRow({
   return (
     <tr>
       <td>{label}</td>
-      <td className="text-right">{displayValue(values.dry_ideal)}</td>
-      <td className="text-right">{displayValue(values.dry_real)}</td>
-      <td className="text-right">{displayValue(values.wet_ideal)}</td>
-      <td className="text-right">{displayValue(values.wet_real)}</td>
+      <td className="text-right gar-lab-num">{displayValue(values.dry_ideal)}</td>
+      <td className="text-right gar-lab-num">{displayValue(values.dry_real)}</td>
+      <td className="text-right gar-lab-num">{displayValue(values.wet_ideal)}</td>
+      <td className="text-right gar-lab-num">{displayValue(values.wet_real)}</td>
     </tr>
   );
 }
@@ -179,7 +179,7 @@ const S = StyleSheet.create({
     textAlign: "right",
   },
   detailValue: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Courier",
     fontSize: 8,
     minWidth: 95,
     textAlign: "right",
@@ -198,7 +198,7 @@ const S = StyleSheet.create({
   },
   sampleFieldLabel: { fontSize: 7.5, color: "#555555", minWidth: 95 },
   sampleFieldValue: {
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "Courier",
     fontSize: 7.5,
     color: "#1a1a1a",
     flex: 1,
@@ -208,7 +208,7 @@ const S = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 6,
   },
-  conditionItem: { fontSize: 7.5, color: "#1a1a1a" },
+  conditionItem: { fontFamily: "Courier", fontSize: 7.5, color: "#1a1a1a" },
   tableHeaderRow: {
     flexDirection: "row",
     backgroundColor: "#1a1a1a",
@@ -229,8 +229,14 @@ const S = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 4,
   },
-  tableCell: { fontSize: 7.5, color: "#1a1a1a" },
-  tableCellRight: { fontSize: 7.5, color: "#1a1a1a", textAlign: "right" },
+  tableCell: { fontFamily: "Courier", fontSize: 7.5, color: "#1a1a1a" },
+  tableCellRight: {
+    fontFamily: "Courier",
+    fontSize: 7.5,
+    color: "#1a1a1a",
+    textAlign: "right",
+  },
+  tableCellLabel: { fontFamily: "Helvetica", fontSize: 7.5, color: "#1a1a1a" },
   colComponent: { width: "40%" },
   colMole: { width: "20%" },
   colWt: { width: "20%" },
@@ -245,6 +251,17 @@ const S = StyleSheet.create({
     color: "#666666",
     fontStyle: "italic",
     marginTop: 10,
+  },
+  gpmSummaryLabel: {
+    fontSize: 7,
+    color: "#555555",
+    marginBottom: 2,
+  },
+  gpmSummaryLine: {
+    fontFamily: "Courier",
+    fontSize: 7.5,
+    color: "#1a1a1a",
+    marginBottom: 2,
   },
   footer: {
     position: "absolute",
@@ -274,7 +291,7 @@ function GasAnalysisReportPDFDocument({
     values: GasAnalysisConditionValues,
   ) => (
     <View style={S.tableRow} wrap={false}>
-      <Text style={[S.tableCell, S.colLabel]}>{label}</Text>
+      <Text style={[S.tableCellLabel, S.colLabel]}>{label}</Text>
       <Text style={[S.tableCellRight, S.colDryIdeal]}>
         {displayValue(values.dry_ideal)}
       </Text>
@@ -404,7 +421,7 @@ function GasAnalysisReportPDFDocument({
             : [{ component: "", mole_pct: "", wt_pct: "", gpm: "" }]
           ).map((row, idx) => (
             <View style={S.tableRow} key={idx} wrap={false}>
-              <Text style={[S.tableCell, S.colComponent]}>
+              <Text style={[S.tableCellLabel, S.colComponent]}>
                 {displayValue(row.component)}
               </Text>
               <Text style={[S.tableCellRight, S.colMole]}>
@@ -453,11 +470,11 @@ function GasAnalysisReportPDFDocument({
         </View>
 
         <View style={{ marginTop: 8 }}>
-          <Text style={S.sampleFieldLabel}>GPM (Dry Real)</Text>
-          <Text style={S.sampleFieldValue}>
+          <Text style={S.gpmSummaryLabel}>GPM (Dry Real)</Text>
+          <Text style={S.gpmSummaryLine}>
             C2+: {displayValue(report.gpm_c2_plus)}
           </Text>
-          <Text style={S.sampleFieldValue}>
+          <Text style={S.gpmSummaryLine}>
             C3+: {displayValue(report.gpm_c3_plus)}
           </Text>
         </View>
@@ -535,8 +552,14 @@ export function GasAnalysisReportDialog({
           width: 210mm; min-height: 297mm; padding: 16mm 18mm;
           margin: 0 auto; background: #fff;
           box-shadow: 0 4px 32px rgba(0,0,0,0.10); border-radius: 2px;
-          box-sizing: border-box; font-family: 'Georgia', serif;
+          box-sizing: border-box;
+          font-family: 'Arial', 'Helvetica Neue', Helvetica, sans-serif;
           color: #1a1a1a; font-size: 9.5pt; line-height: 1.5;
+        }
+        .gar-lab-num {
+          font-family: 'Consolas', 'Roboto Mono', 'Courier New', monospace;
+          font-variant-numeric: tabular-nums;
+          letter-spacing: 0.01em;
         }
         .invoice-brand-bar { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:10mm; gap:12px; }
         .invoice-brand-address { text-align:right; font-size:8.5pt; color:#444; line-height:1.6; }
@@ -544,7 +567,7 @@ export function GasAnalysisReportDialog({
         .invoice-brand-address .brand-name { font-weight:700; font-size:9.5pt; color:#1a1a1a; }
         .invoice-title-row { display:flex; align-items:baseline; justify-content:space-between; border-top:2.5px solid #1a1a1a; border-bottom:1px solid #d0d0d0; padding:5px 0 6px; margin-bottom:8mm; }
         .invoice-title-row h1 { font-size:18pt; font-weight:900; letter-spacing:0.04em; margin:0; color:#1a1a1a; }
-        .invoice-number { font-size:10pt; color:#555; font-family:'Courier New',monospace; font-weight:600; }
+        .invoice-number { font-size:10pt; color:#555; font-family:'Consolas','Roboto Mono','Courier New',monospace; font-weight:600; font-variant-numeric:tabular-nums; }
         .invoice-meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-bottom:8mm; }
         .invoice-bill-to h2 { font-size:7.5pt; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888; margin:0 0 3px; }
         .invoice-bill-to .company-name { font-size:11pt; font-weight:700; margin:0 0 2px; }
@@ -561,15 +584,48 @@ export function GasAnalysisReportDialog({
         .invoice-table tbody tr:last-child { border-bottom:2px solid #1a1a1a; }
         .invoice-table tbody tr:nth-child(even) { background:#f9f9f9; }
         .invoice-table tbody td { padding:5px 8px; vertical-align:top; }
+        .invoice-table tbody td.text-right,
+        .invoice-table tbody td.gar-lab-num {
+          font-family:'Consolas','Roboto Mono','Courier New',monospace;
+          font-variant-numeric:tabular-nums;
+        }
         .gar-sample-grid { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-bottom:6mm; }
         .gar-info-field { display:flex; gap:6px; margin-bottom:3px; font-size:8.5pt; }
         .gar-info-label { color:#555; min-width:105px; }
         .gar-info-value { font-weight:600; color:#1a1a1a; flex:1; }
-        .gar-conditions-row { display:flex; justify-content:space-between; margin-bottom:4mm; font-size:8.5pt; font-weight:600; }
-        .gar-gpm-summary { margin-top:4mm; font-size:8.5pt; }
-        .gar-gpm-summary p { margin:0 0 2px; }
-        .gar-footer-note { margin-top:6mm; font-size:8pt; color:#666; font-style:italic; }
-        .invoice-footer { margin-top:auto; padding-top:6mm; border-top:1px solid #e0e0e0; text-align:center; font-size:7.5pt; color:#999; }
+        .gar-conditions-row {
+          display:flex; justify-content:space-between; margin-bottom:4mm;
+          font-size:8.5pt; font-weight:600;
+          font-family:'Consolas','Roboto Mono','Courier New',monospace;
+          font-variant-numeric:tabular-nums;
+        }
+        .gar-gpm-summary {
+          margin-top: 4mm;
+          font-size: 7.8pt;
+          line-height: 1.45;
+        }
+        .gar-gpm-summary .gar-gpm-label {
+          color: #555;
+          font-weight: 400;
+          margin: 0 0 2px;
+        }
+        .gar-gpm-summary .gar-gpm-line {
+          margin: 0 0 2px;
+          font-family: 'Consolas', 'Roboto Mono', 'Courier New', monospace;
+          font-variant-numeric: tabular-nums;
+          color: #1a1a1a;
+        }
+        .gar-footer-note { margin-top: 6mm; font-size: 7pt; color: #666; font-style: italic; }
+        .invoice-footer {
+          margin-top: auto;
+          padding-top: 6mm;
+          border-top: 1px solid #e0e0e0;
+          text-align: center;
+          font-size: 6.5pt;
+          color: #999;
+          line-height: 1.5;
+        }
+        .invoice-footer p { margin: 0; font-size: inherit; }
         .invoice-dialog-scroll { overflow-y:auto; max-height:85vh; background:#f0f0ef; padding:24px 12px; }
         .invoice-action-bar { display:flex; justify-content:flex-end; gap:10px; padding:12px 0 4px; width:210mm; margin:0 auto; }
       `}</style>
@@ -758,11 +814,11 @@ export function GasAnalysisReportDialog({
                   {componentRows.map((row, idx) => (
                     <tr key={idx}>
                       <td>{displayValue(row.component)}</td>
-                      <td className="text-right">
+                      <td className="text-right gar-lab-num">
                         {displayValue(row.mole_pct)}
                       </td>
-                      <td className="text-right">{displayValue(row.wt_pct)}</td>
-                      <td className="text-right">{displayValue(row.gpm)}</td>
+                      <td className="text-right gar-lab-num">{displayValue(row.wt_pct)}</td>
+                      <td className="text-right gar-lab-num">{displayValue(row.gpm)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -797,11 +853,13 @@ export function GasAnalysisReportDialog({
               </table>
 
               <div className="gar-gpm-summary">
-                <p>
-                  <strong>GPM (Dry Real)</strong>
+                <p className="gar-gpm-label">GPM (Dry Real)</p>
+                <p className="gar-gpm-line">
+                  C2+: {displayValue(report.gpm_c2_plus)}
                 </p>
-                <p>C2+: {displayValue(report.gpm_c2_plus)}</p>
-                <p>C3+: {displayValue(report.gpm_c3_plus)}</p>
+                <p className="gar-gpm-line">
+                  C3+: {displayValue(report.gpm_c3_plus)}
+                </p>
               </div>
 
               <p className="gar-footer-note">
