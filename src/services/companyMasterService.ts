@@ -13,6 +13,8 @@ export interface Company {
   billing_address: string;
   charge_h2_pop_fee: boolean;
   h2_pop_fee_rate: number;
+  pressure_base: number;
+  pressure_base_factor: number;
   active: boolean;
   created_by: number;
 }
@@ -21,13 +23,15 @@ type ApiCompany = {
   id: number;
   code: string;
   name: string;
-  phone: string;
-  email: string;
+  phone: string | null;
+  email: string | null;
   billing_ref: string | null;
   billing_ref_no: string | null;
-  billing_address: string;
+  billing_address: string | null;
   charge_h2_pop_fee?: boolean;
   h2_pop_fee_rate?: string | number | null;
+  pressure_base?: string | number | null;
+  pressure_base_factor?: string | number | null;
   active: boolean;
   created_by_id: number | null;
 };
@@ -35,24 +39,58 @@ type ApiCompany = {
 let companiesCache: Company[] = [];
 let companiesLoaded = false;
 
+const toNumber = (value: unknown, fallback = 0): number => {
+  if (value == null || value === "") return fallback;
+  const num = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(num) ? num : fallback;
+};
+
+export const PRESSURE_BASE_OPTIONS = [
+  { value: 14.65, factor: 0.0175, label: "14.65" },
+  { value: 14.696, factor: 0.01744, label: "14.696" },
+  { value: 14.73, factor: 0.0174, label: "14.73" },
+  { value: 15.025, factor: 0.01706, label: "15.025" },
+] as const;
+
+export const getPressureBaseFactor = (pressureBase: number): number => {
+  const match = PRESSURE_BASE_OPTIONS.find(
+    (option) => option.value === pressureBase,
+  );
+  return match?.factor ?? 0;
+};
+
 const mapApiCompany = (company: ApiCompany): Company => ({
   id: company.id,
   company_code: company.code,
   company_name: company.name,
-  phone: company.phone,
-  email: company.email,
+  phone: company.phone ?? "",
+  email: company.email ?? "",
   billing_reference_type: company.billing_ref ?? "",
   billing_reference_number: company.billing_ref_no ?? "",
-  billing_address: company.billing_address,
+  billing_address: company.billing_address ?? "",
   charge_h2_pop_fee: company.charge_h2_pop_fee ?? false,
-  h2_pop_fee_rate:
-    typeof company.h2_pop_fee_rate === "number"
-      ? company.h2_pop_fee_rate
-      : company.h2_pop_fee_rate
-        ? Number(company.h2_pop_fee_rate) || 0
-        : 0,
+  h2_pop_fee_rate: toNumber(company.h2_pop_fee_rate),
+  pressure_base: toNumber(company.pressure_base),
+  pressure_base_factor: toNumber(company.pressure_base_factor),
   active: company.active,
   created_by: company.created_by_id ?? 0,
+});
+
+const serializeCompanyPayload = (
+  company: Omit<Company, "id" | "created_by">,
+) => ({
+  code: company.company_code,
+  name: company.company_name,
+  phone: company.phone || null,
+  email: company.email || null,
+  billing_ref: company.billing_reference_type || null,
+  billing_ref_no: company.billing_reference_number || null,
+  billing_address: company.billing_address || null,
+  charge_h2_pop_fee: company.charge_h2_pop_fee,
+  h2_pop_fee_rate: company.h2_pop_fee_rate,
+  pressure_base: company.pressure_base,
+  pressure_base_factor: company.pressure_base_factor,
+  active: company.active,
 });
 
 const buildAuthHeaders = (): HeadersInit => {
@@ -107,18 +145,7 @@ export const companyMasterService = {
     const response = await fetch(`${API_BASE_URL}/companies`, {
       method: "POST",
       headers: buildAuthHeaders(),
-      body: JSON.stringify({
-        code: company.company_code,
-        name: company.company_name,
-        phone: company.phone,
-        email: company.email,
-        billing_ref: company.billing_reference_type,
-        billing_ref_no: company.billing_reference_number,
-        billing_address: company.billing_address,
-        charge_h2_pop_fee: company.charge_h2_pop_fee,
-        h2_pop_fee_rate: company.h2_pop_fee_rate,
-        active: company.active,
-      }),
+      body: JSON.stringify(serializeCompanyPayload(company)),
     });
 
     if (!response.ok) {
@@ -142,18 +169,7 @@ export const companyMasterService = {
     const response = await fetch(`${API_BASE_URL}/companies/${id}`, {
       method: "PUT",
       headers: buildAuthHeaders(),
-      body: JSON.stringify({
-        code: updatedCompany.company_code,
-        name: updatedCompany.company_name,
-        phone: updatedCompany.phone,
-        email: updatedCompany.email,
-        billing_ref: updatedCompany.billing_reference_type,
-        billing_ref_no: updatedCompany.billing_reference_number,
-        billing_address: updatedCompany.billing_address,
-        charge_h2_pop_fee: updatedCompany.charge_h2_pop_fee,
-        h2_pop_fee_rate: updatedCompany.h2_pop_fee_rate,
-        active: updatedCompany.active,
-      }),
+      body: JSON.stringify(serializeCompanyPayload(updatedCompany)),
     });
 
     if (!response.ok) {

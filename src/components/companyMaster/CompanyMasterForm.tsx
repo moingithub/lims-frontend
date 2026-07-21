@@ -7,7 +7,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { billingReferenceTypes } from "../../services/companyMasterService";
+import {
+  billingReferenceTypes,
+  getPressureBaseFactor,
+  PRESSURE_BASE_OPTIONS,
+} from "../../services/companyMasterService";
 import { Checkbox } from "../ui/checkbox";
 
 export interface CompanyMasterFormData {
@@ -21,6 +25,8 @@ export interface CompanyMasterFormData {
   billing_address: string;
   charge_h2_pop_fee: boolean;
   h2_pop_fee_rate: number;
+  pressure_base: number;
+  pressure_base_factor: number;
   active: boolean;
 }
 
@@ -155,6 +161,48 @@ export function CompanyMasterForm({
               })
             }
             disabled={!formData.charge_h2_pop_fee}
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Pressure Base</Label>
+          <Select
+            value={
+              PRESSURE_BASE_OPTIONS.some(
+                (option) => option.value === formData.pressure_base,
+              )
+                ? String(formData.pressure_base)
+                : ""
+            }
+            onValueChange={(value) => {
+              const pressure_base = parseFloat(value);
+              onChange({
+                ...formData,
+                pressure_base,
+                pressure_base_factor: getPressureBaseFactor(pressure_base),
+              });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select pressure base" />
+            </SelectTrigger>
+            <SelectContent>
+              {PRESSURE_BASE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={String(option.value)}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Pressure Base Factor</Label>
+          <Input
+            value={formData.pressure_base_factor}
+            readOnly
+            disabled
+            placeholder="Auto-calculated"
           />
         </div>
       </div>

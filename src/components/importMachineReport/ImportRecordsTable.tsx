@@ -23,6 +23,7 @@ export function ImportRecordsTable({
         <TableHeader>
           <TableRow>
             <TableHead>Import ID</TableHead>
+            <TableHead>Company</TableHead>
             <TableHead>Source Machine</TableHead>
             <TableHead>File Name</TableHead>
             <TableHead>Uploaded By</TableHead>
@@ -35,6 +36,7 @@ export function ImportRecordsTable({
           {records.map((record) => (
             <TableRow key={record.id}>
               <TableCell>{record.import_id}</TableCell>
+              <TableCell>{record.company_name || "—"}</TableCell>
               <TableCell>{record.source_machine}</TableCell>
               <TableCell>{record.file_name}</TableCell>
               <TableCell>{record.uploaded_by}</TableCell>

@@ -7,13 +7,19 @@ import {
   ImportRecord,
   importMachineReportService,
 } from "../services/importMachineReportService";
+import {
+  companyMasterService,
+  Company,
+} from "../services/companyMasterService";
 import { ImportUploadForm } from "../components/importMachineReport/ImportUploadForm";
 import { ImportRecordsTable } from "../components/importMachineReport/ImportRecordsTable";
 
 export function ImportMachineReport() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCompanyId, setSelectedCompanyId] = useState("");
   const [sourceMachine, setSourceMachine] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [companies, setCompanies] = useState<Company[]>([]);
   const [importRecords, setImportRecords] = useState<ImportRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
@@ -21,10 +27,16 @@ export function ImportMachineReport() {
   useEffect(() => {
     let isMounted = true;
 
-    const loadRecords = async () => {
+    const loadData = async () => {
       try {
-        const records = await importMachineReportService.fetchImportRecords();
-        if (isMounted) setImportRecords(records);
+        const [records] = await Promise.all([
+          importMachineReportService.fetchImportRecords(),
+          companyMasterService.fetchCompanies(),
+        ]);
+        if (isMounted) {
+          setImportRecords(records);
+          setCompanies(companyMasterService.getActiveCompanies());
+        }
       } catch (error) {
         const message =
           error instanceof Error
@@ -36,7 +48,7 @@ export function ImportMachineReport() {
       }
     };
 
-    loadRecords();
+    loadData();
 
     return () => {
       isMounted = false;
@@ -49,6 +61,7 @@ export function ImportMachineReport() {
   );
 
   const resetUploadForm = () => {
+    setSelectedCompanyId("");
     setSourceMachine("");
     setSelectedFile(null);
     const fileInput = document.getElementById("file-upload") as HTMLInputElement;
@@ -56,6 +69,10 @@ export function ImportMachineReport() {
   };
 
   const handleUpload = async () => {
+    if (!selectedCompanyId) {
+      toast.error("Please select a company");
+      return;
+    }
     if (!sourceMachine) {
       toast.error("Please select a source machine");
       return;
@@ -70,6 +87,7 @@ export function ImportMachineReport() {
       const created = await importMachineReportService.uploadFile(
         selectedFile,
         sourceMachine,
+        Number(selectedCompanyId),
       );
       setImportRecords((prev) => [created, ...prev]);
       toast.success("File uploaded successfully");
@@ -128,8 +146,11 @@ export function ImportMachineReport() {
         </CardHeader>
         <CardContent>
           <ImportUploadForm
+            companies={companies}
+            selectedCompanyId={selectedCompanyId}
             sourceMachine={sourceMachine}
             selectedFile={selectedFile}
+            onCompanyChange={setSelectedCompanyId}
             onSourceMachineChange={setSourceMachine}
             onFileChange={setSelectedFile}
             onUpload={handleUpload}

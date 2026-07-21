@@ -31,6 +31,8 @@ export function CompanyMasterTable({
             <TableHead>Phone#</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Charge H2 Pop Fee</TableHead>
+            <TableHead>Pressure Base</TableHead>
+            <TableHead>Pressure Base Factor</TableHead>
             <TableHead>Active</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -39,7 +41,7 @@ export function CompanyMasterTable({
           {companies.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={7}
+                colSpan={9}
                 className="text-center text-muted-foreground py-8"
               >
                 No companies found
@@ -57,6 +59,8 @@ export function CompanyMasterTable({
                     ? `Yes (${company.h2_pop_fee_rate})`
                     : "No"}
                 </TableCell>
+                <TableCell>{company.pressure_base || "—"}</TableCell>
+                <TableCell>{company.pressure_base_factor || "—"}</TableCell>
                 <TableCell>
                   <span
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs ${

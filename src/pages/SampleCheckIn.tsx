@@ -86,6 +86,8 @@ export function SampleCheckIn({
       billing_address: "",
       charge_h2_pop_fee: false,
       h2_pop_fee_rate: 0,
+      pressure_base: 14.73,
+      pressure_base_factor: 0.0174,
       active: true,
     },
   );
@@ -309,6 +311,8 @@ export function SampleCheckIn({
       billing_address: companyFormData.billing_address,
       charge_h2_pop_fee: companyFormData.charge_h2_pop_fee,
       h2_pop_fee_rate: companyFormData.h2_pop_fee_rate,
+      pressure_base: companyFormData.pressure_base,
+      pressure_base_factor: companyFormData.pressure_base_factor,
       active: companyFormData.active,
       created_by: 1, // TODO: Replace with actual logged-in user ID
     };
@@ -334,6 +338,8 @@ export function SampleCheckIn({
           billing_address: "",
           charge_h2_pop_fee: false,
           h2_pop_fee_rate: 0,
+          pressure_base: 14.73,
+          pressure_base_factor: 0.0174,
           active: true,
         });
 
@@ -734,11 +740,13 @@ export function SampleCheckIn({
       const h2PopFee = selectedCompany?.charge_h2_pop_fee
         ? selectedCompany.h2_pop_fee_rate || 0
         : 0;
+      const pressureBaseFactor = selectedCompany?.pressure_base_factor ?? 0;
 
       const payloads = samplesForWorkOrder.map((sample) => ({
         ...sampleCheckInService.serializeCheckInForPost(sample),
         status: "Pending",
         h2_pop_fee: h2PopFee,
+        pressure_base_factor: pressureBaseFactor,
       }));
 
       const createdCheckIns =

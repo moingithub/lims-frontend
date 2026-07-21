@@ -115,6 +115,7 @@ export interface SampleCheckInPayload {
   work_order_number?: string;
   status: string;
   h2_pop_fee?: number;
+  pressure_base_factor: number;
 }
 
 export interface UpdateWOLinePayload {

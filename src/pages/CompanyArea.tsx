@@ -12,6 +12,7 @@ import {
   CompanyArea,
   companyAreaService,
 } from "../services/companyAreaService";
+import { companyMasterService } from "../services/companyMasterService";
 import { CompanyAreaTable } from "../components/companyArea/CompanyAreaTable";
 import { CompanyAreaDialog } from "../components/companyArea/CompanyAreaDialog";
 import { DeleteCompanyAreaDialog } from "../components/companyArea/DeleteCompanyAreaDialog";
@@ -25,10 +26,13 @@ export function CompanyArea() {
   useEffect(() => {
     let isMounted = true;
 
-    const loadAreas = async () => {
+    const loadData = async () => {
       try {
-        const data = await companyAreaService.fetchCompanyAreas();
-        if (isMounted) setCompanyAreas(data);
+        const [, areas] = await Promise.all([
+          companyMasterService.fetchCompanies(),
+          companyAreaService.fetchCompanyAreas(),
+        ]);
+        if (isMounted) setCompanyAreas(areas);
       } catch (error) {
         const message =
           error instanceof Error
@@ -40,7 +44,7 @@ export function CompanyArea() {
       }
     };
 
-    loadAreas();
+    loadData();
 
     return () => {
       isMounted = false;

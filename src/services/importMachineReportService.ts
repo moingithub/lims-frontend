@@ -4,6 +4,8 @@ import { authService } from "./authService";
 export interface ImportRecord {
   id: number;
   import_id: string;
+  company_id: number;
+  company_name: string;
   source_machine: string;
   status: "Imported" | "Validated" | "Error" | "Archived";
   file_name: string;
@@ -29,6 +31,19 @@ async function parseApiError(
   const body = await response.json().catch(() => ({}));
   return body?.error || body?.message || fallback;
 }
+
+const getFileExtension = (file: File): string => {
+  const lowerName = file.name.toLowerCase();
+  if (!lowerName.includes(".")) return "";
+  return lowerName.slice(lowerName.lastIndexOf("."));
+};
+
+const getUploadEndpoint = (file: File): string => {
+  if (getFileExtension(file) === ".xlsx") {
+    return `${API_BASE_URL}/import_user_reports`;
+  }
+  return `${API_BASE_URL}/import_machine_reports`;
+};
 
 export const importMachineReportService = {
   getImportRecords: (): ImportRecord[] => importRecordsCache,
@@ -129,6 +144,7 @@ export const importMachineReportService = {
   uploadFile: async (
     file: File,
     sourceMachine: string,
+    companyId: number,
   ): Promise<ImportRecord> => {
     const validation = importMachineReportService.validateFile(file);
     if (!validation.valid) {
@@ -138,8 +154,9 @@ export const importMachineReportService = {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("source_machine", sourceMachine);
+    formData.append("company_id", String(companyId));
 
-    const response = await fetch(`${API_BASE_URL}/import_machine_reports`, {
+    const response = await fetch(getUploadEndpoint(file), {
       method: "POST",
       headers: buildAuthHeaders(),
       body: formData,

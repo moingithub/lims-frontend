@@ -8,10 +8,14 @@ import {
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Upload } from "lucide-react";
+import { Company } from "../../services/companyMasterService";
 
 interface ImportUploadFormProps {
+  companies: Company[];
+  selectedCompanyId: string;
   sourceMachine: string;
   selectedFile: File | null;
+  onCompanyChange: (value: string) => void;
   onSourceMachineChange: (value: string) => void;
   onFileChange: (file: File | null) => void;
   onUpload: () => void;
@@ -19,8 +23,11 @@ interface ImportUploadFormProps {
 }
 
 export function ImportUploadForm({
+  companies,
+  selectedCompanyId,
   sourceMachine,
   selectedFile,
+  onCompanyChange,
   onSourceMachineChange,
   onFileChange,
   onUpload,
@@ -33,7 +40,24 @@ export function ImportUploadForm({
 
   return (
     <div className="mb-6 p-3 border rounded-lg bg-muted/50">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div>
+          <Select value={selectedCompanyId} onValueChange={onCompanyChange}>
+            <SelectTrigger
+              id="company-select"
+              className="border-2 border-black"
+            >
+              <SelectValue placeholder="Select Company" />
+            </SelectTrigger>
+            <SelectContent>
+              {companies.map((company) => (
+                <SelectItem key={company.id} value={String(company.id)}>
+                  {company.company_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <div>
           <Select value={sourceMachine} onValueChange={onSourceMachineChange}>
             <SelectTrigger
