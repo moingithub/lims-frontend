@@ -40,6 +40,11 @@ export function resolveUploadAssetUrl(
     path = `/api/uploads/ocr/${filename}`;
   }
 
+  // Some list responses store only the original filename in tag_image.
+  if (path && !path.includes("/") && !path.includes("\\")) {
+    path = `/api/uploads/ocr/${path}`;
+  }
+
   if (!path) {
     return "";
   }
@@ -83,12 +88,37 @@ export async function fetchAuthenticatedUploadAsset(
   }
 
   const token = authService.getAuthState().token;
-  const response = await fetch(url, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const urls = [url];
 
-  if (!response.ok) {
-    throw new Error(`Failed to load upload asset (${response.status})`);
+  // Upload files may be served outside the API router even when the API
+  // itself is mounted at /api. Try that actual file location as a fallback.
+  if (filename) {
+    const apiBase = API_BASE_URL.replace(/\/$/, "");
+    const origin = apiBase.replace(/\/api$/, "");
+    const directUrl = `${origin}/uploads/ocr/${encodeURIComponent(filename)}`;
+    if (!urls.includes(directUrl)) {
+      urls.push(directUrl);
+    }
+  }
+
+  let response: Response | null = null;
+  for (const candidate of urls) {
+    const candidateResponse = await fetch(candidate, {
+      cache: "no-store",
+      headers,
+    });
+    if (candidateResponse.ok) {
+      response = candidateResponse;
+      break;
+    }
+    response = candidateResponse;
+  }
+
+  if (!response?.ok) {
+    throw new Error(
+      `Failed to load upload asset (${response?.status ?? "unknown"})`,
+    );
   }
 
   const blob = await response.blob();

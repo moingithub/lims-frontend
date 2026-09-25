@@ -14,6 +14,11 @@ import { Checkbox } from "../ui/checkbox";
 import { UserPlus, Plus } from "lucide-react";
 import { Customer, Contact } from "../../services/sampleCheckInService";
 import { analysisPricingService } from "../../services/analysisPricingService";
+import {
+  formatUsDateInputDisplay,
+  normalizeUsDateInput,
+  parseUsDateInputToIso,
+} from "../../utils/dateUtils";
 
 export interface SampleFormData {
   analysisNumber: string;
@@ -214,9 +219,17 @@ export function SampleCheckInForm({
         <div className="space-y-2">
           <Label>Date</Label>
           <Input
-            type="date"
-            value={formData.date}
-            onChange={(e) => onFormChange({ date: e.target.value })}
+            type="text"
+            inputMode="numeric"
+            placeholder="MM/DD/YYYY"
+            value={formatUsDateInputDisplay(formData.date)}
+            onChange={(e) =>
+              onFormChange({
+                date: parseUsDateInputToIso(
+                  normalizeUsDateInput(e.target.value),
+                ),
+              })
+            }
           />
         </div>
         <div className="space-y-2">

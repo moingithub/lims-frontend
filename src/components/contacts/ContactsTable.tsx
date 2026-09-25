@@ -33,7 +33,7 @@ export function ContactsTable({
   const getAreaLabel = (companyAreaId?: number | null): string => {
     if (!companyAreaId) return "";
     const area = companyAreaService.getCompanyAreaById(companyAreaId);
-    return area ? `${area.area} (${area.region})` : "";
+    return area ? area.area : "";
   };
 
   return (

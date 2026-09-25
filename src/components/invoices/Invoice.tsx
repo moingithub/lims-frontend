@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { Invoice as InvoiceType } from "../../services/invoicesService";
+import { formatDateUS } from "../../utils/dateUtils";
 
 interface InvoiceProps {
   data: InvoiceType;
@@ -11,7 +12,7 @@ interface InvoiceProps {
 export function Invoice({ data }: InvoiceProps) {
   const formatDate = (date: string | null | undefined) => {
     if (!date) return "";
-    return new Date(date).toLocaleDateString();
+    return formatDateUS(date);
   };
 
   const safe = (val: string | number | null | undefined) =>

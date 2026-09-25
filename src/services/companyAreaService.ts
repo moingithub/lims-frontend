@@ -6,8 +6,12 @@ export interface CompanyArea {
   id: number;
   company_id: number;
   area: string;
-  region: string;
   description: string;
+  gl_code: string;
+  pay_key: string;
+  po: string;
+  authorized_by: string;
+  cost_code: string;
   active: boolean;
   created_by: number;
 }
@@ -16,8 +20,12 @@ type ApiCompanyArea = {
   id: number;
   company_id: number;
   area: string;
-  region: string;
   description: string;
+  gl_code?: string | null;
+  pay_key?: string | null;
+  po?: string | null;
+  authorized_by?: string | null;
+  cost_code?: string | null;
   active: boolean;
   created_by_id: number | null;
 };
@@ -29,10 +37,28 @@ const mapApiCompanyArea = (area: ApiCompanyArea): CompanyArea => ({
   id: area.id,
   company_id: area.company_id,
   area: area.area,
-  region: area.region,
   description: area.description,
+  gl_code: area.gl_code?.trim() ?? "",
+  pay_key: area.pay_key?.trim() ?? "",
+  po: area.po?.trim() ?? "",
+  authorized_by: area.authorized_by?.trim() ?? "",
+  cost_code: area.cost_code?.trim() ?? "",
   active: area.active,
   created_by: area.created_by_id ?? 0,
+});
+
+const serializeCompanyAreaPayload = (
+  companyArea: Omit<CompanyArea, "id" | "created_by">,
+) => ({
+  company_id: companyArea.company_id,
+  area: companyArea.area,
+  description: companyArea.description,
+  gl_code: companyArea.gl_code.trim() || null,
+  pay_key: companyArea.pay_key.trim() || null,
+  po: companyArea.po.trim() || null,
+  authorized_by: companyArea.authorized_by.trim() || null,
+  cost_code: companyArea.cost_code.trim() || null,
+  active: companyArea.active,
 });
 
 const buildAuthHeaders = (): HeadersInit => {
@@ -42,6 +68,15 @@ const buildAuthHeaders = (): HeadersInit => {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 };
+
+async function parseApiError(
+  response: Response,
+  fallback: string,
+): Promise<string> {
+  if (response.status === 401) return "Unauthorized";
+  const body = await response.json().catch(() => ({}));
+  return body?.error || body?.message || fallback;
+}
 
 export const companyAreaService = {
   // ========== CRUD Operations ==========
@@ -61,11 +96,9 @@ export const companyAreaService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to load company areas";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to load company areas"),
+      );
     }
 
     const data: ApiCompanyArea[] = await response.json();
@@ -87,21 +120,13 @@ export const companyAreaService = {
     const response = await fetch(`${API_BASE_URL}/company_areas`, {
       method: "POST",
       headers: buildAuthHeaders(),
-      body: JSON.stringify({
-        company_id: companyArea.company_id,
-        area: companyArea.area,
-        region: companyArea.region,
-        description: companyArea.description,
-        active: companyArea.active,
-      }),
+      body: JSON.stringify(serializeCompanyAreaPayload(companyArea)),
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to create company area";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to create company area"),
+      );
     }
 
     const data: ApiCompanyArea = await response.json();
@@ -119,20 +144,13 @@ export const companyAreaService = {
     const response = await fetch(`${API_BASE_URL}/company_areas/${id}`, {
       method: "PUT",
       headers: buildAuthHeaders(),
-      body: JSON.stringify({
-        area: updatedCompanyArea.area,
-        region: updatedCompanyArea.region,
-        description: updatedCompanyArea.description,
-        active: updatedCompanyArea.active,
-      }),
+      body: JSON.stringify(serializeCompanyAreaPayload(updatedCompanyArea)),
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to update company area";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to update company area"),
+      );
     }
 
     const data: ApiCompanyArea = await response.json();
@@ -152,11 +170,9 @@ export const companyAreaService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to delete company area";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to delete company area"),
+      );
     }
 
     companyAreasCache = companyAreasCache.filter((area) => area.id !== id);
@@ -172,8 +188,12 @@ export const companyAreaService = {
       (area) =>
         area.company_id.toString().includes(searchTerm) ||
         area.area.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        area.region.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        area.description.toLowerCase().includes(searchTerm.toLowerCase()),
+        area.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        area.gl_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        area.pay_key.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        area.po.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        area.authorized_by.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        area.cost_code.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   },
 
@@ -186,9 +206,6 @@ export const companyAreaService = {
     }
     if (!companyArea.area || companyArea.area.trim() === "") {
       return { valid: false, error: "Area is required" };
-    }
-    if (!companyArea.region || companyArea.region.trim() === "") {
-      return { valid: false, error: "Region is required" };
     }
     return { valid: true };
   },
@@ -219,13 +236,6 @@ export const companyAreaService = {
     );
   },
 
-  // Get company areas by region
-  getAreasByRegion: (region: string): CompanyArea[] => {
-    return companyAreasCache.filter((area) =>
-      area.region.toLowerCase().includes(region.toLowerCase()),
-    );
-  },
-
   // Check if area exists for company
   areaExistsForCompany: (
     companyId: number,
@@ -237,13 +247,6 @@ export const companyAreaService = {
         area.company_id === companyId &&
         area.area === areaName &&
         area.id !== excludeId,
-    );
-  },
-
-  // Check if region exists
-  regionExists: (region: string): boolean => {
-    return companyAreasCache.some(
-      (area) => area.region.toLowerCase() === region.toLowerCase(),
     );
   },
 
@@ -300,12 +303,6 @@ export const companyAreaService = {
     return Array.from(new Set(ids));
   },
 
-  // Get unique regions
-  getUniqueRegions: (): string[] => {
-    const regions = companyAreasCache.map((a) => a.region);
-    return Array.from(new Set(regions));
-  },
-
   // Get unique areas
   getUniqueAreas: (): string[] => {
     const areas = companyAreasCache.map((a) => a.area);
@@ -335,20 +332,6 @@ export const companyAreaService = {
     );
   },
 
-  // ========== Geographic Methods ==========
-
-  // Group areas by region
-  getAreasGroupedByRegion: (): { [region: string]: CompanyArea[] } => {
-    const grouped: { [region: string]: CompanyArea[] } = {};
-    companyAreasCache.forEach((area) => {
-      if (!grouped[area.region]) {
-        grouped[area.region] = [];
-      }
-      grouped[area.region].push(area);
-    });
-    return grouped;
-  },
-
   // Group areas by company ID
   getAreasGroupedByCompanyId: (): { [companyId: number]: CompanyArea[] } => {
     const grouped: { [companyId: number]: CompanyArea[] } = {};
@@ -361,40 +344,6 @@ export const companyAreaService = {
     return grouped;
   },
 
-  // Get region summary
-  getRegionSummary: (): {
-    region: string;
-    totalAreas: number;
-    activeAreas: number;
-    companyIds: number[];
-  }[] => {
-    const regions = companyAreaService.getUniqueRegions();
-    return regions.map((region) => {
-      const areasInRegion = companyAreaService.getAreasByRegion(region);
-      return {
-        region,
-        totalAreas: areasInRegion.length,
-        activeAreas: areasInRegion.filter((a) => a.active).length,
-        companyIds: Array.from(new Set(areasInRegion.map((a) => a.company_id))),
-      };
-    });
-  },
-
-  // Check if region has multiple companies
-  isMultiCompanyRegion: (region: string): boolean => {
-    const areasInRegion = companyAreaService.getAreasByRegion(region);
-    const companies = new Set(areasInRegion.map((a) => a.company_id));
-    return companies.size > 1;
-  },
-
-  // Get overlapping regions (multiple companies in same region)
-  getOverlappingRegions: (): string[] => {
-    const regions = companyAreaService.getUniqueRegions();
-    return regions.filter((region) =>
-      companyAreaService.isMultiCompanyRegion(region),
-    );
-  },
-
   // ========== Statistics & Reporting Methods ==========
 
   // Get company area statistics
@@ -403,20 +352,17 @@ export const companyAreaService = {
     active: number;
     inactive: number;
     byCompanyId: { [companyId: number]: number };
-    byRegion: { [region: string]: number };
   } => {
     const stats = {
       total: companyAreasCache.length,
       active: companyAreasCache.filter((a) => a.active).length,
       inactive: companyAreasCache.filter((a) => !a.active).length,
       byCompanyId: {} as { [companyId: number]: number },
-      byRegion: {} as { [region: string]: number },
     };
 
     companyAreasCache.forEach((area) => {
       stats.byCompanyId[area.company_id] =
         (stats.byCompanyId[area.company_id] || 0) + 1;
-      stats.byRegion[area.region] = (stats.byRegion[area.region] || 0) + 1;
     });
 
     return stats;
@@ -429,7 +375,6 @@ export const companyAreaService = {
     active: number;
     inactive: number;
     primaryArea: string;
-    regions: string[];
   }[] => {
     const companyIds = companyAreaService.getUniqueCompanyIds();
     return companyIds.map((id) => {
@@ -441,7 +386,6 @@ export const companyAreaService = {
         active: areas.filter((a) => a.active).length,
         inactive: areas.filter((a) => !a.active).length,
         primaryArea: primaryArea ? primaryArea.area : "N/A",
-        regions: Array.from(new Set(areas.map((a) => a.region))),
       };
     });
   },
@@ -498,16 +442,11 @@ export const companyAreaService = {
       .map((area) => area.area);
   },
 
-  // Get region names for dropdown
-  getRegionNames: (): string[] => {
-    return companyAreaService.getUniqueRegions();
-  },
-
   // Get company area options for select components
   getCompanyAreaOptions: (): { value: number; label: string }[] => {
     return companyAreasCache.map((area) => ({
       value: area.id,
-      label: `${area.area} (${area.region})`,
+      label: area.area,
     }));
   },
 
@@ -517,7 +456,7 @@ export const companyAreaService = {
       .filter((area) => area.active)
       .map((area) => ({
         value: area.id,
-        label: `${area.area} (${area.region})`,
+        label: area.area,
       }));
   },
 
@@ -529,7 +468,7 @@ export const companyAreaService = {
       .filter((area) => area.company_id === companyId && area.active)
       .map((area) => ({
         value: area.id,
-        label: `${area.area} (${area.region})`,
+        label: area.area,
       }));
   },
 
@@ -538,14 +477,12 @@ export const companyAreaService = {
     value: number;
     label: string;
     company_id: number;
-    region: string;
     description: string;
   }[] => {
     return companyAreasCache.map((area) => ({
       value: area.id,
       label: area.area,
       company_id: area.company_id,
-      region: area.region,
       description: area.description,
     }));
   },
@@ -554,12 +491,6 @@ export const companyAreaService = {
   formatCompanyAreaDisplay: (areaId: number): string => {
     const area = companyAreasCache.find((a) => a.id === areaId);
     return area ? area.area : `Area ${areaId}`;
-  },
-
-  // Format company area display with region
-  formatCompanyAreaDisplayWithRegion: (areaId: number): string => {
-    const area = companyAreasCache.find((a) => a.id === areaId);
-    return area ? `${area.area} (${area.region})` : `Area ${areaId}`;
   },
 
   // Get status badge styling

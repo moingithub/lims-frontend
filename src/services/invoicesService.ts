@@ -59,7 +59,13 @@ export interface InvoiceLine {
   sample_checkin?: {
     cost_code: string;
     company_area: {
+      id?: number;
+      company_id?: number;
       area: string;
+      region?: string;
+      description?: string;
+      gl_code?: string;
+      pay_key?: string;
     } | null;
   };
 }
@@ -150,6 +156,25 @@ export async function updateInvoicePaymentStatus(
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
     throw new Error(errorBody?.message || `Server error: ${response.status}`);
+  }
+}
+
+export async function deleteInvoice(id: number): Promise<void> {
+  const token = authService.getAuthState().token;
+  const response = await fetch(`${API_BASE_URL}/invoices/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(
+      errorBody?.error ||
+        errorBody?.message ||
+        `Failed to delete invoice (${response.status})`,
+    );
   }
 }
 

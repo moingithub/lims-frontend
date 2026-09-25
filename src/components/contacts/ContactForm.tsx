@@ -91,7 +91,7 @@ export function ContactForm({ formData, onChange }: ContactFormProps) {
           <SelectContent>
             {filteredAreas.map((area) => (
               <SelectItem key={area.id} value={area.id.toString()}>
-                {area.area} ({area.region})
+                {area.area}
               </SelectItem>
             ))}
           </SelectContent>

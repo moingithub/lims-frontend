@@ -28,6 +28,8 @@ import { Checkbox } from "../ui/checkbox";
 import { Save } from "lucide-react";
 import { LineItem, WorkOrderWithId } from "../../services/workOrdersService";
 import { analysisPricingService } from "../../services/analysisPricingService";
+import { DecimalInput } from "./DecimalInput";
+import { isoToUSDate } from "../../utils/dateUtils";
 
 interface EditLineItemsDialogProps {
   open: boolean;
@@ -77,6 +79,15 @@ export function EditLineItemsDialog({
   const totalOrderAmount =
     subtotal + mileageFee + miscellaneousCharges + hourlyFee;
 
+  const formatOrderDate = (date: string): string => {
+    if (!date?.trim()) return "N/A";
+    const trimmed = date.trim();
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) {
+      return trimmed;
+    }
+    return isoToUSDate(trimmed) || trimmed;
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -105,7 +116,7 @@ export function EditLineItemsDialog({
               <Label className="text-sm text-muted-foreground">
                 Order Date
               </Label>
-              <p>{order.date}</p>
+              <p>{formatOrderDate(order.date)}</p>
             </div>
           </div>
 
@@ -221,68 +232,63 @@ export function EditLineItemsDialog({
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          value={item.applied_rate || ""}
-                          onChange={(e) =>
+                        <DecimalInput
+                          value={item.applied_rate}
+                          onChange={(value) =>
                             onLineItemChange(
                               item.id.toString(),
                               "applied_rate",
-                              parseFloat(e.target.value) || 0,
+                              value,
                             )
                           }
                           className="h-9 text-right"
-                          step="0.01"
                           placeholder="0.00"
                         />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          type="number"
+                        <DecimalInput
                           value={item.sample_fee}
-                          onChange={(e) =>
+                          onChange={(value) =>
                             onLineItemChange(
                               item.id.toString(),
                               "sample_fee",
-                              parseFloat(e.target.value) || 0,
+                              value,
                             )
                           }
                           className="h-9 text-right"
-                          step="0.01"
+                          placeholder="0.00"
                         />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          type="number"
+                        <DecimalInput
                           value={item.h2_pop_fee}
-                          onChange={(e) =>
+                          onChange={(value) =>
                             onLineItemChange(
                               item.id.toString(),
                               "h2_pop_fee",
-                              parseFloat(e.target.value) || 0,
+                              value,
                             )
                           }
                           className="h-9 text-right"
-                          step="0.01"
+                          placeholder="0.00"
                         />
                       </TableCell>
                       <TableCell className="text-right">
-                        <Input
-                          type="number"
+                        <DecimalInput
                           value={item.spot_composite_fee}
                           disabled={
                             (item.sample_type || "").toLowerCase() === "spot" ||
                             item.customer_cylinder === true
                           }
-                          onChange={(e) =>
+                          onChange={(value) =>
                             onLineItemChange(
                               item.id.toString(),
                               "spot_composite_fee",
-                              parseFloat(e.target.value) || 0,
+                              value,
                             )
                           }
                           className="h-9 text-right"
-                          step="0.01"
+                          placeholder="0.00"
                         />
                       </TableCell>
                       <TableCell className="text-right">
@@ -311,29 +317,20 @@ export function EditLineItemsDialog({
                 <Label className="text-muted-foreground whitespace-nowrap">
                   Miles:
                 </Label>
-                <Input
-                  type="number"
+                <DecimalInput
                   value={miles}
-                  onChange={(e) =>
-                    onMilesChange(parseFloat(e.target.value) || 0)
-                  }
+                  onChange={onMilesChange}
                   className="w-20 h-9 text-right"
-                  step="1"
-                  min="0"
                   placeholder="0"
+                  integer
                 />
                 <Label className="text-muted-foreground whitespace-nowrap">
                   Rate/Mile:
                 </Label>
-                <Input
-                  type="number"
+                <DecimalInput
                   value={ratePerMile}
-                  onChange={(e) =>
-                    onRatePerMileChange(parseFloat(e.target.value) || 0)
-                  }
+                  onChange={onRatePerMileChange}
                   className="w-20 h-9 text-right"
-                  step="0.01"
-                  min="0"
                   placeholder="0.00"
                 />
                 <Label className="text-muted-foreground whitespace-nowrap">
@@ -352,31 +349,19 @@ export function EditLineItemsDialog({
                 <Label className="text-muted-foreground">
                   Miscellaneous Charges:
                 </Label>
-                <Input
-                  type="number"
+                <DecimalInput
                   value={miscellaneousCharges}
-                  onChange={(e) =>
-                    onMiscellaneousChargesChange(
-                      parseFloat(e.target.value) || 0,
-                    )
-                  }
+                  onChange={onMiscellaneousChargesChange}
                   className="w-32 h-9 text-right"
-                  step="0.01"
-                  min="0"
                   placeholder="0.00"
                 />
               </div>
               <div className="flex justify-between items-center">
                 <Label className="text-muted-foreground">Hourly Fee:</Label>
-                <Input
-                  type="number"
+                <DecimalInput
                   value={hourlyFee}
-                  onChange={(e) =>
-                    onHourlyFeeChange(parseFloat(e.target.value) || 0)
-                  }
+                  onChange={onHourlyFeeChange}
                   className="w-32 h-9 text-right"
-                  step="0.01"
-                  min="0"
                   placeholder="0.00"
                 />
               </div>

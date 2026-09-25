@@ -1,5 +1,11 @@
 import { Label } from "../ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { Checkbox } from "../ui/checkbox";
 import { analysisPricingService } from "../../services/analysisPricingService";
 import { CompanyArea } from "../../services/companyAreaService";
@@ -66,13 +72,17 @@ export function AnalysisOptionsForm({
           <Label>Area</Label>
           <Select value={area} onValueChange={onAreaChange}>
             <SelectTrigger>
-              <SelectValue placeholder={selectedCompanyId ? "Select area" : "Select company first"} />
+              <SelectValue
+                placeholder={
+                  selectedCompanyId ? "Select area" : "Select company first"
+                }
+              />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="NA">NA</SelectItem>
               {filteredAreas.map((ca) => (
                 <SelectItem key={ca.id} value={ca.area}>
-                  {ca.area} ({ca.region})
+                  {ca.area}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -85,9 +95,14 @@ export function AnalysisOptionsForm({
           <Checkbox
             id="customer-cylinder-main"
             checked={customerCylinder}
-            onCheckedChange={(checked: boolean) => onCustomerCylinderChange(checked)}
+            onCheckedChange={(checked: boolean) =>
+              onCustomerCylinderChange(checked)
+            }
           />
-          <Label htmlFor="customer-cylinder-main" className="font-normal cursor-pointer">
+          <Label
+            htmlFor="customer-cylinder-main"
+            className="font-normal cursor-pointer"
+          >
             This is a customer-owned cylinder
           </Label>
         </div>
@@ -107,9 +122,14 @@ export function AnalysisOptionsForm({
           <Checkbox
             id="sampled-by-natty"
             checked={sampledByNatty}
-            onCheckedChange={(checked: boolean) => onSampledByNattyChange(checked)}
+            onCheckedChange={(checked: boolean) =>
+              onSampledByNattyChange(checked)
+            }
           />
-          <Label htmlFor="sampled-by-natty" className="font-normal cursor-pointer">
+          <Label
+            htmlFor="sampled-by-natty"
+            className="font-normal cursor-pointer"
+          >
             Sampled By Natty
           </Label>
         </div>

@@ -1,6 +1,5 @@
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
-import { Textarea } from "../ui/textarea";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import {
   Select,
@@ -9,6 +8,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import {
+  formatUsDateInputDisplay,
+  normalizeUsDateInput,
+  parseUsDateInputToIso,
+} from "../../utils/dateUtils";
 
 interface SampleDetailsFormProps {
   cylinderNumber: string;
@@ -22,6 +26,11 @@ interface SampleDetailsFormProps {
   temperature: string;
   fieldH2S: string;
   costCode: string;
+  authorizedBy: string;
+  sampleDate: string;
+  ambTemp: string;
+  sampleTime: string;
+  sampledBy: string;
   checkInType: "Cylinder" | "Bottle" | "CP Cylinder";
   billingReferenceType: string;
   billingReferenceNumber: string;
@@ -37,6 +46,10 @@ interface SampleDetailsFormProps {
   onTemperatureChange: (value: string) => void;
   onFieldH2SChange: (value: string) => void;
   onCostCodeChange: (value: string) => void;
+  onSampleDateChange: (value: string) => void;
+  onAmbTempChange: (value: string) => void;
+  onSampleTimeChange: (value: string) => void;
+  onSampledByChange: (value: string) => void;
   onCheckInTypeChange: (value: "Cylinder" | "Bottle" | "CP Cylinder") => void;
   onBillingReferenceTypeChange: (value: string) => void;
   onBillingReferenceNumberChange: (value: string) => void;
@@ -55,6 +68,11 @@ export function SampleDetailsForm({
   temperature,
   fieldH2S,
   costCode,
+  authorizedBy,
+  sampleDate,
+  ambTemp,
+  sampleTime,
+  sampledBy,
   checkInType,
   billingReferenceType,
   billingReferenceNumber,
@@ -70,6 +88,10 @@ export function SampleDetailsForm({
   onTemperatureChange,
   onFieldH2SChange,
   onCostCodeChange,
+  onSampleDateChange,
+  onAmbTempChange,
+  onSampleTimeChange,
+  onSampledByChange,
   onCheckInTypeChange,
   onBillingReferenceTypeChange,
   onBillingReferenceNumberChange,
@@ -267,16 +289,62 @@ export function SampleDetailsForm({
             placeholder="Cost code"
           />
         </div>
-      </div>
 
-      <div className="space-y-2">
-        <Label>Remarks</Label>
-        <Textarea
-          value={remarks}
-          onChange={(e) => onRemarksChange(e.target.value)}
-          placeholder="Enter remarks..."
-          rows={2}
-        />
+        <div className="space-y-2">
+          <Label>Authorized By</Label>
+          <Input value={authorizedBy} placeholder="Authorized by" readOnly />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Sample Date</Label>
+          <Input
+            type="text"
+            inputMode="numeric"
+            placeholder="MM/DD/YYYY"
+            value={formatUsDateInputDisplay(sampleDate)}
+            onChange={(e) =>
+              onSampleDateChange(
+                parseUsDateInputToIso(normalizeUsDateInput(e.target.value)),
+              )
+            }
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Sampled By</Label>
+          <Input
+            value={sampledBy}
+            onChange={(e) => onSampledByChange(e.target.value)}
+            placeholder="Sampled by"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Amb Temp</Label>
+          <Input
+            value={ambTemp}
+            onChange={(e) => onAmbTempChange(e.target.value)}
+            placeholder="e.g. 78 F"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Remarks</Label>
+          <Input
+            value={remarks}
+            onChange={(e) => onRemarksChange(e.target.value)}
+            placeholder="Enter remarks..."
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Sample Time</Label>
+          <Input
+            type="time"
+            value={sampleTime}
+            onChange={(e) => onSampleTimeChange(e.target.value)}
+          />
+        </div>
       </div>
     </div>
   );

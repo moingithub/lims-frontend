@@ -9,6 +9,7 @@ import { authService } from "./authService";
 import { companyMasterService } from "./companyMasterService";
 import { workorderHeadersService } from "./workorderHeadersService";
 import { sampleCheckInService } from "./sampleCheckInService";
+import { toIsoDateInputValue } from "../utils/dateUtils";
 
 // Get customers from Company Master Service
 export const getCustomers = (): Customer[] => {
@@ -47,26 +48,20 @@ export const getWorkOrders = async (): Promise<WorkOrder[]> => {
   }));
 };
 
-// Date utility functions
+// Returns YYYY-MM-DD for HTML date inputs
 export const getFirstDayOfMonth = (): string => {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const year = now.getFullYear();
-  return `${month}-01-${year}`;
+  return `${year}-${month}-01`;
 };
 
+// Returns YYYY-MM-DD for HTML date inputs
 export const getCurrentDate = (): string => {
   const now = new Date();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   const year = now.getFullYear();
-  return `${month}-${day}-${year}`;
-};
-
-// Convert MM-DD-YYYY to YYYY-MM-DD for date comparison
-export const usDateToISO = (usDate: string): string => {
-  if (!usDate) return "";
-  const [month, day, year] = usDate.split("-");
   return `${year}-${month}-${day}`;
 };
 
@@ -85,9 +80,9 @@ export const getFilteredOrders = (
 
     // If date range is selected, filter by date
     if (filters.date_from && filters.date_to) {
-      const orderDate = new Date(order.date);
-      const fromDate = new Date(usDateToISO(filters.date_from));
-      const toDate = new Date(usDateToISO(filters.date_to));
+      const orderDate = new Date(toIsoDateInputValue(order.date));
+      const fromDate = new Date(toIsoDateInputValue(filters.date_from));
+      const toDate = new Date(toIsoDateInputValue(filters.date_to));
       if (orderDate < fromDate || orderDate > toDate) return false;
     }
 

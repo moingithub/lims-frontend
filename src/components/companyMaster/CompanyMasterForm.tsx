@@ -24,9 +24,9 @@ export interface CompanyMasterFormData {
   billing_reference_number: string;
   billing_address: string;
   charge_h2_pop_fee: boolean;
-  h2_pop_fee_rate: number;
-  pressure_base: number;
-  pressure_base_factor: number;
+  h2_pop_fee_rate: number | "";
+  pressure_base: number | "";
+  pressure_base_factor: number | "";
   active: boolean;
 }
 
@@ -154,12 +154,14 @@ export function CompanyMasterForm({
             className="w-32"
             placeholder="Rate"
             value={formData.h2_pop_fee_rate}
-            onChange={(e) =>
+            onChange={(e) => {
+              const value = e.target.value;
               onChange({
                 ...formData,
-                h2_pop_fee_rate: parseFloat(e.target.value) || 0,
-              })
-            }
+                h2_pop_fee_rate:
+                  value === "" ? "" : parseFloat(value) || "",
+              });
+            }}
             disabled={!formData.charge_h2_pop_fee}
           />
         </div>
@@ -169,13 +171,23 @@ export function CompanyMasterForm({
           <Label>Pressure Base</Label>
           <Select
             value={
-              PRESSURE_BASE_OPTIONS.some(
-                (option) => option.value === formData.pressure_base,
-              )
-                ? String(formData.pressure_base)
-                : ""
+              formData.pressure_base === ""
+                ? "__none__"
+                : PRESSURE_BASE_OPTIONS.some(
+                      (option) => option.value === formData.pressure_base,
+                    )
+                  ? String(formData.pressure_base)
+                  : "__none__"
             }
             onValueChange={(value) => {
+              if (value === "__none__") {
+                onChange({
+                  ...formData,
+                  pressure_base: "",
+                  pressure_base_factor: "",
+                });
+                return;
+              }
               const pressure_base = parseFloat(value);
               onChange({
                 ...formData,
@@ -185,9 +197,10 @@ export function CompanyMasterForm({
             }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select pressure base" />
+              <SelectValue placeholder="Select pressure base (optional)" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="__none__">None</SelectItem>
               {PRESSURE_BASE_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={String(option.value)}>
                   {option.label}
@@ -199,7 +212,11 @@ export function CompanyMasterForm({
         <div className="space-y-2">
           <Label>Pressure Base Factor</Label>
           <Input
-            value={formData.pressure_base_factor}
+            value={
+              formData.pressure_base_factor === ""
+                ? ""
+                : formData.pressure_base_factor
+            }
             readOnly
             disabled
             placeholder="Auto-calculated"

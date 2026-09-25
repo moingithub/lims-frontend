@@ -7,12 +7,15 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
-import { Plus, FileCheck, Loader2 } from "lucide-react";
+import { Plus, FileCheck, X, CheckCircle2, Camera, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { getCurrentDateUS } from "../utils/dateUtils";
-import { validateImageFileForOCR } from "../utils/imageValidation";
+import { getCurrentDateUS, toIsoDateInputValue } from "../utils/dateUtils";
+import { validateImageFileForOCRQuick } from "../utils/imageValidation";
+import { compressImageForOCR } from "../utils/imageCompression";
+import { Badge } from "../components/ui/badge";
 import {
   CheckedInSample,
+  resolveOcrSampleDateAndTime,
   sampleCheckInService,
 } from "../services/sampleCheckInService";
 import { analysisPricingService } from "../services/analysisPricingService";
@@ -34,6 +37,12 @@ import { SampleDetailsForm } from "../components/sampleCheckIn/SampleDetailsForm
 import { CheckedInCylindersTable } from "../components/sampleCheckIn/CheckedInCylindersTable";
 import { WorkOrderSummary } from "../components/sampleCheckIn/WorkOrderSummary";
 import { TagImageDialog } from "../components/sampleCheckIn/TagImageDialog";
+import { TagCameraDialog } from "../components/sampleCheckIn/TagCameraDialog";
+import {
+  OcrProgressStepper,
+  OcrProgressStage,
+  waitForOcrStepVisibility,
+} from "../components/sampleCheckIn/OcrProgressStepper";
 import { AddCompanyMasterDialog } from "../components/companyMaster/AddCompanyMasterDialog";
 import { AddContactDialog } from "../components/contacts/AddContactDialog";
 import { WorkOrderReportDialog } from "../components/sampleCheckIn/WorkOrderReportDialog";
@@ -59,10 +68,8 @@ export function SampleCheckIn({
   );
 
   // Current customer context (persists across form clears)
-  const [currentCustomer, setCurrentCustomer] = useState("Acme Corporation");
-
-  // Mock data: Monthly cylinder count for current customer
-  const [monthlyCustomerCylinders] = useState(45);
+  const [currentCustomer, setCurrentCustomer] = useState("");
+  const [monthlyCustomerCylinders, setMonthlyCustomerCylinders] = useState(0);
 
   // Analysis number counter
   const [analysisCounter, setAnalysisCounter] = useState(1);
@@ -72,6 +79,7 @@ export function SampleCheckIn({
   const [isAddContactDialogOpen, setIsAddContactDialogOpen] = useState(false);
   const [isWorkOrderDialogOpen, setIsWorkOrderDialogOpen] = useState(false);
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [isCameraDialogOpen, setIsCameraDialogOpen] = useState(false);
 
   // Company Master form data
   const [companyFormData, setCompanyFormData] = useState<CompanyMasterFormData>(
@@ -85,9 +93,9 @@ export function SampleCheckIn({
       billing_reference_number: "",
       billing_address: "",
       charge_h2_pop_fee: false,
-      h2_pop_fee_rate: 0,
-      pressure_base: 14.73,
-      pressure_base_factor: 0.0174,
+      h2_pop_fee_rate: "",
+      pressure_base: "",
+      pressure_base_factor: "",
       active: true,
     },
   );
@@ -113,10 +121,13 @@ export function SampleCheckIn({
     }
   }, [isAddContactDialogOpen, selectedCompanyId]);
 
-  // Get first active analysis type as default
+  // Prefer GPA 2261 as the default when it is available.
   const getDefaultAnalysisType = () => {
     const activeTypes = analysisPricingService.getActiveAnalysisPrices();
-    return activeTypes.length > 0 ? activeTypes[0].analysis_code : "";
+    const preferredType = activeTypes.find(
+      (analysis) => analysis.analysis_code.trim().toLowerCase() === "gpa 2261",
+    );
+    return preferredType?.analysis_code ?? activeTypes[0]?.analysis_code ?? "";
   };
 
   // Form fields for scanned data
@@ -141,15 +152,19 @@ export function SampleCheckIn({
   const [temperature, setTemperature] = useState("");
   const [fieldH2S, setFieldH2S] = useState("");
   const [costCode, setCostCode] = useState("");
+  const [authorizedBy, setAuthorizedBy] = useState("");
+  const [sampleDate, setSampleDate] = useState("");
+  const [ambTemp, setAmbTemp] = useState("");
+  const [sampleTime, setSampleTime] = useState("");
+  const [sampledBy, setSampledBy] = useState("");
   const [cylinderNumber, setCylinderNumber] = useState("");
   const [remarks, setRemarks] = useState("");
   const [scannedTagImage, setScannedTagImage] = useState("");
   const [uploadedTagImagePath, setUploadedTagImagePath] = useState("");
   const [uploadedTagImageFilename, setUploadedTagImageFilename] = useState("");
   const [sampledByNatty, setSampledByNatty] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Checked-in cylinders and work order
+  // Data - Load from Company Master and Contacts services
   const [checkedInCylinders, setCheckedInCylinders] = useState<
     CheckedInSample[]
   >([]);
@@ -161,9 +176,12 @@ export function SampleCheckIn({
   const [selectedTagImageFilename, setSelectedTagImageFilename] = useState<
     string | null
   >(null);
-  const [isProcessingOCR, setIsProcessingOCR] = useState(false);
-
-  // Data - Load from Company Master and Contacts services
+  const [ocrStage, setOcrStage] = useState<OcrProgressStage | null>(null);
+  const [ocrComplete, setOcrComplete] = useState(false);
+  const [tagPreviewUrl, setTagPreviewUrl] = useState<string | null>(null);
+  const tagPreviewUrlRef = useRef<string | null>(null);
+  const ocrAbortRef = useRef<AbortController | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [companies, setCompanies] = useState<Company[]>(
     companyMasterService.getActiveCompanies(),
   );
@@ -175,6 +193,15 @@ export function SampleCheckIn({
   );
 
   // Load dropdown data on first render
+  useEffect(() => {
+    return () => {
+      if (tagPreviewUrlRef.current) {
+        URL.revokeObjectURL(tagPreviewUrlRef.current);
+      }
+      ocrAbortRef.current?.abort();
+    };
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -213,12 +240,16 @@ export function SampleCheckIn({
         const activeAnalysisTypes =
           analysisPricingService.getActiveAnalysisPrices();
         if (activeAnalysisTypes.length > 0) {
-          const firstAnalysisType = activeAnalysisTypes[0].analysis_code;
+          const defaultAnalysisType =
+            activeAnalysisTypes.find(
+              (analysis) =>
+                analysis.analysis_code.trim().toLowerCase() === "gpa 2261",
+            )?.analysis_code ?? activeAnalysisTypes[0].analysis_code;
           if (
             !analysisType ||
             !activeAnalysisTypes.some((a) => a.analysis_code === analysisType)
           ) {
-            setAnalysisType(firstAnalysisType);
+            setAnalysisType(defaultAnalysisType);
           }
         }
 
@@ -234,6 +265,37 @@ export function SampleCheckIn({
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!selectedCompanyId) {
+      setMonthlyCustomerCylinders(0);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadMonthlyCount = async () => {
+      try {
+        const count =
+          await sampleCheckInService.getMonthlyCheckInCountForCompany(
+            selectedCompanyId,
+          );
+        if (isMounted) {
+          setMonthlyCustomerCylinders(count);
+        }
+      } catch {
+        if (isMounted) {
+          setMonthlyCustomerCylinders(0);
+        }
+      }
+    };
+
+    loadMonthlyCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedCompanyId, workOrderNumber]);
 
   const ensureNextAnalysisSequence = async (): Promise<number> => {
     try {
@@ -259,8 +321,12 @@ export function SampleCheckIn({
     if (company) {
       setCustomerCode(code);
       setCustomerName(company.company_name);
+      setCurrentCustomer(company.company_name);
       setSelectedContact(""); // Reset contact when customer changes
       setSelectedCompanyId(company.id);
+      setArea("NA");
+      setCostCode("");
+      setAuthorizedBy("");
       applyCompanyBillingRefs(company);
     }
   };
@@ -284,8 +350,23 @@ export function SampleCheckIn({
       );
       if (linkedArea) {
         setArea(linkedArea.area);
+        setCostCode(linkedArea.cost_code);
+        setAuthorizedBy(linkedArea.authorized_by);
       }
     }
+  };
+
+  const handleAreaSelect = (areaName: string) => {
+    setArea(areaName);
+
+    const selectedArea = companyAreas.find(
+      (areaItem) =>
+        areaItem.area === areaName &&
+        areaItem.company_id === selectedCompanyId &&
+        areaItem.active,
+    );
+    setCostCode(selectedArea?.cost_code ?? "");
+    setAuthorizedBy(selectedArea?.authorized_by ?? "");
   };
 
   const handleAddCompanyConfirm = () => {
@@ -310,9 +391,18 @@ export function SampleCheckIn({
       billing_reference_number: companyFormData.billing_reference_number,
       billing_address: companyFormData.billing_address,
       charge_h2_pop_fee: companyFormData.charge_h2_pop_fee,
-      h2_pop_fee_rate: companyFormData.h2_pop_fee_rate,
-      pressure_base: companyFormData.pressure_base,
-      pressure_base_factor: companyFormData.pressure_base_factor,
+      h2_pop_fee_rate:
+        companyFormData.h2_pop_fee_rate === ""
+          ? 0
+          : companyFormData.h2_pop_fee_rate,
+      pressure_base:
+        companyFormData.pressure_base === ""
+          ? 0
+          : companyFormData.pressure_base,
+      pressure_base_factor:
+        companyFormData.pressure_base_factor === ""
+          ? 0
+          : companyFormData.pressure_base_factor,
       active: companyFormData.active,
       created_by: 1, // TODO: Replace with actual logged-in user ID
     };
@@ -323,6 +413,7 @@ export function SampleCheckIn({
         setCompanies([...companies, addedCompany]);
         setCustomerCode(companyFormData.company_code.toUpperCase());
         setCustomerName(companyFormData.company_name);
+        setCurrentCustomer(companyFormData.company_name);
         setSelectedCompanyId(addedCompany.id);
         applyCompanyBillingRefs(addedCompany);
 
@@ -338,8 +429,8 @@ export function SampleCheckIn({
           billing_address: "",
           charge_h2_pop_fee: false,
           h2_pop_fee_rate: 0,
-          pressure_base: 14.73,
-          pressure_base_factor: 0.0174,
+          pressure_base: "",
+          pressure_base_factor: "",
           active: true,
         });
 
@@ -414,65 +505,137 @@ export function SampleCheckIn({
     void createContact();
   };
 
-  const handleUploadedImage = async (file: File) => {
+  const revokeTagPreview = () => {
+    if (tagPreviewUrlRef.current) {
+      URL.revokeObjectURL(tagPreviewUrlRef.current);
+      tagPreviewUrlRef.current = null;
+    }
+    setTagPreviewUrl(null);
+  };
+
+  const setTagPreviewFromFile = (file: File) => {
+    revokeTagPreview();
+    if (!file.type.startsWith("image/")) {
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    tagPreviewUrlRef.current = url;
+    setTagPreviewUrl(url);
+  };
+
+  const applyOcrDataToForm = (ocrData: Partial<CheckedInSample>) => {
+    const { sampleDate: resolvedSampleDate, sampleTime: resolvedSampleTime } =
+      resolveOcrSampleDateAndTime(ocrData.sample_date, ocrData.sample_time);
+
+    setDate(resolvedSampleDate || ocrData.date || getCurrentDateUS());
+    setProducer(ocrData.producer || "");
+    setWellName(ocrData.well_name || "");
+    setMeterNumber(ocrData.meter_number || "");
+    setSampleType(ocrData.sample_type || "spot");
+    setFlowRate(ocrData.flow_rate || "");
+    setPressure(ocrData.pressure || "");
+    setPressureUnit(
+      ocrData.pressure_unit?.toUpperCase() === "PSIA" ? "PSIA" : "PSIG",
+    );
+    setTemperature(ocrData.temperature || "");
+    setFieldH2S(ocrData.field_h2s != null ? String(ocrData.field_h2s) : "");
+    setCylinderNumber(ocrData.cylinder_number || "");
+    setRemarks(ocrData.remarks || "");
+    setCostCode(ocrData.cost_code || "");
+    setSampleDate(
+      toIsoDateInputValue(resolvedSampleDate || ocrData.date || ""),
+    );
+    setAmbTemp(ocrData.amb_temp || "");
+    setSampleTime(resolvedSampleTime);
+    setSampledBy(ocrData.sampled_by || "");
+  };
+
+  const handleCancelOcr = () => {
+    ocrAbortRef.current?.abort();
+    ocrAbortRef.current = null;
+    setOcrStage(null);
+    setOcrComplete(false);
+    toast.message("OCR cancelled");
+  };
+
+  const resetTagUploadState = () => {
+    revokeTagPreview();
+    setOcrComplete(false);
+    setScannedTagImage("");
+    setUploadedTagImagePath("");
+    setUploadedTagImageFilename("");
+  };
+
+  const ensureReadyForTagUpload = (): boolean => {
     if (!customerCode) {
       toast.error("Please select a company before uploading");
-      return;
+      return false;
     }
 
     if (!selectedContactId) {
       toast.error("Please select a contact before uploading");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleUploadedImage = async (file: File) => {
+    if (!ensureReadyForTagUpload()) {
       return;
     }
 
-    const validation = await validateImageFileForOCR(file);
-    if (!validation.valid) {
-      validation.errors.forEach((error) => toast.error(error));
-      validation.warnings.forEach((warning) => toast.warning(warning));
-      return;
-    }
+    ocrAbortRef.current?.abort();
+    setOcrComplete(false);
+    setTagPreviewFromFile(file);
 
-    validation.warnings.forEach((warning) => toast.warning(warning));
-
-    setIsProcessingOCR(true);
+    setOcrStage("optimizing");
     try {
+      const validation = await validateImageFileForOCRQuick(file);
+      if (!validation.valid) {
+        validation.errors.forEach((error) => toast.error(error));
+        validation.warnings.forEach((warning) => toast.warning(warning));
+        revokeTagPreview();
+        return;
+      }
+
+      validation.warnings.forEach((warning) => toast.warning(warning));
+
+      const uploadFile = await compressImageForOCR(file);
+      if (uploadFile !== file) {
+        setTagPreviewFromFile(uploadFile);
+      }
+
+      setOcrStage("reading");
+      const controller = new AbortController();
+      ocrAbortRef.current = controller;
+
       const { path, filename, ocrData } =
-        await sampleCheckInService.uploadTagImage(file);
+        await sampleCheckInService.uploadTagImage(uploadFile, {
+          signal: controller.signal,
+        });
+
       setUploadedTagImagePath(path);
       setUploadedTagImageFilename(filename);
       setScannedTagImage(path);
       setSelectedTagImage(path);
 
-      // Populate form fields with OCR extracted data
-      setDate(ocrData.date || getCurrentDateUS());
-      setProducer(ocrData.producer || "");
-      setArea(ocrData.area || "NA");
-      setWellName(ocrData.well_name || "");
-      setMeterNumber(ocrData.meter_number || "");
-      setSampleType(ocrData.sample_type || "spot");
-      setFlowRate(ocrData.flow_rate || "");
-      setPressure(ocrData.pressure || "");
-      setPressureUnit(
-        ocrData.pressure_unit?.toUpperCase() === "PSIA" ? "PSIA" : "PSIG",
-      );
-      setTemperature(ocrData.temperature || "");
-      setFieldH2S(
-        ocrData.field_h2s != null ? String(ocrData.field_h2s) : "",
-      );
-      setCylinderNumber(ocrData.cylinder_number || "");
-      setRemarks(ocrData.remarks || "");
-      setCostCode(ocrData.cost_code || "");
+      setOcrStage("updating");
+      applyOcrDataToForm(ocrData);
+      await waitForOcrStepVisibility();
+      setOcrComplete(true);
 
-      // toast.success(
-      //   `Image uploaded and saved to path ${filePath}. OCR data populated in form.`,
-      // );
-
-      toast.success(`OCR data populated in form & Image saved!`);
+      toast.success("Sample tag read — form fields updated.");
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      setOcrComplete(false);
       const message = error instanceof Error ? error.message : "Upload failed";
       toast.error(message);
     } finally {
-      setIsProcessingOCR(false);
+      ocrAbortRef.current = null;
+      setOcrStage(null);
     }
   };
 
@@ -489,8 +652,46 @@ export function SampleCheckIn({
   };
 
   const triggerImageUpload = () => {
+    if (!ensureReadyForTagUpload()) {
+      return;
+    }
+
     fileInputRef.current?.click();
   };
+
+  const triggerCameraCapture = () => {
+    if (!ensureReadyForTagUpload()) {
+      return;
+    }
+
+    setIsCameraDialogOpen(true);
+  };
+
+  const handleCameraCapture = async (file: File) => {
+    await handleUploadedImage(file);
+  };
+
+  const renderTagCaptureButtons = (replaceLabel = false) => (
+    <div className="flex gap-2">
+      <Button
+        type="button"
+        onClick={triggerCameraCapture}
+        className="h-10 flex-1 bg-blue-600 text-white hover:bg-blue-700"
+      >
+        <Camera className="mr-2 h-4 w-4" />
+        {replaceLabel ? "Retake Photo" : "Take Photo"}
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={triggerImageUpload}
+        className="h-10 flex-1"
+      >
+        <Upload className="mr-2 h-4 w-4" />
+        {replaceLabel ? "Replace Image" : "Upload Image"}
+      </Button>
+    </div>
+  );
 
   const handleAddCylinder = async () => {
     if (!cylinderNumber) {
@@ -621,6 +822,11 @@ export function SampleCheckIn({
       temperature,
       field_h2s: fieldH2S.trim() ? parseFloat(fieldH2S) : 0,
       cost_code: costCode,
+      authorized_by: authorizedBy,
+      sample_date: sampleDate,
+      amb_temp: ambTemp,
+      sample_time: sampleTime,
+      sampled_by: sampledBy,
       remarks,
       check_in_type: checkInType,
       checkin_type: checkInType,
@@ -679,11 +885,20 @@ export function SampleCheckIn({
     setTemperature("");
     setFieldH2S("");
     setCostCode("");
+    setAuthorizedBy("");
+    setSampleDate("");
+    setAmbTemp("");
+    setSampleTime("");
+    setSampledBy("");
     setCylinderNumber("");
     setRemarks("");
-    setScannedTagImage("");
-    setUploadedTagImagePath("");
-    setUploadedTagImageFilename("");
+    resetTagUploadState();
+  };
+
+  const handleViewUploadedTag = () => {
+    const imageUrl = uploadedTagImagePath || scannedTagImage;
+    if (!imageUrl) return;
+    handleViewTagImage(imageUrl, uploadedTagImageFilename || undefined);
   };
 
   const handleViewTagImage = (imageUrl: string, filename?: string) => {
@@ -737,10 +952,15 @@ export function SampleCheckIn({
       }
 
       const selectedCompany = companies.find((c) => c.id === selectedCompanyId);
-      const h2PopFee = selectedCompany?.charge_h2_pop_fee
-        ? selectedCompany.h2_pop_fee_rate || 0
+      const parsedH2Pop = Number(selectedCompany?.h2_pop_fee_rate);
+      const h2PopFee =
+        selectedCompany?.charge_h2_pop_fee && Number.isFinite(parsedH2Pop)
+          ? parsedH2Pop
+          : 0;
+      const parsedPressureBase = Number(selectedCompany?.pressure_base_factor);
+      const pressureBaseFactor = Number.isFinite(parsedPressureBase)
+        ? parsedPressureBase
         : 0;
-      const pressureBaseFactor = selectedCompany?.pressure_base_factor ?? 0;
 
       const payloads = samplesForWorkOrder.map((sample) => ({
         ...sampleCheckInService.serializeCheckInForPost(sample),
@@ -801,7 +1021,18 @@ export function SampleCheckIn({
       setCheckedInCylinders([]);
       clearForm();
     } catch (error) {
-      toast.error("Failed to generate work order or submit check-ins");
+      let message = "Failed to generate work order or submit check-ins";
+      if (error instanceof Error && error.message.trim()) {
+        message = error.message;
+      } else if (error && typeof error === "object") {
+        const body = error as { error?: unknown; message?: unknown };
+        if (typeof body.error === "string" && body.error.trim()) {
+          message = body.error;
+        } else if (typeof body.message === "string" && body.message.trim()) {
+          message = body.message;
+        }
+      }
+      toast.error(message);
     }
   };
 
@@ -852,7 +1083,7 @@ export function SampleCheckIn({
                 customerName={customerName}
                 selectedCompanyId={selectedCompanyId}
                 onAnalysisTypeChange={setAnalysisType}
-                onAreaChange={setArea}
+                onAreaChange={handleAreaSelect}
                 onCustomerCylinderChange={setCustomerCylinder}
                 onRushedChange={setRushed}
                 onSampledByNattyChange={setSampledByNatty}
@@ -860,28 +1091,67 @@ export function SampleCheckIn({
 
               <Separator />
 
-              <div className="w-full">
-                {isProcessingOCR ? (
+              <div className="w-full space-y-3">
+                {tagPreviewUrl && (
                   <div
-                    role="status"
-                    aria-live="polite"
-                    className="flex h-10 w-full items-center justify-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-4 text-sm font-medium text-blue-600 pointer-events-none"
+                    className={`relative overflow-hidden rounded-md border bg-muted/30 ${
+                      ocrComplete ? "border-2 border-green-500" : ""
+                    }`}
                   >
-                    <Loader2
-                      className="h-4 w-4 shrink-0 animate-spin"
-                      color="#2563eb"
+                    {ocrComplete && (
+                      <Badge className="absolute top-2 right-2 bg-green-600 hover:bg-green-600">
+                        Uploaded
+                      </Badge>
+                    )}
+                    <img
+                      src={tagPreviewUrl}
+                      alt="Selected sample tag preview"
+                      className="max-h-40 w-full object-contain bg-white"
                     />
-                    Processing Image…
+                  </div>
+                )}
+
+                {ocrStage ? (
+                  <div className="space-y-2">
+                    <OcrProgressStepper stage={ocrStage} />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={handleCancelOcr}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel OCR
+                    </Button>
+                  </div>
+                ) : ocrComplete ? (
+                  <div className="space-y-2">
+                    <div className="flex items-start gap-2 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                      <div>
+                        <p className="font-medium">
+                          Sample tag read successfully
+                        </p>
+                        <p className="text-xs text-green-700">
+                          Review populated fields and edit if needed.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={handleViewUploadedTag}
+                      >
+                        View tag
+                      </Button>
+                      {renderTagCaptureButtons(true)}
+                    </div>
                   </div>
                 ) : (
-                  <Button
-                    type="button"
-                    onClick={triggerImageUpload}
-                    className="h-10 w-full bg-blue-600 text-white"
-                  >
-                    <FileCheck className="h-4 w-4 mr-2" />
-                    Upload Sample Tag Image
-                  </Button>
+                  renderTagCaptureButtons()
                 )}
 
                 <input
@@ -890,7 +1160,6 @@ export function SampleCheckIn({
                   accept="image/*"
                   className="hidden"
                   onChange={handleImageInputChange}
-                  disabled={isProcessingOCR}
                 />
               </div>
               {/* {uploadedTagImagePath && (
@@ -915,6 +1184,11 @@ export function SampleCheckIn({
               temperature={temperature}
               fieldH2S={fieldH2S}
               costCode={costCode}
+              authorizedBy={authorizedBy}
+              sampleDate={sampleDate}
+              ambTemp={ambTemp}
+              sampleTime={sampleTime}
+              sampledBy={sampledBy}
               checkInType={checkInType}
               billingReferenceType={invoiceRefName}
               billingReferenceNumber={invoiceRefValue}
@@ -930,6 +1204,10 @@ export function SampleCheckIn({
               onTemperatureChange={setTemperature}
               onFieldH2SChange={setFieldH2S}
               onCostCodeChange={setCostCode}
+              onSampleDateChange={setSampleDate}
+              onAmbTempChange={setAmbTemp}
+              onSampleTimeChange={setSampleTime}
+              onSampledByChange={setSampledBy}
               onCheckInTypeChange={setCheckInType}
               onBillingReferenceTypeChange={setInvoiceRefName}
               onBillingReferenceNumberChange={setInvoiceRefValue}
@@ -985,6 +1263,12 @@ export function SampleCheckIn({
         onOpenChange={setIsImageDialogOpen}
         imageUrl={selectedTagImage}
         filename={selectedTagImageFilename}
+      />
+
+      <TagCameraDialog
+        open={isCameraDialogOpen}
+        onOpenChange={setIsCameraDialogOpen}
+        onCapture={handleCameraCapture}
       />
 
       {/* Add Company Dialog */}

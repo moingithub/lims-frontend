@@ -44,9 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     permissions: [],
   });
 
-  // Always start logged out so the login screen is shown on load
+  // Always start logged out so the login screen is shown on load.
+  // Only clear persisted storage — keep an in-memory token from this page session
+  // so HMR remounts do not strip Authorization from API calls.
   useEffect(() => {
-    authService.logout();
+    authService.clearPersistedSession();
   }, []);
 
   const login = async (email: string, password: string) => {

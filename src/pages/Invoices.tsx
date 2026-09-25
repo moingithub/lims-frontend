@@ -22,6 +22,7 @@ import {
   updateInvoicePaymentStatus,
   printInvoice,
   downloadInvoice,
+  deleteInvoice,
 } from "../services/invoicesService";
 
 export function Invoices() {
@@ -39,6 +40,7 @@ export function Invoices() {
   const [newPaymentStatus, setNewPaymentStatus] = useState("");
   const [invoices, setInvoices] = useState<InvoiceListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchInvoices()
@@ -79,7 +81,11 @@ export function Invoices() {
   };
 
   const confirmDeleteInvoice = async () => {
-    if (invoiceToDelete) {
+    if (!invoiceToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteInvoice(invoiceToDelete.id);
       setInvoices((prev) =>
         prev.filter((inv) => inv.id !== invoiceToDelete.id),
       );
@@ -88,6 +94,12 @@ export function Invoices() {
       );
       setIsDeleteDialogOpen(false);
       setInvoiceToDelete(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to delete invoice",
+      );
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -149,7 +161,6 @@ export function Invoices() {
               invoices={filteredInvoices}
               onViewInvoice={handleViewInvoice}
               onEditStatus={handleEditStatus}
-              onDeleteInvoice={handleDeleteInvoice}
               getStatusBadgeClass={getStatusBadgeClass}
             />
           )}
@@ -176,6 +187,7 @@ export function Invoices() {
       <DeleteInvoiceDialog
         open={isDeleteDialogOpen}
         invoice={invoiceToDelete}
+        isDeleting={isDeleting}
         onOpenChange={setIsDeleteDialogOpen}
         onConfirm={confirmDeleteInvoice}
       />

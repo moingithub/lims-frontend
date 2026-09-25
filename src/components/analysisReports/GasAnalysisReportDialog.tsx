@@ -44,6 +44,29 @@ function formatAnalyzedOn(value?: string): string {
   return formatted || value;
 }
 
+function formatSampleDateTime(
+  date?: string | null,
+  time?: string | null,
+): string {
+  const formattedDate = date ? isoToUSDate(date) : "";
+  const formattedTime = time?.trim() ?? "";
+  return (
+    [formattedDate, formattedTime].filter(Boolean).join(" ") || PLACEHOLDER
+  );
+}
+
+function formatSampleDate(value?: string | null): string {
+  if (!value?.trim()) return PLACEHOLDER;
+
+  const trimmed = value.trim();
+  const dayMonthYear = trimmed.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (dayMonthYear) {
+    return `${dayMonthYear[2]}/${dayMonthYear[1]}/${dayMonthYear[3]}`;
+  }
+
+  return isoToUSDate(trimmed) || displayValue(value);
+}
+
 function InfoField({ label, value }: { label: string; value: string }) {
   return (
     <div className="gar-info-field">
@@ -54,12 +77,7 @@ function InfoField({ label, value }: { label: string; value: string }) {
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="invoice-detail-row">
-      <span className="label">{label}</span>
-      <span className="value gar-lab-num">{value}</span>
-    </div>
-  );
+  return <InfoField label={label} value={value} />;
 }
 
 function ConditionTableRow({
@@ -72,10 +90,18 @@ function ConditionTableRow({
   return (
     <tr>
       <td>{label}</td>
-      <td className="text-right gar-lab-num">{displayValue(values.dry_ideal)}</td>
-      <td className="text-right gar-lab-num">{displayValue(values.dry_real)}</td>
-      <td className="text-right gar-lab-num">{displayValue(values.wet_ideal)}</td>
-      <td className="text-right gar-lab-num">{displayValue(values.wet_real)}</td>
+      <td className="text-right gar-lab-num">
+        {displayValue(values.dry_ideal)}
+      </td>
+      <td className="text-right gar-lab-num">
+        {displayValue(values.dry_real)}
+      </td>
+      <td className="text-right gar-lab-num">
+        {displayValue(values.wet_ideal)}
+      </td>
+      <td className="text-right gar-lab-num">
+        {displayValue(values.wet_real)}
+      </td>
     </tr>
   );
 }
@@ -147,7 +173,7 @@ const S = StyleSheet.create({
     marginBottom: 12,
   },
   leftSection: { flex: 1 },
-  rightSection: { alignItems: "flex-end" },
+  rightSection: { flex: 1 },
   label: {
     fontFamily: "Helvetica-Bold",
     fontSize: 6.5,
@@ -165,24 +191,19 @@ const S = StyleSheet.create({
   detailText: { fontSize: 8, color: "#555555", lineHeight: 1.45 },
   detailRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
     marginBottom: 3,
-    gap: 8,
+    gap: 6,
   },
   detailLabel: {
-    fontSize: 6.5,
-    color: "#888888",
-    letterSpacing: 0.7,
-    textTransform: "uppercase",
-    minWidth: 75,
-    textAlign: "right",
+    fontSize: 7.5,
+    color: "#555555",
+    minWidth: 120,
   },
   detailValue: {
     fontFamily: "Courier",
-    fontSize: 8,
-    minWidth: 95,
-    textAlign: "right",
+    fontSize: 7.5,
+    color: "#1a1a1a",
+    flex: 1,
   },
   sampleGrid: {
     flexDirection: "row",
@@ -196,7 +217,7 @@ const S = StyleSheet.create({
     marginBottom: 3,
     gap: 6,
   },
-  sampleFieldLabel: { fontSize: 7.5, color: "#555555", minWidth: 95 },
+  sampleFieldLabel: { fontSize: 7.5, color: "#555555", minWidth: 120 },
   sampleFieldValue: {
     fontFamily: "Courier",
     fontSize: 7.5,
@@ -229,6 +250,21 @@ const S = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 4,
   },
+  tableRowTotal: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: "#1a1a1a",
+    borderBottomWidth: 1,
+    borderBottomColor: "#1a1a1a",
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    marginTop: 2,
+  },
+  tableCellBold: {
+    fontFamily: "Helvetica-Bold",
+    fontSize: 7.5,
+    color: "#1a1a1a",
+  },
   tableCell: { fontFamily: "Courier", fontSize: 7.5, color: "#1a1a1a" },
   tableCellRight: {
     fontFamily: "Courier",
@@ -251,17 +287,6 @@ const S = StyleSheet.create({
     color: "#666666",
     fontStyle: "italic",
     marginTop: 10,
-  },
-  gpmSummaryLabel: {
-    fontSize: 7,
-    color: "#555555",
-    marginBottom: 2,
-  },
-  gpmSummaryLine: {
-    fontFamily: "Courier",
-    fontSize: 7.5,
-    color: "#1a1a1a",
-    marginBottom: 2,
   },
   footer: {
     position: "absolute",
@@ -346,11 +371,11 @@ function GasAnalysisReportPDFDocument({
           </View>
           <View style={S.rightSection}>
             {[
-              ["Method", report.method],
-              ["Analysis#", report.analysis_number],
-              ["Cylinder#", report.cylinder_number],
-              ["Analyzed On", formatAnalyzedOn(report.analyzed_on)],
-              ["Analyzed By", report.analyzed_by],
+              ["Method:", report.method],
+              ["Analysis#:", report.analysis_number],
+              ["Cylinder#:", report.cylinder_number],
+              ["Analyzed On:", formatAnalyzedOn(report.analyzed_on)],
+              ["Analyzed By:", report.analyzed_by],
             ].map(([label, value]) => (
               <View style={S.detailRow} key={label}>
                 <Text style={S.detailLabel}>{label}</Text>
@@ -367,7 +392,15 @@ function GasAnalysisReportPDFDocument({
               ["Producer", report.producer],
               ["Well/Lease", report.well_lease],
               ["Meter#", report.meter_number],
-              ["Sample Type", report.sample_type],
+              ["Pressure Measured", report.pressure_measured],
+              ["Amb. Temp", report.amb_temp],
+              ["Instrument", report.instrument],
+              [
+                "Last Instrument Verification",
+                formatSampleDate(report.last_instrument_verification),
+              ],
+              ["Heating Method", report.heating_method],
+              ["Hexanes Split", report.hexanes_split],
               ["Remarks", report.remarks],
             ].map(([label, value]) => (
               <View style={S.sampleField} key={label}>
@@ -379,12 +412,24 @@ function GasAnalysisReportPDFDocument({
           <View style={S.sampleColumn}>
             {[
               ["Sampled By", report.sampled_by],
-              ["Sample Date", report.sample_date ? isoToUSDate(report.sample_date) : ""],
+              [
+                "Sample Date/Time",
+                formatSampleDateTime(report.sample_date, report.sample_time),
+              ],
               ["Sample Pressure", report.sample_pressure],
               ["Sample Temperature", report.sample_temperature],
               ["Sample Method", report.sample_method],
-              ["Field H2S", report.field_h2s],
+              [
+                "Effective Start Date",
+                formatSampleDate(report.effective_start_date),
+              ],
+              [
+                "Effective End Date",
+                formatSampleDate(report.effective_end_date),
+              ],
+              ["Field H2S*", report.field_h2s],
               ["Flow Rate", report.flow_rate],
+              ["Sample Type", report.sample_type],
             ].map(([label, value]) => (
               <View style={S.sampleField} key={label}>
                 <Text style={S.sampleFieldLabel}>{label}:</Text>
@@ -406,7 +451,9 @@ function GasAnalysisReportPDFDocument({
         <View>
           <View style={S.tableHeaderRow}>
             <Text style={[S.tableHeaderCell, S.colComponent]}>Component</Text>
-            <Text style={[S.tableHeaderCell, S.colMole, { textAlign: "right" }]}>
+            <Text
+              style={[S.tableHeaderCell, S.colMole, { textAlign: "right" }]}
+            >
               Mole%
             </Text>
             <Text style={[S.tableHeaderCell, S.colWt, { textAlign: "right" }]}>
@@ -435,22 +482,42 @@ function GasAnalysisReportPDFDocument({
               </Text>
             </View>
           ))}
+          <View style={S.tableRowTotal} wrap={false}>
+            <Text style={[S.tableCellBold, S.colComponent]}>Total</Text>
+            <Text style={[S.tableCellRight, S.colMole, S.tableCellBold]}>
+              {displayValue(report.component_totals.mole_pct)}
+            </Text>
+            <Text style={[S.tableCellRight, S.colWt, S.tableCellBold]}>
+              {displayValue(report.component_totals.wt_pct)}
+            </Text>
+            <Text style={[S.tableCellRight, S.colGpm, S.tableCellBold]}>
+              {displayValue(report.component_totals.gpm)}
+            </Text>
+          </View>
         </View>
 
         <Text style={S.sectionLabel}>Analysis Results</Text>
         <View>
           <View style={S.tableHeaderRow}>
             <Text style={[S.tableHeaderCell, S.colLabel]} />
-            <Text style={[S.tableHeaderCell, S.colDryIdeal, { textAlign: "right" }]}>
+            <Text
+              style={[S.tableHeaderCell, S.colDryIdeal, { textAlign: "right" }]}
+            >
               Dry Ideal
             </Text>
-            <Text style={[S.tableHeaderCell, S.colDryReal, { textAlign: "right" }]}>
+            <Text
+              style={[S.tableHeaderCell, S.colDryReal, { textAlign: "right" }]}
+            >
               Dry Real
             </Text>
-            <Text style={[S.tableHeaderCell, S.colWetIdeal, { textAlign: "right" }]}>
+            <Text
+              style={[S.tableHeaderCell, S.colWetIdeal, { textAlign: "right" }]}
+            >
               Wet Ideal
             </Text>
-            <Text style={[S.tableHeaderCell, S.colWetReal, { textAlign: "right" }]}>
+            <Text
+              style={[S.tableHeaderCell, S.colWetReal, { textAlign: "right" }]}
+            >
               Wet Real
             </Text>
           </View>
@@ -467,16 +534,6 @@ function GasAnalysisReportPDFDocument({
             report.compressibility_factor,
           )}
           {renderConditionRow("GPM", report.gpm_totals)}
-        </View>
-
-        <View style={{ marginTop: 8 }}>
-          <Text style={S.gpmSummaryLabel}>GPM (Dry Real)</Text>
-          <Text style={S.gpmSummaryLine}>
-            C2+: {displayValue(report.gpm_c2_plus)}
-          </Text>
-          <Text style={S.gpmSummaryLine}>
-            C3+: {displayValue(report.gpm_c3_plus)}
-          </Text>
         </View>
 
         <Text style={S.footerNote}>
@@ -568,13 +625,11 @@ export function GasAnalysisReportDialog({
         .invoice-title-row { display:flex; align-items:baseline; justify-content:space-between; border-top:2.5px solid #1a1a1a; border-bottom:1px solid #d0d0d0; padding:5px 0 6px; margin-bottom:8mm; }
         .invoice-title-row h1 { font-size:18pt; font-weight:900; letter-spacing:0.04em; margin:0; color:#1a1a1a; }
         .invoice-number { font-size:10pt; color:#555; font-family:'Consolas','Roboto Mono','Courier New',monospace; font-weight:600; font-variant-numeric:tabular-nums; }
-        .invoice-meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-bottom:8mm; }
+        .invoice-meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-bottom:8mm; align-items:start; }
+        .gar-field-column { min-width:0; }
         .invoice-bill-to h2 { font-size:7.5pt; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888; margin:0 0 3px; }
         .invoice-bill-to .company-name { font-size:11pt; font-weight:700; margin:0 0 2px; }
         .invoice-bill-to .bill-detail { font-size:8.5pt; color:#555; margin:0 0 1px; line-height:1.45; }
-        .invoice-detail-row { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-bottom:3px; font-size:8.5pt; }
-        .invoice-detail-row .label { color:#888; min-width:90px; text-align:right; font-size:7.5pt; text-transform:uppercase; letter-spacing:0.08em; }
-        .invoice-detail-row .value { font-weight:600; min-width:100px; text-align:right; }
         .invoice-services-title { font-size:7.5pt; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888; margin:6mm 0 4px; }
         .invoice-table { width:100%; border-collapse:collapse; font-size:7.8pt; margin-bottom:5mm; table-layout:fixed; }
         .invoice-table thead tr { background:#1a1a1a; color:#fff; }
@@ -589,31 +644,21 @@ export function GasAnalysisReportDialog({
           font-family:'Consolas','Roboto Mono','Courier New',monospace;
           font-variant-numeric:tabular-nums;
         }
-        .gar-sample-grid { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-bottom:6mm; }
-        .gar-info-field { display:flex; gap:6px; margin-bottom:3px; font-size:8.5pt; }
-        .gar-info-label { color:#555; min-width:105px; }
-        .gar-info-value { font-weight:600; color:#1a1a1a; flex:1; }
+        .invoice-table tbody tr.gar-component-total td {
+          font-weight:700;
+          border-top:2px solid #1a1a1a;
+          border-bottom:2px solid #1a1a1a;
+          background:#f5f5f5;
+        }
+        .gar-sample-grid { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-bottom:6mm; align-items:start; }
+        .gar-info-field { display:flex; gap:6px; margin-bottom:3px; font-size:8.5pt; line-height:1.45; }
+        .gar-info-label { color:#555; min-width:120px; flex-shrink:0; }
+        .gar-info-value { font-weight:600; color:#1a1a1a; flex:1; min-width:0; }
         .gar-conditions-row {
           display:flex; justify-content:space-between; margin-bottom:4mm;
           font-size:8.5pt; font-weight:600;
           font-family:'Consolas','Roboto Mono','Courier New',monospace;
           font-variant-numeric:tabular-nums;
-        }
-        .gar-gpm-summary {
-          margin-top: 4mm;
-          font-size: 7.8pt;
-          line-height: 1.45;
-        }
-        .gar-gpm-summary .gar-gpm-label {
-          color: #555;
-          font-weight: 400;
-          margin: 0 0 2px;
-        }
-        .gar-gpm-summary .gar-gpm-line {
-          margin: 0 0 2px;
-          font-family: 'Consolas', 'Roboto Mono', 'Courier New', monospace;
-          font-variant-numeric: tabular-nums;
-          color: #1a1a1a;
         }
         .gar-footer-note { margin-top: 6mm; font-size: 7pt; color: #666; font-style: italic; }
         .invoice-footer {
@@ -708,190 +753,233 @@ export function GasAnalysisReportDialog({
                         <p className="bill-detail">{report.customer_phone}</p>
                       )}
                     </div>
-                    <div>
+                    <div className="gar-field-column">
                       <DetailRow
-                        label="Method"
+                        label="Method:"
                         value={displayValue(report.method)}
                       />
                       <DetailRow
-                        label="Analysis#"
+                        label="Analysis#:"
                         value={displayValue(report.analysis_number)}
                       />
                       <DetailRow
-                        label="Cylinder#"
+                        label="Cylinder#:"
                         value={displayValue(report.cylinder_number)}
                       />
                       <DetailRow
-                        label="Analyzed On"
+                        label="Analyzed On:"
                         value={formatAnalyzedOn(report.analyzed_on)}
                       />
                       <DetailRow
-                        label="Analyzed By"
+                        label="Analyzed By:"
                         value={displayValue(report.analyzed_by)}
                       />
                     </div>
                   </div>
 
-              <p className="invoice-services-title">Sample Information</p>
-              <div className="gar-sample-grid">
-                <div>
-                  <InfoField
-                    label="Producer:"
-                    value={displayValue(report.producer)}
-                  />
-                  <InfoField
-                    label="Well/Lease:"
-                    value={displayValue(report.well_lease)}
-                  />
-                  <InfoField
-                    label="Meter#:"
-                    value={displayValue(report.meter_number)}
-                  />
-                  <InfoField
-                    label="Sample Type:"
-                    value={displayValue(report.sample_type)}
-                  />
-                  <InfoField
-                    label="Remarks:"
-                    value={displayValue(report.remarks)}
-                  />
+                  <p className="invoice-services-title">Sample Information</p>
+                  <div className="gar-sample-grid">
+                    <div className="gar-field-column">
+                      <InfoField
+                        label="Producer:"
+                        value={displayValue(report.producer)}
+                      />
+                      <InfoField
+                        label="Well/Lease:"
+                        value={displayValue(report.well_lease)}
+                      />
+                      <InfoField
+                        label="Meter#:"
+                        value={displayValue(report.meter_number)}
+                      />
+                      <InfoField
+                        label="Pressure Measured:"
+                        value={displayValue(report.pressure_measured)}
+                      />
+                      <InfoField
+                        label="Amb. Temp:"
+                        value={displayValue(report.amb_temp)}
+                      />
+                      <InfoField
+                        label="Instrument:"
+                        value={displayValue(report.instrument)}
+                      />
+                      <InfoField
+                        label="Last Instrument Verification:"
+                        value={formatSampleDate(
+                          report.last_instrument_verification,
+                        )}
+                      />
+                      <InfoField
+                        label="Heating Method:"
+                        value={displayValue(report.heating_method)}
+                      />
+                      <InfoField
+                        label="Hexanes Split:"
+                        value={displayValue(report.hexanes_split)}
+                      />
+                      <InfoField
+                        label="Remarks:"
+                        value={displayValue(report.remarks)}
+                      />
+                    </div>
+                    <div className="gar-field-column">
+                      <InfoField
+                        label="Sampled By:"
+                        value={displayValue(report.sampled_by)}
+                      />
+                      <InfoField
+                        label="Sample Date/Time:"
+                        value={formatSampleDateTime(
+                          report.sample_date,
+                          report.sample_time,
+                        )}
+                      />
+                      <InfoField
+                        label="Sample Pressure:"
+                        value={displayValue(report.sample_pressure)}
+                      />
+                      <InfoField
+                        label="Sample Temperature:"
+                        value={displayValue(report.sample_temperature)}
+                      />
+                      <InfoField
+                        label="Sample Method:"
+                        value={displayValue(report.sample_method)}
+                      />
+                      <InfoField
+                        label="Effective Start Date:"
+                        value={formatSampleDate(report.effective_start_date)}
+                      />
+                      <InfoField
+                        label="Effective End Date:"
+                        value={formatSampleDate(report.effective_end_date)}
+                      />
+                      <InfoField
+                        label="Field H2S*:"
+                        value={displayValue(report.field_h2s)}
+                      />
+                      <InfoField
+                        label="Flow Rate:"
+                        value={displayValue(report.flow_rate)}
+                      />
+                      <InfoField
+                        label="Sample Type:"
+                        value={displayValue(report.sample_type)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="gar-conditions-row">
+                    <span>
+                      Base Condition: {displayValue(report.base_condition)}
+                    </span>
+                    <span>
+                      Physical Constant:{" "}
+                      {displayValue(report.physical_constant)}
+                    </span>
+                  </div>
+
+                  <table className="invoice-table">
+                    <thead>
+                      <tr>
+                        <th>Component</th>
+                        <th className="text-right">Mole%</th>
+                        <th className="text-right">Wt%</th>
+                        <th className="text-right">GPM</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {componentRows.map((row, idx) => (
+                        <tr key={idx}>
+                          <td>{displayValue(row.component)}</td>
+                          <td className="text-right gar-lab-num">
+                            {displayValue(row.mole_pct)}
+                          </td>
+                          <td className="text-right gar-lab-num">
+                            {displayValue(row.wt_pct)}
+                          </td>
+                          <td className="text-right gar-lab-num">
+                            {displayValue(row.gpm)}
+                          </td>
+                        </tr>
+                      ))}
+                      <tr className="gar-component-total">
+                        <td>Total</td>
+                        <td className="text-right gar-lab-num">
+                          {displayValue(report.component_totals.mole_pct)}
+                        </td>
+                        <td className="text-right gar-lab-num">
+                          {displayValue(report.component_totals.wt_pct)}
+                        </td>
+                        <td className="text-right gar-lab-num">
+                          {displayValue(report.component_totals.gpm)}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <p className="invoice-services-title">Analysis Results</p>
+                  <table className="invoice-table">
+                    <thead>
+                      <tr>
+                        <th />
+                        <th className="text-right">Dry Ideal</th>
+                        <th className="text-right">Dry Real</th>
+                        <th className="text-right">Wet Ideal</th>
+                        <th className="text-right">Wet Real</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <ConditionTableRow
+                        label="Gross Heating Value (BTU/ft3)"
+                        values={report.gross_heating_value}
+                      />
+                      <ConditionTableRow
+                        label="Specific Gravity (air=1.000)"
+                        values={report.specific_gravity}
+                      />
+                      <ConditionTableRow
+                        label="Compressibility Factor (Z)"
+                        values={report.compressibility_factor}
+                      />
+                      <ConditionTableRow
+                        label="GPM"
+                        values={report.gpm_totals}
+                      />
+                    </tbody>
+                  </table>
+
+                  <p className="gar-footer-note">
+                    *Field H2S rounded to nearest whole ppm
+                  </p>
+
+                  <div className="invoice-footer">
+                    <p>
+                      Natty Gas Lab · 10700 FM 307, Midland, TX 79706 ·
+                      432-686-2719 · www.nattygaslab.com
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <InfoField
-                    label="Sampled By:"
-                    value={displayValue(report.sampled_by)}
-                  />
-                  <InfoField
-                    label="Sample Date:"
-                    value={
-                      report.sample_date
-                        ? isoToUSDate(report.sample_date)
-                        : PLACEHOLDER
-                    }
-                  />
-                  <InfoField
-                    label="Sample Pressure:"
-                    value={displayValue(report.sample_pressure)}
-                  />
-                  <InfoField
-                    label="Sample Temperature:"
-                    value={displayValue(report.sample_temperature)}
-                  />
-                  <InfoField
-                    label="Sample Method:"
-                    value={displayValue(report.sample_method)}
-                  />
-                  <InfoField
-                    label="Field H2S:"
-                    value={displayValue(report.field_h2s)}
-                  />
-                  <InfoField
-                    label="Flow Rate:"
-                    value={displayValue(report.flow_rate)}
-                  />
+
+                <div className="invoice-action-bar no-print">
+                  <Button
+                    onClick={handleDownloadPDF}
+                    disabled={isGenerating || !report}
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating…
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-2" />
+                        Download PDF
+                      </>
+                    )}
+                  </Button>
                 </div>
-              </div>
-
-              <div className="gar-conditions-row">
-                <span>
-                  Base Condition: {displayValue(report.base_condition)}
-                </span>
-                <span>
-                  Physical Constant: {displayValue(report.physical_constant)}
-                </span>
-              </div>
-
-              <table className="invoice-table">
-                <thead>
-                  <tr>
-                    <th>Component</th>
-                    <th className="text-right">Mole%</th>
-                    <th className="text-right">Wt%</th>
-                    <th className="text-right">GPM</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {componentRows.map((row, idx) => (
-                    <tr key={idx}>
-                      <td>{displayValue(row.component)}</td>
-                      <td className="text-right gar-lab-num">
-                        {displayValue(row.mole_pct)}
-                      </td>
-                      <td className="text-right gar-lab-num">{displayValue(row.wt_pct)}</td>
-                      <td className="text-right gar-lab-num">{displayValue(row.gpm)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              <p className="invoice-services-title">Analysis Results</p>
-              <table className="invoice-table">
-                <thead>
-                  <tr>
-                    <th />
-                    <th className="text-right">Dry Ideal</th>
-                    <th className="text-right">Dry Real</th>
-                    <th className="text-right">Wet Ideal</th>
-                    <th className="text-right">Wet Real</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <ConditionTableRow
-                    label="Gross Heating Value (BTU/ft3)"
-                    values={report.gross_heating_value}
-                  />
-                  <ConditionTableRow
-                    label="Specific Gravity (air=1.000)"
-                    values={report.specific_gravity}
-                  />
-                  <ConditionTableRow
-                    label="Compressibility Factor (Z)"
-                    values={report.compressibility_factor}
-                  />
-                  <ConditionTableRow label="GPM" values={report.gpm_totals} />
-                </tbody>
-              </table>
-
-              <div className="gar-gpm-summary">
-                <p className="gar-gpm-label">GPM (Dry Real)</p>
-                <p className="gar-gpm-line">
-                  C2+: {displayValue(report.gpm_c2_plus)}
-                </p>
-                <p className="gar-gpm-line">
-                  C3+: {displayValue(report.gpm_c3_plus)}
-                </p>
-              </div>
-
-              <p className="gar-footer-note">
-                *Field H2S rounded to nearest whole ppm
-              </p>
-
-              <div className="invoice-footer">
-                <p>
-                  Natty Gas Lab · 10700 FM 307, Midland, TX 79706 · 432-686-2719
-                  · www.nattygaslab.com
-                </p>
-              </div>
-            </div>
-
-            <div className="invoice-action-bar no-print">
-              <Button
-                onClick={handleDownloadPDF}
-                disabled={isGenerating || !report}
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating…
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4 mr-2" />
-                    Download PDF
-                  </>
-                )}
-              </Button>
-            </div>
               </>
             ) : null}
           </div>

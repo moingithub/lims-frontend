@@ -23,7 +23,7 @@ export function PendingWorkOrdersCard({ orders }: PendingWorkOrdersCardProps) {
             const priority = dashboardService.getPriorityColor(order.hours_in_queue);
             return (
               <div
-                key={order.id}
+                key={order.work_order_number}
                 className={`flex items-center justify-between p-4 border rounded-lg ${priority.bg} ${priority.border} transition-all hover:shadow-md`}
               >
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-4 items-center">

@@ -25,6 +25,7 @@ import { GenerateInvoices } from "./pages/GenerateInvoices";
 import { Invoices } from "./pages/Invoices";
 import { ImportMachineReport } from "./pages/ImportMachineReport";
 import { MapAnalysisPosition } from "./pages/MapAnalysisPosition";
+import { LinkReport } from "./pages/LinkReport";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
@@ -137,6 +138,13 @@ function AppContent() {
         return (
           <ProtectedRoute moduleName="sample_checkin">
             <SampleCheckIn onNavigate={setActivePage} />
+          </ProtectedRoute>
+        );
+
+      case "link-report":
+        return (
+          <ProtectedRoute moduleName="sample_checkin">
+            <LinkReport />
           </ProtectedRoute>
         );
 
@@ -287,17 +295,19 @@ function AppContent() {
   }
 
   return (
-    <div className="flex h-screen bg-background flex-col">
+    <div className="flex h-screen min-h-0 flex-col bg-background">
       <Header
         isLoggedIn={isAuthenticated}
         userName={user?.name}
         onLogin={handleLoginSuccess}
         onLogout={handleLogout}
       />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         <Sidebar activePage={activePage} onNavigate={setActivePage} />
-        <main className="flex-1 overflow-auto">
-          <div className="container mx-auto p-6 max-w-7xl">{renderPage()}</div>
+        <main className="flex-1 min-w-0 overflow-auto">
+          <div className="container mx-auto max-w-7xl p-4 sm:p-6">
+            {renderPage()}
+          </div>
         </main>
       </div>
       <Toaster />

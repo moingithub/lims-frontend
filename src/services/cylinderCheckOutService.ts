@@ -52,9 +52,12 @@ export interface CylinderCheckOutApiRecord {
 
 const buildAuthHeaders = (): HeadersInit => {
   const token = authService.getAuthState().token;
+  if (!token) {
+    throw new Error("Your session has expired. Please log in again.");
+  }
   return {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    Authorization: `Bearer ${token}`,
   };
 };
 
@@ -526,7 +529,16 @@ export const cylinderCheckOutService = {
   },
 
   getCheckOutRecords: (): CheckOutRecord[] => {
-    return [];
+    return checkOutApiCache.map((record) => ({
+      id: record.id,
+      company_id: record.company_id,
+      contact_id: record.company_contact_id,
+      cylinder_id: record.cylinder_id,
+      barcode: "",
+      cylinder_type: "",
+      created_by: record.created_by_id,
+      created_at: record.created_at,
+    }));
   },
 
   getCheckOutById: (id: number): CheckOutRecord | undefined => {

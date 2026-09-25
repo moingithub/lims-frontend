@@ -13,6 +13,7 @@ import { InvoiceListItem } from "../../services/invoicesService";
 interface DeleteInvoiceDialogProps {
   open: boolean;
   invoice: InvoiceListItem | null;
+  isDeleting?: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 }
@@ -20,6 +21,7 @@ interface DeleteInvoiceDialogProps {
 export function DeleteInvoiceDialog({
   open,
   invoice,
+  isDeleting = false,
   onOpenChange,
   onConfirm,
 }: DeleteInvoiceDialogProps) {
@@ -34,12 +36,20 @@ export function DeleteInvoiceDialog({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isDeleting}
+          >
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onConfirm}>
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isDeleting}
+          >
             <Trash2 className="w-4 h-4 mr-2" />
-            Delete
+            {isDeleting ? "Deleting..." : "Delete"}
           </Button>
         </DialogFooter>
       </DialogContent>

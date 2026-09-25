@@ -1,5 +1,16 @@
 import { API_BASE_URL } from "../config/api";
 import { authService } from "./authService";
+import {
+  extractDateFromDateTime,
+  toIsoDateInputValue,
+} from "../utils/dateUtils";
+import { companyAreaService } from "./companyAreaService";
+import {
+  workOrdersService,
+  WorkOrderHeader,
+  WorkOrderLine,
+} from "./workOrdersService";
+import { analysisPricingService } from "./analysisPricingService";
 
 /**
  * Update status in sample_checkin by work order number
@@ -8,15 +19,11 @@ const updateStatusByWorkOrderNumber = async (
   workOrderNumber: string,
   payload: { status: string },
 ) => {
-  const token = authService.getAuthState().token;
   const response = await fetch(
     `${API_BASE_URL}/sample_checkin/update_status_by_wo/${encodeURIComponent(workOrderNumber)}`,
     {
       method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
+      headers: buildAuthHeaders(),
       body: JSON.stringify(payload),
     },
   );
@@ -30,6 +37,9 @@ export interface CheckedInSample {
   id: number;
   company_id: number;
   company_contact_id?: number;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
   analysis_type_id?: number;
   area_id?: number;
   customer_cylinder?: boolean;
@@ -51,6 +61,23 @@ export interface CheckedInSample {
   temperature: string;
   field_h2s: number;
   cost_code: string;
+  authorized_by: string;
+  sample_date: string | null;
+  amb_temp: string;
+  sample_time: string;
+  sampled_by: string | null;
+  pressure_base_factor?: number;
+  pressure_measured?: string;
+  analyzed_by?: string;
+  base_condition?: string;
+  physical_constant?: string;
+  instrument?: string;
+  last_instrument_verification?: string;
+  heating_method?: string;
+  hexanes_split?: string;
+  sample_method?: string;
+  effective_start_date?: string;
+  effective_end_date?: string;
   remarks: string;
   check_in_type: "Cylinder" | "Bottle" | "CP Cylinder";
   checkin_type?: string;
@@ -97,6 +124,7 @@ export interface SampleCheckInPayload {
   cylinder_id: number | null;
   cylinder_number: string;
   analysis_number: string;
+  date: string;
   producer: string;
   well_name: string;
   meter_number: string;
@@ -107,6 +135,11 @@ export interface SampleCheckInPayload {
   temperature: string;
   field_h2s: number;
   cost_code: string;
+  authorized_by: string;
+  sample_date: string | null;
+  amb_temp: string;
+  sample_time: string | null;
+  sampled_by: string | null;
   checkin_type: string;
   invoice_ref_name: string;
   invoice_ref_value: string;
@@ -116,6 +149,17 @@ export interface SampleCheckInPayload {
   status: string;
   h2_pop_fee?: number;
   pressure_base_factor: number;
+  pressure_measured?: string;
+  analyzed_by?: string;
+  base_condition?: string;
+  physical_constant?: string;
+  instrument?: string;
+  last_instrument_verification?: string;
+  heating_method?: string;
+  hexanes_split?: string;
+  sample_method?: string;
+  effective_start_date?: string;
+  effective_end_date?: string;
 }
 
 export interface UpdateWOLinePayload {
@@ -128,28 +172,677 @@ export interface UpdateWOLinePayload {
   spot_composite_fee: number;
 }
 
-type SampleCheckInApiRecord = {
-  id: number;
-  analysis_number: string;
+export interface UpdateSampleCheckInPayload {
+  status?: string;
+  remarks?: string;
+  pressure_base_factor?: number;
+  pressure_measured?: string;
+  amb_temp?: string;
+  sample_time?: string;
+  sample_date?: string | null;
+  sampled_by?: string | null;
+  analyzed_by?: string;
+  base_condition?: string;
+  physical_constant?: string;
+  instrument?: string;
+  last_instrument_verification?: string;
+  heating_method?: string;
+  hexanes_split?: string;
+  sample_method?: string;
+  effective_start_date?: string;
+  effective_end_date?: string;
+}
+
+type ApiAnalysisTypeRelation = {
+  id?: number;
+  analysis_type?: string;
 };
 
-const buildAuthHeaders = (): HeadersInit => {
-  const token = authService.getAuthState().token;
+type ApiCompanyContactRelation = {
+  id?: number;
+  name?: string;
+  phone?: string;
+  email?: string;
+};
+
+type ApiCompanyAreaRelation = {
+  id?: number;
+  area?: string | null;
+};
+
+export type SampleCheckInApiRecord = {
+  id: number;
+  analysis_number?: string;
+  work_order_number?: string;
+  company_id?: number;
+  company_name?: string;
+  company_contact_id?: number;
+  contact_id?: number;
+  company_contact?: ApiCompanyContactRelation | null;
+  Company_contact?: ApiCompanyContactRelation | null;
+  analysis_type_id?: number | null;
+  analysis_type?: string | ApiAnalysisTypeRelation | null;
+  Analysis_type?: ApiAnalysisTypeRelation | null;
+  analysis_pricing?: ApiAnalysisTypeRelation | null;
+  analysis_position?: number | null;
+  rushed?: boolean;
+  date?: string;
+  check_in_time?: string;
+  created_at?: string;
+  status?: string;
+  created_by?: number;
+  created_by_id?: number;
+  cylinder_number?: string;
+  producer?: string;
+  well_name?: string;
+  meter_number?: string;
+  flow_rate?: string;
+  pressure?: string;
+  temperature?: string;
+  field_h2s?: number | string | null;
+  cost_code?: string;
+  authorized_by?: string;
+  sample_date?: string | null;
+  sampled_date?: string | null;
+  amb_temp?: string | null;
+  sample_time?: string | null;
+  pressure_measured?: string | null;
+  sampled_by?: string | null;
+  analyzed_by?: string;
+  base_condition?: string;
+  physical_constant?: string;
+  instrument?: string;
+  last_instrument_verification?: string;
+  heating_method?: string;
+  hexanes_split?: string;
+  sample_method?: string;
+  effective_start_date?: string;
+  effective_end_date?: string;
+  pressure_base_factor?: number;
+  remarks?: string;
+  checkin_type?: string;
+  check_in_type?: string;
+  sample_type?: string;
+  customer_cylinder?: boolean;
+  customer_owned_cylinder?: boolean;
+  sampled_by_lab?: boolean;
+  sampled_by_natty?: boolean;
+  area?: string;
+  area_id?: number | null;
+  company_area?: ApiCompanyAreaRelation | string | null;
+  Company_area?: ApiCompanyAreaRelation | null;
+  invoice_ref_name?: string;
+  invoice_ref_value?: string;
+  billing_reference_type?: string;
+  billing_reference_number?: string;
+  scanned_tag_image?: string | null;
+  tag_image?: string;
+};
+
+const parseApiNumber = (value: unknown, fallback = 0): number => {
+  if (value == null || value === "") return fallback;
+  const num = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(num) ? num : fallback;
+};
+
+const normalizeOcrFieldKey = (key: string): string =>
+  key.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+const getOcrFieldValue = (
+  ocrApiData: Record<string, unknown>,
+  aliases: string[],
+): string | undefined => {
+  const normalizedAliases = new Set(
+    aliases.map((alias) => normalizeOcrFieldKey(alias)),
+  );
+
+  for (const [key, value] of Object.entries(ocrApiData)) {
+    if (value == null || String(value).trim() === "") continue;
+    if (normalizedAliases.has(normalizeOcrFieldKey(key))) {
+      return String(value).trim();
+    }
+  }
+
+  return undefined;
+};
+
+const getOcrAmbTempValue = (
+  ocrApiData: Record<string, unknown>,
+): string | undefined => {
+  const direct = getOcrFieldValue(ocrApiData, [
+    "Amb_Temp",
+    "Amb Temp",
+    "Amb. Temp",
+    "amb_temp",
+    "Amb Temp Tag",
+    "Amb. Temp Tag",
+    "Amb_Temp_Tag",
+  ]);
+  if (direct) return formatAmbTempValue(direct);
+
+  for (const [key, value] of Object.entries(ocrApiData)) {
+    if (value == null || String(value).trim() === "") continue;
+    const normalizedKey = normalizeOcrFieldKey(key);
+    if (normalizedKey.includes("amb") && normalizedKey.includes("temp")) {
+      return formatAmbTempValue(String(value));
+    }
+  }
+
+  return undefined;
+};
+
+const normalizeOcrSampleTime = (value: string): string => {
+  const trimmed = value.trim();
+  const twelveHourMatch = trimmed.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (twelveHourMatch) {
+    let hours = Number(twelveHourMatch[1]);
+    const minutes = twelveHourMatch[2];
+    const meridiem = twelveHourMatch[3].toUpperCase();
+    if (meridiem === "PM" && hours < 12) hours += 12;
+    if (meridiem === "AM" && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  }
+
+  const compactTwelveHourMatch = trimmed.match(
+    /^(\d{1,2}):(\d{2})\s*(am|pm)$/i,
+  );
+  if (compactTwelveHourMatch) {
+    let hours = Number(compactTwelveHourMatch[1]);
+    const minutes = compactTwelveHourMatch[2];
+    const meridiem = compactTwelveHourMatch[3].toUpperCase();
+    if (meridiem === "PM" && hours < 12) hours += 12;
+    if (meridiem === "AM" && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  }
+
+  const compactNoSpaceMatch = trimmed.match(/^(\d{1,2}):(\d{2})(am|pm)$/i);
+  if (compactNoSpaceMatch) {
+    let hours = Number(compactNoSpaceMatch[1]);
+    const minutes = compactNoSpaceMatch[2];
+    const meridiem = compactNoSpaceMatch[3].toUpperCase();
+    if (meridiem === "PM" && hours < 12) hours += 12;
+    if (meridiem === "AM" && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  }
+
+  const colonMeridiemMatch = trimmed.match(/^(\d{1,2}):(\d{2}):(am|pm)$/i);
+  if (colonMeridiemMatch) {
+    let hours = Number(colonMeridiemMatch[1]);
+    const minutes = colonMeridiemMatch[2];
+    const meridiem = colonMeridiemMatch[3].toUpperCase();
+    if (meridiem === "PM" && hours < 12) hours += 12;
+    if (meridiem === "AM" && hours === 12) hours = 0;
+    return `${String(hours).padStart(2, "0")}:${minutes}`;
+  }
+
+  const twentyFourHourMatch = trimmed.match(/^(\d{1,2}):(\d{2})/);
+  if (twentyFourHourMatch) {
+    return `${String(Number(twentyFourHourMatch[1])).padStart(2, "0")}:${twentyFourHourMatch[2]}`;
+  }
+
+  return trimmed;
+};
+
+const getOcrSampleTimeValue = (
+  ocrApiData: Record<string, unknown>,
+): string | undefined => {
+  const direct = getOcrFieldValue(ocrApiData, [
+    "Sample_Time",
+    "Sample Time",
+    "sample_time",
+  ]);
+  return direct ? normalizeOcrSampleTime(direct) : undefined;
+};
+
+const formatAmbTempValue = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  const inlineMatch = trimmed.match(/^(\d+(?:\.\d+)?)(?:\s*([FCfc°]))?/);
+  if (inlineMatch) {
+    const amount = inlineMatch[1];
+    const unit = inlineMatch[2]?.toUpperCase() ?? "F";
+    return `${amount} ${unit}`.trim();
+  }
+
+  return trimmed;
+};
+
+const extractAmbTempFromOcrText = (ocrText: string): string | undefined => {
+  const patterns = [
+    /Amb[\s.,]*Temp(?:erature)?(?:\s*Tag)?[\s:.-]+(\d+(?:\.\d+)?(?:\s*[FCfc°])?)/i,
+    /Amb[\s.,]*Temp(?:erature)?(?:\s*Tag)?[^0-9\n]*(\d+(?:\.\d+)?)(?:\s*([FCfc°]))?/i,
+    /Ambient[\s-]*Temp(?:erature)?[\s:.-]+(\d+(?:\.\d+)?(?:\s*[FCfc°])?)/i,
+    /"Amb[\s.,]*Temp(?:erature)?(?:\s*Tag)?"\s*:\s*"([^"]+)"/i,
+    /"label"\s*:\s*"Amb[\s.,]*Temp(?:erature)?(?:\s*Tag)?"[^}]*"value"\s*:\s*"([^"]+)"/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = ocrText.match(pattern);
+    if (match) {
+      const rawValue = match[2] ? `${match[1]} ${match[2]}` : match[1];
+      const formatted = formatAmbTempValue(rawValue);
+      if (formatted) {
+        return formatted;
+      }
+    }
+  }
+
+  return undefined;
+};
+
+const resolveAmbTempFromOcrPayload = (payload: unknown): string | undefined => {
+  const candidates: string[] = [];
+
+  const visit = (value: unknown, keyHint = ""): void => {
+    if (value == null) return;
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (!trimmed) return;
+
+      const normalizedKey = normalizeOcrFieldKey(keyHint);
+      if (
+        normalizedKey.includes("amb") &&
+        normalizedKey.includes("temp") &&
+        /\d/.test(trimmed)
+      ) {
+        candidates.push(formatAmbTempValue(trimmed));
+      }
+
+      const fromText = extractAmbTempFromOcrText(trimmed);
+      if (fromText) {
+        candidates.push(fromText);
+      }
+      return;
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      const normalizedKey = normalizeOcrFieldKey(keyHint);
+      if (normalizedKey.includes("amb") && normalizedKey.includes("temp")) {
+        candidates.push(formatAmbTempValue(String(value)));
+      }
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => visit(item, keyHint));
+      return;
+    }
+
+    if (typeof value === "object") {
+      Object.entries(value as Record<string, unknown>).forEach(([key, child]) =>
+        visit(child, key),
+      );
+    }
+  };
+
+  visit(payload);
+
+  try {
+    const serialized = JSON.stringify(payload);
+    const fromSerialized = extractAmbTempFromOcrText(serialized);
+    if (fromSerialized) {
+      candidates.push(fromSerialized);
+    }
+  } catch {
+    // ignore serialization issues
+  }
+
+  return candidates.find((value) => value.trim().length > 0);
+};
+
+const extractSampleDateFromOcrText = (ocrText: string): string | undefined => {
+  const labeledMatch = ocrText.match(/Date(?:\/Time)?[:\s]+([^\n]+)/i);
+  if (labeledMatch) {
+    const dateValue = labeledMatch[1].trim();
+    const splitDateTime = dateValue.match(/^(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+    return splitDateTime?.[1] ?? dateValue;
+  }
+
+  const looseMatch = ocrText.match(
+    /(?:^|[\s\n])(\d{1,2}\/\d{1,2}\/\d{2,4})(?:\s+\d{1,2}(?::\d{2})?\s*(?:am|pm))?/i,
+  );
+  return looseMatch?.[1];
+};
+
+const splitCombinedSampleDateTime = (
+  value: string,
+): { date?: string; time?: string } => {
+  const trimmed = value.trim();
+  if (!trimmed) return {};
+
+  const slashFormat = trimmed.match(
+    /^(\d{1,2}\/\d{1,2}\/\d{2,4})(?:\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?))?/i,
+  );
+  if (slashFormat) {
+    return {
+      date: slashFormat[1],
+      time: slashFormat[2]
+        ? normalizeOcrSampleTime(slashFormat[2].trim())
+        : undefined,
+    };
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}T/.test(trimmed)) {
+    const [datePart, timePart = ""] = trimmed.split("T");
+    const normalizedTime = timePart
+      ? normalizeOcrSampleTime(timePart.slice(0, 5))
+      : undefined;
+    return {
+      date: datePart,
+      time: normalizedTime,
+    };
+  }
+
+  return { date: trimmed };
+};
+
+export const resolveOcrSampleDateAndTime = (
+  sampleDate?: string | null,
+  sampleTime?: string | null,
+): { sampleDate: string; sampleTime: string } => {
+  let dateValue = sampleDate?.trim() ?? "";
+  let timeValue = sampleTime?.trim() ?? "";
+
+  if (dateValue) {
+    const split = splitCombinedSampleDateTime(dateValue);
+    dateValue = split.date ?? dateValue;
+    if (!timeValue && split.time) {
+      timeValue = split.time;
+    }
+  }
+
   return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    sampleDate: dateValue,
+    sampleTime: timeValue ? normalizeOcrSampleTime(timeValue) : "",
   };
 };
 
+const extractSampleTempFromOcrText = (ocrText: string): string | undefined => {
+  const pattern =
+    /Temp(?:erature)?(?:\s*\([^)]*\))?[:\s]+(\d+(?:\.\d+)?(?:\s*[FCfc°])?)/gi;
+
+  let match: RegExpExecArray | null = null;
+  while ((match = pattern.exec(ocrText)) !== null) {
+    const prefix = ocrText.slice(Math.max(0, match.index - 8), match.index);
+    if (/Amb\.?\s*$/i.test(prefix)) {
+      continue;
+    }
+    return match[1].trim();
+  }
+
+  return undefined;
+};
+
+const extractSampleTimeFromOcrText = (ocrText: string): string | undefined => {
+  const labeledMatch = ocrText.match(/Sample\s*Time[:\s]+([^\n]+)/i);
+  if (labeledMatch) {
+    return normalizeOcrSampleTime(labeledMatch[1].trim());
+  }
+
+  const dateTimeMatch = ocrText.match(
+    /Date(?:\/Time)?[:\s]+(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)/i,
+  );
+  if (dateTimeMatch) {
+    return normalizeOcrSampleTime(dateTimeMatch[2].trim());
+  }
+
+  const looseDateTimeMatch = ocrText.match(
+    /(?:^|[\s\n])(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(\d{1,2}(?::\d{2})?(?:am|pm)?)/i,
+  );
+  if (looseDateTimeMatch) {
+    return normalizeOcrSampleTime(looseDateTimeMatch[2].trim());
+  }
+
+  return undefined;
+};
+
+const mergeOcrResults = (
+  structured: Partial<CheckedInSample>,
+  textParsed: Partial<CheckedInSample>,
+): Partial<CheckedInSample> => {
+  const merged: Partial<CheckedInSample> = { ...textParsed, ...structured };
+
+  const fillIfMissing = <K extends keyof CheckedInSample>(key: K) => {
+    const value = merged[key];
+    if (
+      (value == null || value === "") &&
+      textParsed[key] != null &&
+      textParsed[key] !== ""
+    ) {
+      merged[key] = textParsed[key];
+    }
+  };
+
+  fillIfMissing("amb_temp");
+  fillIfMissing("sample_time");
+  fillIfMissing("temperature");
+  fillIfMissing("sample_date");
+  fillIfMissing("sampled_by");
+  fillIfMissing("pressure");
+  fillIfMissing("pressure_unit");
+  fillIfMissing("field_h2s");
+  fillIfMissing("flow_rate");
+  fillIfMissing("cylinder_number");
+  fillIfMissing("cost_code");
+  fillIfMissing("remarks");
+  fillIfMissing("producer");
+  fillIfMissing("well_name");
+  fillIfMissing("meter_number");
+  fillIfMissing("sample_type");
+
+  return merged;
+};
+
+const normalizeCheckInType = (
+  value?: string | null,
+): CheckedInSample["check_in_type"] => {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (normalized.includes("bottle")) return "Bottle";
+  if (normalized.includes("cp")) return "CP Cylinder";
+  return "Cylinder";
+};
+
+const resolveNestedContact = (
+  record: SampleCheckInApiRecord,
+): ApiCompanyContactRelation | null => {
+  const nested = record.company_contact ?? record.Company_contact;
+  return nested && typeof nested === "object" ? nested : null;
+};
+
+const resolveNestedCompanyArea = (
+  record: SampleCheckInApiRecord,
+): ApiCompanyAreaRelation | null => {
+  const nested = record.company_area ?? record.Company_area;
+  return nested && typeof nested === "object" ? nested : null;
+};
+
+const resolveSampleCheckInArea = (record: SampleCheckInApiRecord): string => {
+  if (record.area?.trim()) return record.area.trim();
+
+  const nestedArea = resolveNestedCompanyArea(record);
+  if (nestedArea?.area?.trim()) return nestedArea.area.trim();
+
+  if (typeof record.company_area === "string" && record.company_area.trim()) {
+    return record.company_area.trim();
+  }
+
+  return "";
+};
+
+export const mapApiRecordToCheckedInSample = (
+  record: SampleCheckInApiRecord,
+): CheckedInSample => {
+  const analysisType = resolveSampleCheckInAnalysisType(record);
+  const nestedContact = resolveNestedContact(record);
+  const nestedArea = resolveNestedCompanyArea(record);
+
+  return {
+    id: record.id,
+    company_id: record.company_id ?? 0,
+    company_contact_id:
+      record.company_contact_id ?? nestedContact?.id ?? undefined,
+    contact_name: nestedContact?.name?.trim() || undefined,
+    contact_email: nestedContact?.email?.trim() || undefined,
+    contact_phone: nestedContact?.phone?.trim() || undefined,
+    contact_id:
+      record.contact_id ?? record.company_contact_id ?? nestedContact?.id ?? 0,
+    analysis_type_id: analysisType.id ?? undefined,
+    area_id: record.area_id ?? nestedArea?.id ?? undefined,
+    analysis_type: analysisType.name,
+    area: resolveSampleCheckInArea(record),
+    customer_owned_cylinder: Boolean(
+      record.customer_cylinder ?? record.customer_owned_cylinder,
+    ),
+    cylinder_number: record.cylinder_number?.trim() ?? "",
+    analysis_number: record.analysis_number?.trim() ?? "",
+    date:
+      record.date?.trim() ||
+      extractDateFromDateTime(record.check_in_time) ||
+      extractDateFromDateTime(record.created_at) ||
+      "",
+    producer: record.producer?.trim() ?? "",
+    sampled_by_natty: Boolean(record.sampled_by_lab ?? record.sampled_by_natty),
+    well_name: record.well_name?.trim() ?? "",
+    meter_number: record.meter_number?.trim() ?? "",
+    flow_rate: record.flow_rate?.trim() ?? "",
+    pressure: record.pressure?.trim() ?? "",
+    temperature: record.temperature?.trim() ?? "",
+    field_h2s: parseApiNumber(record.field_h2s),
+    cost_code: record.cost_code?.trim() ?? "",
+    authorized_by: record.authorized_by?.trim() ?? "",
+    sample_date: record.sample_date ?? record.sampled_date ?? null,
+    amb_temp: record.amb_temp?.trim() ?? "",
+    sample_time: record.sample_time?.trim() ?? "",
+    sampled_by: record.sampled_by ?? null,
+    remarks: record.remarks?.trim() ?? "",
+    check_in_type: normalizeCheckInType(
+      record.checkin_type ?? record.check_in_type,
+    ),
+    sample_type: record.sample_type?.trim(),
+    check_in_time: record.check_in_time ?? record.created_at ?? "",
+    rushed: Boolean(record.rushed),
+    tag_image: record.scanned_tag_image ?? record.tag_image ?? "",
+    billing_reference_type:
+      record.invoice_ref_name?.trim() ??
+      record.billing_reference_type?.trim() ??
+      "",
+    billing_reference_number:
+      record.invoice_ref_value?.trim() ??
+      record.billing_reference_number?.trim() ??
+      "",
+    work_order_number: record.work_order_number?.trim(),
+    status: record.status,
+    created_by: record.created_by ?? record.created_by_id ?? 0,
+  };
+};
+
+export const parseSampleCheckInAnalysisPosition = (
+  value: unknown,
+): number | null => {
+  if (value == null || value === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+export const resolveSampleCheckInAnalysisType = (
+  record: SampleCheckInApiRecord,
+): { id: number | null; name: string } => {
+  const relation =
+    (record.Analysis_type && typeof record.Analysis_type === "object"
+      ? record.Analysis_type
+      : null) ??
+    (record.analysis_pricing && typeof record.analysis_pricing === "object"
+      ? record.analysis_pricing
+      : null) ??
+    (record.analysis_type && typeof record.analysis_type === "object"
+      ? record.analysis_type
+      : null);
+
+  const relationName = relation?.analysis_type?.trim();
+  if (relationName) {
+    return {
+      id: record.analysis_type_id ?? relation.id ?? null,
+      name: relationName,
+    };
+  }
+
+  if (typeof record.analysis_type === "string" && record.analysis_type.trim()) {
+    return {
+      id: record.analysis_type_id ?? null,
+      name: record.analysis_type.trim(),
+    };
+  }
+
+  if (record.analysis_type_id != null) {
+    const pricing = analysisPricingService.getAnalysisPriceById(
+      record.analysis_type_id,
+    );
+    if (pricing?.analysis_code) {
+      return {
+        id: record.analysis_type_id,
+        name: pricing.analysis_code,
+      };
+    }
+  }
+
+  return { id: record.analysis_type_id ?? null, name: "Unknown" };
+};
+
+const buildAuthHeaders = (): HeadersInit => {
+  const token = authService.getAccessToken();
+  if (!token) {
+    throw new Error("Your session has expired. Please log in again.");
+  }
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+};
+
+async function parseApiError(
+  response: Response,
+  fallback: string,
+): Promise<string> {
+  const rawBody = await response.text().catch(() => "");
+  let body: any = {};
+  try {
+    body = rawBody ? JSON.parse(rawBody) : {};
+  } catch {
+    body = {};
+  }
+  if (typeof body?.detail === "string") return body.detail;
+  if (Array.isArray(body?.detail)) {
+    return body.detail
+      .map((item: { msg?: string; loc?: string[] }) =>
+        item.loc?.length
+          ? `${item.loc.join(".")}: ${item.msg ?? "Invalid value"}`
+          : (item.msg ?? "Invalid value"),
+      )
+      .join("; ");
+  }
+  if (
+    body?.detail &&
+    typeof body.detail === "object" &&
+    !Array.isArray(body.detail)
+  ) {
+    return (
+      body.detail.message ||
+      body.detail.error ||
+      JSON.stringify(body.detail)
+    );
+  }
+  return (
+    body?.error ||
+    body?.message ||
+    rawBody ||
+    `${fallback} (${response.status})`
+  );
+}
+
 let sampleCheckInApiCache: SampleCheckInApiRecord[] = [];
 let sampleCheckInApiCacheLoaded = false;
-
-// Import workOrdersService for work order creation
-import {
-  workOrdersService,
-  WorkOrderHeader,
-  WorkOrderLine,
-} from "./workOrdersService";
 
 const initialCustomers: Customer[] = [
   {
@@ -368,6 +1061,29 @@ let checkedInSamples: CheckedInSample[] = [
   },
 ];
 
+const pickSampleCheckInUpdateFields = (
+  record: SampleCheckInApiRecord,
+): UpdateSampleCheckInPayload => ({
+  status: record.status,
+  remarks: record.remarks,
+  pressure_base_factor: record.pressure_base_factor ?? 0,
+  pressure_measured: record.pressure_measured ?? undefined,
+  amb_temp: record.amb_temp ?? undefined,
+  sample_time: record.sample_time ?? undefined,
+  sample_date: record.sample_date ?? record.sampled_date ?? null,
+  sampled_by: record.sampled_by ?? null,
+  analyzed_by: record.analyzed_by,
+  base_condition: record.base_condition,
+  physical_constant: record.physical_constant,
+  instrument: record.instrument,
+  last_instrument_verification: record.last_instrument_verification,
+  heating_method: record.heating_method,
+  hexanes_split: record.hexanes_split,
+  sample_method: record.sample_method,
+  effective_start_date: record.effective_start_date,
+  effective_end_date: record.effective_end_date,
+});
+
 export const sampleCheckInService = {
   getCustomers: (): Customer[] => {
     return initialCustomers;
@@ -419,8 +1135,7 @@ export const sampleCheckInService = {
     // Sampled By: "Sampled By: John Smith"
     const sampledByMatch = ocrText.match(/Sampled By[:\s]+([^\n]*)/i);
     if (sampledByMatch) {
-      // Can be stored in remarks or as additional metadata
-      // extracted.sampled_by = sampledByMatch[1].trim();
+      extracted.sampled_by = sampledByMatch[1].trim();
     }
 
     // Company: "Company: Acme Corporation"
@@ -476,10 +1191,16 @@ export const sampleCheckInService = {
         unit === "PSIA" || unit === "PSI-A" ? "PSIA" : "PSIG";
     }
 
-    // Temperature: "Temp: 75 F" or "Temperature: 75 F"
-    const tempMatch = ocrText.match(/Temp(?:erature)?[:\s]+([^\n]*)/i);
-    if (tempMatch) {
-      extracted.temperature = tempMatch[1].trim();
+    // Amb Temp: inline on tag row — "Amb. Temp: 95 F"
+    const ambTemp = extractAmbTempFromOcrText(ocrText);
+    if (ambTemp) {
+      extracted.amb_temp = ambTemp;
+    }
+
+    // Sample Temp: inline — "Temp: 81 F" but not "Amb. Temp"
+    const sampleTemp = extractSampleTempFromOcrText(ocrText);
+    if (sampleTemp) {
+      extracted.temperature = sampleTemp;
     }
 
     // Field H2S: "Field H25: 10 PPM" or "Field H2S: 10 PPM"
@@ -497,10 +1218,15 @@ export const sampleCheckInService = {
       extracted.cylinder_number = bottleMatch[1].trim();
     }
 
-    // Date: "Date: 041032026"
-    const dateMatch = ocrText.match(/Date[:\s]+([^\n]*)/i);
-    if (dateMatch) {
-      extracted.date = dateMatch[1].trim();
+    // Date: labeled or unlabeled — "12/10/26 2:30pm"
+    const sampleDate = extractSampleDateFromOcrText(ocrText);
+    if (sampleDate) {
+      extracted.sample_date = sampleDate;
+    }
+
+    const sampleTime = extractSampleTimeFromOcrText(ocrText);
+    if (sampleTime) {
+      extracted.sample_time = sampleTime;
     }
 
     return extracted;
@@ -511,9 +1237,53 @@ export const sampleCheckInService = {
   ): Partial<CheckedInSample> => {
     const mapped: Partial<CheckedInSample> = {};
 
-    // Map fields according to API response structure
-    if (ocrApiData.Date) {
-      mapped.date = String(ocrApiData.Date);
+    const sampleDate = getOcrFieldValue(ocrApiData, [
+      "sample_date",
+      "Sample_date",
+      "Sample_Date",
+      "Date",
+    ]);
+    if (sampleDate) {
+      mapped.sample_date = sampleDate;
+    } else if (
+      ocrApiData.sample_date != null &&
+      ocrApiData.sample_date !== ""
+    ) {
+      mapped.sample_date = String(ocrApiData.sample_date);
+    } else if (ocrApiData.Date) {
+      mapped.sample_date = String(ocrApiData.Date);
+    } else if (ocrApiData.Sample_Date) {
+      mapped.sample_date = String(ocrApiData.Sample_Date);
+    }
+
+    if (mapped.sample_date) {
+      const split = splitCombinedSampleDateTime(mapped.sample_date);
+      mapped.sample_date = split.date ?? mapped.sample_date;
+      if (split.time && !getOcrSampleTimeValue(ocrApiData)) {
+        mapped.sample_time = split.time;
+      }
+    }
+
+    const ambTemp = getOcrAmbTempValue(ocrApiData);
+    if (ambTemp) {
+      mapped.amb_temp = ambTemp;
+    }
+
+    const sampleTime = getOcrSampleTimeValue(ocrApiData);
+    if (sampleTime) {
+      mapped.sample_time = sampleTime;
+    } else if (
+      ocrApiData.sample_time != null &&
+      ocrApiData.sample_time !== ""
+    ) {
+      mapped.sample_time = normalizeOcrSampleTime(
+        String(ocrApiData.sample_time),
+      );
+    }
+    if (ocrApiData.Sampled_By) {
+      mapped.sampled_by = String(ocrApiData.Sampled_By);
+    } else if (ocrApiData["Sampled By"]) {
+      mapped.sampled_by = String(ocrApiData["Sampled By"]);
     }
     if (ocrApiData.Producer) {
       mapped.producer = String(ocrApiData.Producer);
@@ -544,6 +1314,8 @@ export const sampleCheckInService = {
     }
     if (ocrApiData.Temperature) {
       mapped.temperature = String(ocrApiData.Temperature);
+    } else if (ocrApiData.Temp) {
+      mapped.temperature = String(ocrApiData.Temp);
     }
     if (ocrApiData.Flow_Rate) {
       mapped.flow_rate = String(ocrApiData.Flow_Rate);
@@ -564,11 +1336,19 @@ export const sampleCheckInService = {
       mapped.cost_code = String(ocrApiData.Cost_Code);
     }
 
+    if (!mapped.amb_temp) {
+      const scannedAmbTemp = resolveAmbTempFromOcrPayload(ocrApiData);
+      if (scannedAmbTemp) {
+        mapped.amb_temp = scannedAmbTemp;
+      }
+    }
+
     return mapped;
   },
 
   uploadTagImage: async (
     file: File,
+    options?: { signal?: AbortSignal },
   ): Promise<{
     path: string;
     filename: string;
@@ -578,21 +1358,7 @@ export const sampleCheckInService = {
       throw new Error("Only image files are supported for tag upload");
     }
 
-    let token = authService.getAuthState().token;
-
-    // Fallback to localStorage parse if auth state token is missing
-    if (!token) {
-      const stored = localStorage.getItem("natty_gas_auth");
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          token = parsed?.token || parsed?.accessToken || "";
-        } catch {
-          // ignore
-        }
-      }
-    }
-
+    const token = authService.getAccessToken();
     if (!token) {
       throw new Error(
         "Missing Authorization token. Please log in before uploading OCR images.",
@@ -616,6 +1382,7 @@ export const sampleCheckInService = {
         Authorization: `Bearer ${token}`,
       },
       body: formData,
+      signal: options?.signal,
     });
 
     if (!response.ok) {
@@ -642,15 +1409,64 @@ export const sampleCheckInService = {
       );
     }
 
-    // Map OCR data from the API response
-    // Try new structured format first (data object), fall back to parsing ocrText
-    let ocrData: Partial<CheckedInSample>;
-    if (result.data && typeof result.data === "object") {
-      ocrData = sampleCheckInService.mapOCRDataToFormFields(result.data);
-    } else {
-      // Fallback to text parsing for backward compatibility
-      const ocrText = result.ocrText ?? "";
-      ocrData = sampleCheckInService.parseOCRText(ocrText);
+    // Map OCR data from structured response, raw text, or both.
+    const structuredSource =
+      result.data && typeof result.data === "object"
+        ? (result.data as Record<string, unknown>)
+        : (result as Record<string, unknown>);
+    const ocrTextParts = [
+      result.ocrText,
+      result.ocr_text,
+      result.text,
+      result.rawText,
+      structuredSource.ocrText,
+      structuredSource.ocr_text,
+      structuredSource.text,
+      structuredSource.rawText,
+      structuredSource.raw_text,
+    ].filter(
+      (part): part is string =>
+        typeof part === "string" && part.trim().length > 0,
+    );
+    const ocrText = ocrTextParts.join("\n");
+    const structured =
+      sampleCheckInService.mapOCRDataToFormFields(structuredSource);
+    const textParsed = sampleCheckInService.parseOCRText(ocrText);
+    let ocrData = mergeOcrResults(structured, textParsed);
+
+    const dataRecord = structuredSource as Record<string, unknown>;
+    if (!ocrData.sample_date?.trim()) {
+      const sampleDate = getOcrFieldValue(dataRecord, [
+        "Sample_date",
+        "sample_date",
+        "Sample_Date",
+        "Date",
+      ]);
+      if (sampleDate) {
+        ocrData = {
+          ...ocrData,
+          sample_date:
+            splitCombinedSampleDateTime(sampleDate).date ?? sampleDate,
+        };
+      }
+    }
+
+    if (!ocrData.sample_time?.trim()) {
+      const sampleTime = getOcrSampleTimeValue(dataRecord);
+      if (sampleTime) {
+        ocrData = { ...ocrData, sample_time: sampleTime };
+      }
+    }
+
+    if (!ocrData.amb_temp?.trim()) {
+      const ambTemp =
+        getOcrAmbTempValue(dataRecord) ??
+        resolveAmbTempFromOcrPayload(result) ??
+        resolveAmbTempFromOcrPayload(structuredSource) ??
+        resolveAmbTempFromOcrPayload(ocrText);
+      if (ambTemp) {
+        ocrData = { ...ocrData, amb_temp: ambTemp };
+      }
     }
 
     return {
@@ -788,6 +1604,103 @@ export const sampleCheckInService = {
     return sampleCheckInApiCache;
   },
 
+  fetchSampleCheckInById: async (
+    id: number,
+  ): Promise<SampleCheckInApiRecord | null> => {
+    const response = await fetch(`${API_BASE_URL}/sample_checkin/${id}`, {
+      method: "GET",
+      headers: buildAuthHeaders(),
+    });
+
+    if (!response.ok) return null;
+    return (await response.json()) as SampleCheckInApiRecord;
+  },
+
+  fetchSamplesByWorkOrderNumber: async (
+    workOrderNumber: string,
+  ): Promise<CheckedInSample[]> => {
+    const normalizedNumber = workOrderNumber.trim();
+    const records = await sampleCheckInService.fetchSampleCheckIns(true);
+    let samples = records
+      .filter(
+        (record) =>
+          (record.work_order_number ?? "").trim() === normalizedNumber,
+      )
+      .map(mapApiRecordToCheckedInSample);
+
+    const needsDetailEnrichment = samples.some((sample) => {
+      const hasContact =
+        sample.contact_name?.trim() ||
+        sample.contact_email?.trim() ||
+        sample.contact_phone?.trim() ||
+        (sample.company_contact_id != null && sample.company_contact_id > 0) ||
+        sample.contact_id > 0;
+      const hasArea = Boolean(sample.area?.trim());
+      return !hasContact || !hasArea;
+    });
+
+    if (needsDetailEnrichment && samples.length > 0) {
+      const enrichedSamples = [...samples];
+      for (let index = 0; index < enrichedSamples.length; index += 1) {
+        const sample = enrichedSamples[index];
+        const hasContact =
+          sample.contact_name?.trim() ||
+          sample.contact_email?.trim() ||
+          sample.contact_phone?.trim() ||
+          (sample.company_contact_id != null &&
+            sample.company_contact_id > 0) ||
+          sample.contact_id > 0;
+        const hasArea = Boolean(sample.area?.trim());
+        if (hasContact && hasArea) continue;
+
+        const detail = await sampleCheckInService.fetchSampleCheckInById(
+          sample.id,
+        );
+        if (detail) {
+          enrichedSamples[index] = mapApiRecordToCheckedInSample(detail);
+        }
+      }
+      samples = enrichedSamples;
+    }
+
+    const needsAreaLookup = samples.some(
+      (sample) =>
+        !sample.area?.trim() && sample.area_id != null && sample.area_id > 0,
+    );
+    if (needsAreaLookup) {
+      await companyAreaService.fetchCompanyAreas();
+      samples = samples.map((sample) => {
+        if (sample.area?.trim()) return sample;
+        if (sample.area_id != null && sample.area_id > 0) {
+          const area = companyAreaService.getCompanyAreaById(sample.area_id);
+          if (area?.area) return { ...sample, area: area.area };
+        }
+        return sample;
+      });
+    }
+
+    return samples;
+  },
+
+  getMonthlyCheckInCountForCompany: async (
+    companyId: number,
+    referenceDate = new Date(),
+  ): Promise<number> => {
+    const records = await sampleCheckInService.fetchSampleCheckIns();
+    const year = referenceDate.getFullYear();
+    const month = referenceDate.getMonth();
+
+    return records.filter((record) => {
+      if (record.company_id !== companyId) return false;
+      const rawDate =
+        record.check_in_time ?? record.created_at ?? record.date ?? "";
+      if (!rawDate) return false;
+      const parsed = new Date(rawDate);
+      if (Number.isNaN(parsed.getTime())) return false;
+      return parsed.getFullYear() === year && parsed.getMonth() === month;
+    }).length;
+  },
+
   getNextAnalysisSequence: async (year?: number): Promise<number> => {
     const resolvedYear = year ?? new Date().getFullYear();
     const records = await sampleCheckInService.fetchSampleCheckIns();
@@ -883,6 +1796,11 @@ export const sampleCheckInService = {
       temperature: sample.temperature || "",
       field_h2s: sample.field_h2s ?? 0,
       cost_code: sample.cost_code || "",
+      authorized_by: sample.authorized_by || "",
+      sample_date: sample.sample_date?.trim() || null,
+      amb_temp: sample.amb_temp?.trim() || "",
+      sample_time: sample.sample_time?.trim() || "",
+      sampled_by: sample.sampled_by?.trim() || null,
       remarks: sample.remarks || "",
       check_in_type: sample.check_in_type || "Cylinder",
       checkin_type: sample.checkin_type ?? sample.check_in_type,
@@ -907,6 +1825,24 @@ export const sampleCheckInService = {
   },
 
   serializeCheckInForPost: (sample: CheckedInSample): SampleCheckInPayload => {
+    const isoDate =
+      toIsoDateInputValue(sample.date) ||
+      new Date().toISOString().slice(0, 10);
+    const isoSampleDate = sample.sample_date?.trim()
+      ? toIsoDateInputValue(sample.sample_date) || null
+      : null;
+    const sampleTime = sample.sample_time?.trim()
+      ? normalizeOcrSampleTime(sample.sample_time)
+      : null;
+    const isoEffectiveStart = sample.effective_start_date?.trim()
+      ? toIsoDateInputValue(sample.effective_start_date) || null
+      : undefined;
+    const isoEffectiveEnd = sample.effective_end_date?.trim()
+      ? toIsoDateInputValue(sample.effective_end_date) || null
+      : undefined;
+    const fieldH2s = Number(sample.field_h2s);
+    const pressureBaseFactor = Number(sample.pressure_base_factor);
+
     return {
       company_id: sample.company_id,
       company_contact_id: sample.company_contact_id ?? sample.contact_id,
@@ -914,11 +1850,12 @@ export const sampleCheckInService = {
       area_id: sample.area_id ?? null,
       customer_cylinder:
         sample.customer_cylinder ?? sample.customer_owned_cylinder ?? false,
-      rushed: sample.rushed,
+      rushed: Boolean(sample.rushed),
       sampled_by_lab: sample.sampled_by_lab ?? sample.sampled_by_natty ?? false,
       cylinder_id: sample.cylinder_id ?? null,
       cylinder_number: sample.cylinder_number,
       analysis_number: sample.analysis_number,
+      date: isoDate,
       producer: sample.producer,
       well_name: sample.well_name,
       meter_number: sample.meter_number,
@@ -927,8 +1864,13 @@ export const sampleCheckInService = {
       pressure: sample.pressure,
       pressure_unit: sample.pressure_unit ?? "",
       temperature: sample.temperature,
-      field_h2s: sample.field_h2s ?? 0,
+      field_h2s: Number.isFinite(fieldH2s) ? fieldH2s : 0,
       cost_code: sample.cost_code,
+      authorized_by: sample.authorized_by,
+      sample_date: isoSampleDate,
+      amb_temp: sample.amb_temp?.trim() ?? "",
+      sample_time: sampleTime,
+      sampled_by: sample.sampled_by?.trim() ? sample.sampled_by.trim() : null,
       checkin_type: sample.checkin_type ?? sample.check_in_type,
       invoice_ref_name:
         sample.invoice_ref_name ?? sample.billing_reference_type,
@@ -937,6 +1879,20 @@ export const sampleCheckInService = {
       remarks: sample.remarks,
       scanned_tag_image: sample.scanned_tag_image ?? sample.tag_image ?? null,
       status: sample.status ?? "Pending",
+      pressure_base_factor: Number.isFinite(pressureBaseFactor)
+        ? pressureBaseFactor
+        : 0,
+      pressure_measured: sample.pressure_measured,
+      analyzed_by: sample.analyzed_by,
+      base_condition: sample.base_condition,
+      physical_constant: sample.physical_constant,
+      instrument: sample.instrument,
+      last_instrument_verification: sample.last_instrument_verification,
+      heating_method: sample.heating_method,
+      hexanes_split: sample.hexanes_split,
+      sample_method: sample.sample_method,
+      effective_start_date: isoEffectiveStart,
+      effective_end_date: isoEffectiveEnd,
     };
   },
 
@@ -948,14 +1904,38 @@ export const sampleCheckInService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to create sample check-in";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to create sample check-in"),
+      );
     }
 
     const responseData = await response.json();
+    sampleCheckInApiCacheLoaded = false;
+    return responseData;
+  },
+
+  updateSampleCheckIn: async (
+    id: number,
+    payload: UpdateSampleCheckInPayload,
+  ): Promise<SampleCheckInApiRecord> => {
+    const existing = await sampleCheckInService.fetchSampleCheckInById(id);
+    const body: UpdateSampleCheckInPayload = existing
+      ? { ...pickSampleCheckInUpdateFields(existing), ...payload }
+      : payload;
+
+    const response = await fetch(`${API_BASE_URL}/sample_checkin/${id}`, {
+      method: "PUT",
+      headers: buildAuthHeaders(),
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        await parseApiError(response, "Failed to update sample check-in"),
+      );
+    }
+
+    const responseData = (await response.json()) as SampleCheckInApiRecord;
     sampleCheckInApiCacheLoaded = false;
     return responseData;
   },
@@ -1148,15 +2128,11 @@ export const sampleCheckInService = {
    * Update a Work Order Line
    */
   updateWOLine: async (id: number, payload: UpdateWOLinePayload) => {
-    const token = authService.getAuthState().token;
     const response = await fetch(
       `${API_BASE_URL}/sample_checkin/update_wo_lines/${id}`,
       {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: buildAuthHeaders(),
         body: JSON.stringify(payload),
       },
     );

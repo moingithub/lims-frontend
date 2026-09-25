@@ -1,7 +1,13 @@
+import {
+  workOrdersService,
+  WorkOrderWithId,
+} from "./workOrdersService";
+
 export interface PendingOrder {
   id: number;
   work_order_id: string;
   customer: string;
+  company_id?: number;
   cylinders: number;
   date: string;
   days_pending: number;
@@ -9,68 +15,85 @@ export interface PendingOrder {
   created_by: number;
 }
 
-const initialPendingOrders: PendingOrder[] = [
-  { 
-    id: 1, 
-    work_order_id: "WO-001236", 
-    customer: "Industrial Co", 
-    cylinders: 5, 
-    date: "2025-11-03", 
-    days_pending: 3,
-    priority: "High",
-    created_by: 1,
-  },
-  { 
-    id: 2, 
-    work_order_id: "WO-001237", 
-    customer: "Gas Solutions", 
-    cylinders: 3, 
-    date: "2025-11-03", 
-    days_pending: 2,
-    priority: "Medium",
-    created_by: 1,
-  },
-  { 
-    id: 3, 
-    work_order_id: "WO-001240", 
-    customer: "TechGas Inc", 
-    cylinders: 4, 
-    date: "2025-10-30", 
-    days_pending: 5,
-    priority: "High",
-    created_by: 1,
-  },
-];
+const parseCylinderCount = (order: WorkOrderWithId): number => {
+  if (typeof order.cylinders === "number") return order.cylinders;
+  if (typeof order.cylinders === "string" && order.cylinders.trim() !== "") {
+    const parsed = Number(order.cylinders);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return 0;
+};
+
+const getDaysPending = (order: WorkOrderWithId): number => {
+  if (order.pending_since != null && Number.isFinite(order.pending_since)) {
+    return Math.max(0, Math.floor(order.pending_since));
+  }
+  return workOrdersService.calculateDaysSince(order.date);
+};
+
+const getPriorityFromDays = (days: number): string => {
+  if (days >= 5) return "High";
+  if (days >= 2) return "Medium";
+  return "Low";
+};
+
+const mapWorkOrderToPendingOrder = (order: WorkOrderWithId): PendingOrder | null => {
+  const cylinders = parseCylinderCount(order);
+  if (cylinders <= 0) return null;
+
+  const days_pending = getDaysPending(order);
+
+  return {
+    id: order.api_id ?? 0,
+    work_order_id: order.id,
+    customer: order.customer,
+    company_id: order.company_id,
+    cylinders,
+    date: order.date,
+    days_pending,
+    priority: getPriorityFromDays(days_pending),
+    created_by: order.created_by,
+  };
+};
 
 export const pendingOrdersService = {
-  getPendingOrders: (): PendingOrder[] => {
-    return initialPendingOrders;
+  fetchPendingOrders: async (): Promise<PendingOrder[]> => {
+    const orders = await workOrdersService.fetchWorkOrders();
+    return orders
+      .filter(
+        (order) => order.status === "Pending" || order.status === "In Progress",
+      )
+      .map(mapWorkOrderToPendingOrder)
+      .filter((order): order is PendingOrder => order != null)
+      .sort((a, b) => b.days_pending - a.days_pending);
   },
 
   searchOrders: (orders: PendingOrder[], searchTerm: string): PendingOrder[] => {
-    return orders.filter(order =>
-      Object.values(order).some(value =>
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      )
+    const normalized = searchTerm.trim().toLowerCase();
+    if (!normalized) return orders;
+
+    return orders.filter((order) =>
+      [order.work_order_id, order.customer, order.priority, order.date]
+        .some((value) => String(value).toLowerCase().includes(normalized)),
     );
   },
 
   filterByCustomer: (orders: PendingOrder[], customer: string): PendingOrder[] => {
     if (customer === "all") return orders;
-    return orders.filter(order => order.customer === customer);
+    return orders.filter((order) => order.customer === customer);
   },
 
   filterByPriority: (orders: PendingOrder[], priority: string): PendingOrder[] => {
     if (priority === "all") return orders;
-    return orders.filter(order => order.priority === priority);
+    return orders.filter((order) => order.priority === priority);
   },
 
   getUniqueCustomers: (orders: PendingOrder[]): string[] => {
-    return Array.from(new Set(orders.map(order => order.customer))).sort();
+    return Array.from(new Set(orders.map((order) => order.customer))).sort();
   },
 
   getUniquePriorities: (orders: PendingOrder[]): string[] => {
-    return Array.from(new Set(orders.map(order => order.priority))).sort();
+    return Array.from(new Set(orders.map((order) => order.priority))).sort();
   },
 
   getPriorityBadgeVariant: (priority: string): string => {
@@ -87,8 +110,15 @@ export const pendingOrdersService = {
   },
 
   exportToCSV: (orders: PendingOrder[]): string => {
-    const headers = ["Work Order ID", "Customer", "Cylinders", "Date", "Days Pending", "Priority"];
-    const rows = orders.map(order => [
+    const headers = [
+      "Work Order ID",
+      "Customer",
+      "Cylinders",
+      "Date",
+      "Days Pending",
+      "Priority",
+    ];
+    const rows = orders.map((order) => [
       order.work_order_id,
       order.customer,
       order.cylinders,
@@ -96,12 +126,7 @@ export const pendingOrdersService = {
       order.days_pending,
       order.priority,
     ]);
-    
-    const csvContent = [
-      headers.join(","),
-      ...rows.map(row => row.join(",")),
-    ].join("\n");
-    
-    return csvContent;
+
+    return [headers.join(","), ...rows.map((row) => row.join(","))].join("\n");
   },
 };

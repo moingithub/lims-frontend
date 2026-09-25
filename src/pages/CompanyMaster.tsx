@@ -33,13 +33,13 @@ export function CompanyMaster() {
     company_name: "",
     phone: "",
     email: "",
-    billing_reference_type: "GL Code",
+    billing_reference_type: "PO",
     billing_reference_number: "",
     billing_address: "",
     charge_h2_pop_fee: false,
-    h2_pop_fee_rate: 0,
-    pressure_base: 14.73,
-    pressure_base_factor: 0.0174,
+    h2_pop_fee_rate: "",
+    pressure_base: "",
+    pressure_base_factor: "",
     active: true,
   });
 
@@ -83,13 +83,13 @@ export function CompanyMaster() {
       company_name: "",
       phone: "",
       email: "",
-      billing_reference_type: "GL Code",
+      billing_reference_type: "PO",
       billing_reference_number: "",
       billing_address: "",
       charge_h2_pop_fee: false,
-      h2_pop_fee_rate: 0,
-      pressure_base: 14.73,
-      pressure_base_factor: 0.0174,
+      h2_pop_fee_rate: "",
+      pressure_base: "",
+      pressure_base_factor: "",
       active: true,
     });
     setIsAddDialogOpen(true);
@@ -108,8 +108,8 @@ export function CompanyMaster() {
       billing_address: company.billing_address,
       charge_h2_pop_fee: company.charge_h2_pop_fee,
       h2_pop_fee_rate: company.h2_pop_fee_rate,
-      pressure_base: company.pressure_base,
-      pressure_base_factor: company.pressure_base_factor,
+      pressure_base: company.pressure_base || "",
+      pressure_base_factor: company.pressure_base_factor || "",
       active: company.active,
     });
     setIsEditDialogOpen(true);
@@ -136,9 +136,14 @@ export function CompanyMaster() {
         billing_reference_number: formData.billing_reference_number,
         billing_address: formData.billing_address,
         charge_h2_pop_fee: formData.charge_h2_pop_fee,
-        h2_pop_fee_rate: formData.h2_pop_fee_rate,
-        pressure_base: formData.pressure_base,
-        pressure_base_factor: formData.pressure_base_factor,
+        h2_pop_fee_rate:
+          formData.h2_pop_fee_rate === "" ? 0 : formData.h2_pop_fee_rate,
+        pressure_base:
+          formData.pressure_base === "" ? 0 : formData.pressure_base,
+        pressure_base_factor:
+          formData.pressure_base_factor === ""
+            ? 0
+            : formData.pressure_base_factor,
         active: formData.active,
       });
       const updatedCompanies = [...companies, createdCompany];
@@ -175,9 +180,14 @@ export function CompanyMaster() {
           billing_reference_number: formData.billing_reference_number,
           billing_address: formData.billing_address,
           charge_h2_pop_fee: formData.charge_h2_pop_fee,
-          h2_pop_fee_rate: formData.h2_pop_fee_rate,
-          pressure_base: formData.pressure_base,
-          pressure_base_factor: formData.pressure_base_factor,
+          h2_pop_fee_rate:
+          formData.h2_pop_fee_rate === "" ? 0 : formData.h2_pop_fee_rate,
+          pressure_base:
+            formData.pressure_base === "" ? 0 : formData.pressure_base,
+          pressure_base_factor:
+            formData.pressure_base_factor === ""
+              ? 0
+              : formData.pressure_base_factor,
           active: formData.active,
         },
       );

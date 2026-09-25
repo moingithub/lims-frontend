@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { FileDown } from "lucide-react";
 import { toast } from "sonner@2.0.3";
@@ -13,18 +18,26 @@ import { AnalysisReportsTable } from "../components/analysisReports/AnalysisRepo
 import { AnalysisReportsFilters } from "../components/analysisReports/AnalysisReportsFilters";
 import { GasAnalysisReportDialog } from "../components/analysisReports/GasAnalysisReportDialog";
 import { companyMasterService } from "../services/companyMasterService";
+import { TagImageDialog } from "../components/sampleCheckIn/TagImageDialog";
+import { linkReportService } from "../services/linkReportService";
 
 export function AnalysisReports() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [customerFilter, setCustomerFilter] = useState("all");
+  const [meterNumberFilter, setMeterNumberFilter] = useState("all");
+  const [wellNameFilter, setWellNameFilter] = useState("all");
+  const [analysisNumberFilter, setAnalysisNumberFilter] = useState("all");
   const [analysisData, setAnalysisData] = useState<AnalysisReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedReport, setSelectedReport] = useState<GasAnalysisReport | null>(
-    null,
-  );
+  const [selectedReport, setSelectedReport] =
+    useState<GasAnalysisReport | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isReportLoading, setIsReportLoading] = useState(false);
+  const [selectedTagImage, setSelectedTagImage] = useState<string | null>(null);
+  const [selectedTagImageFilename, setSelectedTagImageFilename] = useState<
+    string | null
+  >(null);
 
   const loadReports = useCallback(async () => {
     try {
@@ -49,6 +62,116 @@ export function AnalysisReports() {
 
   const statuses = analysisReportsService.getUniqueStatuses(analysisData);
   const customers = analysisReportsService.getUniqueCustomers(analysisData);
+  const getCascadeFilteredReports = (
+    customer: string,
+    wellName: string,
+    meterNumber: string,
+  ): AnalysisReport[] => {
+    let source =
+      customer === "all"
+        ? analysisData
+        : analysisReportsService.filterByCustomer(analysisData, customer);
+
+    if (wellName !== "all") {
+      source = analysisReportsService.filterByWellName(source, wellName);
+    }
+    if (meterNumber !== "all") {
+      source = analysisReportsService.filterByMeterNumber(source, meterNumber);
+    }
+
+    return source;
+  };
+
+  const resetAnalysisNumberIfInvalid = (
+    customer: string,
+    wellName: string,
+    meterNumber: string,
+  ) => {
+    const availableAnalysisNumbers =
+      analysisReportsService.getUniqueAnalysisNumbers(
+        getCascadeFilteredReports(customer, wellName, meterNumber),
+      );
+
+    if (
+      analysisNumberFilter !== "all" &&
+      !availableAnalysisNumbers.includes(analysisNumberFilter)
+    ) {
+      setAnalysisNumberFilter("all");
+    }
+  };
+
+  const customerFilteredData = getCascadeFilteredReports(
+    customerFilter,
+    "all",
+    "all",
+  );
+  const meterNumbers = analysisReportsService.getUniqueMeterNumbers(
+    getCascadeFilteredReports(customerFilter, wellNameFilter, "all"),
+  );
+  const wellNames =
+    analysisReportsService.getUniqueWellNames(customerFilteredData);
+  const analysisNumbers = analysisReportsService.getUniqueAnalysisNumbers(
+    getCascadeFilteredReports(
+      customerFilter,
+      wellNameFilter,
+      meterNumberFilter,
+    ),
+  );
+
+  const handleCustomerChange = (value: string) => {
+    setCustomerFilter(value);
+
+    const filteredByCustomer = getCascadeFilteredReports(value, "all", "all");
+    const availableWells =
+      analysisReportsService.getUniqueWellNames(filteredByCustomer);
+    const nextWell =
+      wellNameFilter !== "all" && !availableWells.includes(wellNameFilter)
+        ? "all"
+        : wellNameFilter;
+
+    if (nextWell !== wellNameFilter) {
+      setWellNameFilter("all");
+    }
+
+    const availableMeters = analysisReportsService.getUniqueMeterNumbers(
+      getCascadeFilteredReports(value, nextWell, "all"),
+    );
+    const nextMeter =
+      meterNumberFilter !== "all" &&
+      !availableMeters.includes(meterNumberFilter)
+        ? "all"
+        : meterNumberFilter;
+
+    if (nextMeter !== meterNumberFilter) {
+      setMeterNumberFilter("all");
+    }
+
+    resetAnalysisNumberIfInvalid(value, nextWell, nextMeter);
+  };
+
+  const handleWellNameChange = (value: string) => {
+    setWellNameFilter(value);
+
+    const availableMeters = analysisReportsService.getUniqueMeterNumbers(
+      getCascadeFilteredReports(customerFilter, value, "all"),
+    );
+    const nextMeter =
+      meterNumberFilter !== "all" &&
+      !availableMeters.includes(meterNumberFilter)
+        ? "all"
+        : meterNumberFilter;
+
+    if (nextMeter !== meterNumberFilter) {
+      setMeterNumberFilter("all");
+    }
+
+    resetAnalysisNumberIfInvalid(customerFilter, value, nextMeter);
+  };
+
+  const handleMeterNumberChange = (value: string) => {
+    setMeterNumberFilter(value);
+    resetAnalysisNumberIfInvalid(customerFilter, wellNameFilter, value);
+  };
 
   let filteredData = analysisReportsService.searchReports(
     analysisData,
@@ -61,6 +184,18 @@ export function AnalysisReports() {
   filteredData = analysisReportsService.filterByStatus(
     filteredData,
     statusFilter,
+  );
+  filteredData = analysisReportsService.filterByMeterNumber(
+    filteredData,
+    meterNumberFilter,
+  );
+  filteredData = analysisReportsService.filterByWellName(
+    filteredData,
+    wellNameFilter,
+  );
+  filteredData = analysisReportsService.filterByAnalysisNumber(
+    filteredData,
+    analysisNumberFilter,
   );
 
   const handleViewReport = async (report: AnalysisReport) => {
@@ -82,6 +217,19 @@ export function AnalysisReports() {
       setIsDialogOpen(false);
     } finally {
       setIsReportLoading(false);
+    }
+  };
+
+  const handleDownload = async (report: AnalysisReport) => {
+    try {
+      await linkReportService.downloadAnalysisReport(
+        report.sample_checkin_id,
+        `Analysis-${report.analysis_number}.xlsx`,
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to download report",
+      );
     }
   };
 
@@ -124,10 +272,19 @@ export function AnalysisReports() {
             <AnalysisReportsFilters
               statusFilter={statusFilter}
               customerFilter={customerFilter}
+              meterNumberFilter={meterNumberFilter}
+              wellNameFilter={wellNameFilter}
+              analysisNumberFilter={analysisNumberFilter}
               statuses={statuses}
               customers={customers}
+              meterNumbers={meterNumbers}
+              wellNames={wellNames}
+              analysisNumbers={analysisNumbers}
               onStatusChange={setStatusFilter}
-              onCustomerChange={setCustomerFilter}
+              onCustomerChange={handleCustomerChange}
+              onMeterNumberChange={handleMeterNumberChange}
+              onWellNameChange={handleWellNameChange}
+              onAnalysisNumberChange={setAnalysisNumberFilter}
             />
           </div>
 
@@ -139,6 +296,11 @@ export function AnalysisReports() {
             <AnalysisReportsTable
               reports={filteredData}
               onViewReport={handleViewReport}
+              onDownload={handleDownload}
+              onViewImage={(imageUrl, filename) => {
+                setSelectedTagImage(imageUrl);
+                setSelectedTagImageFilename(filename ?? null);
+              }}
             />
           )}
 
@@ -153,6 +315,18 @@ export function AnalysisReports() {
         report={selectedReport}
         isLoading={isReportLoading}
         onOpenChange={setIsDialogOpen}
+      />
+
+      <TagImageDialog
+        open={Boolean(selectedTagImage)}
+        imageUrl={selectedTagImage}
+        filename={selectedTagImageFilename}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedTagImage(null);
+            setSelectedTagImageFilename(null);
+          }
+        }}
       />
     </div>
   );

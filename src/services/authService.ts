@@ -22,6 +22,46 @@ export interface AuthState {
 
 const AUTH_STORAGE_KEY = "natty_gas_auth";
 
+type StoredAuthState = AuthState & {
+  access_token?: string;
+  accessToken?: string;
+};
+
+let memoryAuthState: AuthState | null = null;
+
+const asTokenString = (value: unknown): string | undefined => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (value && typeof value === "object") {
+    const nested = value as Record<string, unknown>;
+    return (
+      asTokenString(nested.token) ??
+      asTokenString(nested.access_token) ??
+      asTokenString(nested.accessToken) ??
+      asTokenString(nested.jwt)
+    );
+  }
+  return undefined;
+};
+
+const pickTokenFromPayload = (data: Record<string, unknown>): string | undefined => {
+  return (
+    asTokenString(data.token) ??
+    asTokenString(data.access_token) ??
+    asTokenString(data.accessToken) ??
+    asTokenString(data.jwt) ??
+    asTokenString(data.id_token) ??
+    (data.data && typeof data.data === "object"
+      ? pickTokenFromPayload(data.data as Record<string, unknown>)
+      : undefined) ??
+    (data.user && typeof data.user === "object"
+      ? asTokenString((data.user as Record<string, unknown>).token)
+      : undefined)
+  );
+};
+
 export const authService = {
   // ========== Authentication ==========
 
@@ -45,21 +85,37 @@ export const authService = {
         return { success: false, error: message };
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as Record<string, unknown>;
+      const apiUser = data.user as Partial<AuthUser> | undefined;
+      const apiRole = data.role as
+        | { id?: number; name?: string }
+        | undefined;
 
-      if (!data?.user || !data?.role) {
+      if (!apiUser || !apiRole) {
         return { success: false, error: "Invalid server response" };
       }
 
+      const headerAuth =
+        response.headers.get("Authorization") ??
+        response.headers.get("authorization");
+      const headerToken = headerAuth?.replace(/^Bearer\s+/i, "").trim();
+      const token = pickTokenFromPayload(data) ?? (headerToken || undefined);
+      if (!token) {
+        return {
+          success: false,
+          error: "Login response did not include a token",
+        };
+      }
+
       const authUser: AuthUser = {
-        id: data.user.id,
-        name: data.user.name,
-        email: data.user.email,
-        role_id: data.role.id,
-        role_name: data.role.name,
-        company_id: data.user.company_id ?? null,
-        company_name: data.user.company_name ?? null,
-        active: data.user.active,
+        id: apiUser.id ?? 0,
+        name: apiUser.name ?? "",
+        email: apiUser.email ?? "",
+        role_id: apiRole.id ?? 0,
+        role_name: apiRole.name ?? "",
+        company_id: apiUser.company_id ?? null,
+        company_name: apiUser.company_name ?? null,
+        active: Boolean(apiUser.active),
       };
 
       const permissions: RoleModule[] = Array.isArray(data.permissions)
@@ -78,7 +134,7 @@ export const authService = {
         isAuthenticated: true,
         user: authUser,
         permissions,
-        token: data.token,
+        token,
       });
 
       return { success: true, user: authUser };
@@ -89,27 +145,53 @@ export const authService = {
 
   // Logout user
   logout: (): void => {
+    memoryAuthState = null;
     localStorage.removeItem(AUTH_STORAGE_KEY);
+  },
+
+  // Clear only localStorage so a full page load shows login,
+  // without dropping an in-memory token from the current session (HMR remounts).
+  clearPersistedSession: (): void => {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+  },
+
+  getAccessToken: (): string | undefined => {
+    return authService.getAuthState().token;
   },
 
   // ========== Session Management ==========
 
-  // Get current auth state from localStorage
+  // Get current auth state from memory, then localStorage
   getAuthState: (): AuthState => {
+    if (memoryAuthState?.token) {
+      return memoryAuthState;
+    }
+
     const stored = localStorage.getItem(AUTH_STORAGE_KEY);
     if (stored) {
       try {
-        return JSON.parse(stored);
+        const state = JSON.parse(stored) as StoredAuthState;
+        const token =
+          asTokenString(state.token) ??
+          asTokenString(state.access_token) ??
+          asTokenString(state.accessToken);
+        const resolved = { ...state, token };
+        if (token) {
+          memoryAuthState = resolved;
+        }
+        return resolved;
       } catch (e) {
         return { isAuthenticated: false, user: null, permissions: [] };
       }
     }
-    return { isAuthenticated: false, user: null, permissions: [] };
+    return memoryAuthState ?? { isAuthenticated: false, user: null, permissions: [] };
   },
 
-  // Set auth state to localStorage
+  // Set auth state to memory and localStorage
   setAuthState: (state: AuthState): void => {
-    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state));
+    const token = asTokenString(state.token);
+    memoryAuthState = { ...state, token };
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(memoryAuthState));
   },
 
   // Check if user is authenticated

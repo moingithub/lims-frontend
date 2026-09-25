@@ -8,16 +8,18 @@ import {
 } from "../ui/table";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { Pencil, Unlink } from "lucide-react";
+import { Download, Image, Upload, Unlink } from "lucide-react";
 import {
   AnalysisPositionRecord,
   mapAnalysisPositionService,
 } from "../../services/mapAnalysisPositionService";
 
-interface AnalysisPositionsTableProps {
+interface LinkReportTableProps {
   records: AnalysisPositionRecord[];
-  onEdit: (record: AnalysisPositionRecord) => void;
+  onImport: (record: AnalysisPositionRecord) => void;
+  onDownload: (record: AnalysisPositionRecord) => void;
   onUnmap: (record: AnalysisPositionRecord) => void;
+  onViewImage: (imageUrl: string, filename?: string) => void;
 }
 
 function displayValue(value: string | number | null | undefined): string {
@@ -25,11 +27,13 @@ function displayValue(value: string | number | null | undefined): string {
   return String(value);
 }
 
-export function AnalysisPositionsTable({
+export function LinkReportTable({
   records,
-  onEdit,
+  onImport,
+  onDownload,
   onUnmap,
-}: AnalysisPositionsTableProps) {
+  onViewImage,
+}: LinkReportTableProps) {
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
@@ -41,6 +45,7 @@ export function AnalysisPositionsTable({
             <TableHead>Import ID</TableHead>
             <TableHead>Analysis Position</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead className="text-center">Tag Image</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -48,7 +53,7 @@ export function AnalysisPositionsTable({
           {records.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={7}
+                colSpan={8}
                 className="text-center text-muted-foreground py-8"
               >
                 No records found
@@ -60,10 +65,14 @@ export function AnalysisPositionsTable({
               return (
                 <TableRow key={record.sample_checkin_id}>
                   <TableCell>{record.company_name}</TableCell>
-                  <TableCell>{displayValue(record.work_order_number)}</TableCell>
+                  <TableCell>
+                    {displayValue(record.work_order_number)}
+                  </TableCell>
                   <TableCell>{record.analysis_number}</TableCell>
                   <TableCell>{displayValue(record.import_id)}</TableCell>
-                  <TableCell>{displayValue(record.analysis_position)}</TableCell>
+                  <TableCell>
+                    {displayValue(record.analysis_position)}
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"
@@ -76,17 +85,41 @@ export function AnalysisPositionsTable({
                       {unmapped ? "Unmapped" : "Mapped"}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() =>
+                        onViewImage(
+                          record.scanned_tag_image || record.tag_image,
+                          record.tag_image,
+                        )
+                      }
+                      disabled={!record.scanned_tag_image && !record.tag_image}
+                      title="View tag image"
+                    >
+                      <Image className="w-4 h-4 text-blue-600" />
+                    </Button>
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
                       <Button
                         variant="ghost"
                         size="sm"
-                        title={unmapped ? "Map position" : "Edit mapping"}
-                        onClick={() => onEdit(record)}
+                        title="Import and link report"
+                        onClick={() => onImport(record)}
                       >
-                        <Pencil
+                        <Upload
                           className={`w-4 h-4 ${unmapped ? "text-amber-600" : "text-blue-600"}`}
                         />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Download analysis report"
+                        onClick={() => onDownload(record)}
+                      >
+                        <Download className="w-4 h-4 text-green-600" />
                       </Button>
                       {!unmapped && (
                         <Button
@@ -94,6 +127,7 @@ export function AnalysisPositionsTable({
                           size="sm"
                           title="Unmap"
                           onClick={() => onUnmap(record)}
+                          disabled
                         >
                           <Unlink className="w-4 h-4 text-red-600" />
                         </Button>

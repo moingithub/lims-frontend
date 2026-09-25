@@ -8,8 +8,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { Filter, Calendar } from "lucide-react";
+import { Filter } from "lucide-react";
 import { Customer } from "../../types/generateInvoices";
+import {
+  formatUsDateInputDisplay,
+  normalizeUsDateInput,
+  parseUsDateInputToIso,
+} from "../../utils/dateUtils";
 
 interface InvoiceFiltersProps {
   selectedCompanyId: number | null; // ✅ Changed from selectedCustomer (string)
@@ -59,30 +64,34 @@ export function InvoiceFilters({
 
       <div className="space-y-2">
         <Label>Date From</Label>
-        <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            type="text"
-            value={dateFrom}
-            onChange={(e) => onDateFromChange(e.target.value)}
-            placeholder="MM-DD-YYYY"
-            className="pl-10"
-          />
-        </div>
+        <Input
+          type="text"
+          inputMode="numeric"
+          placeholder="MM/DD/YYYY"
+          value={formatUsDateInputDisplay(dateFrom)}
+          onChange={(e) =>
+            onDateFromChange(
+              parseUsDateInputToIso(normalizeUsDateInput(e.target.value)),
+            )
+          }
+          className="cursor-pointer"
+        />
       </div>
 
       <div className="space-y-2">
         <Label>Date To</Label>
-        <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            type="text"
-            value={dateTo}
-            onChange={(e) => onDateToChange(e.target.value)}
-            placeholder="MM-DD-YYYY"
-            className="pl-10"
-          />
-        </div>
+        <Input
+          type="text"
+          inputMode="numeric"
+          placeholder="MM/DD/YYYY"
+          value={formatUsDateInputDisplay(dateTo)}
+          onChange={(e) =>
+            onDateToChange(
+              parseUsDateInputToIso(normalizeUsDateInput(e.target.value)),
+            )
+          }
+          className="cursor-pointer"
+        />
       </div>
 
       <Button onClick={onSearch}>

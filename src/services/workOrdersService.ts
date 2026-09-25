@@ -81,6 +81,11 @@ export interface LineItem {
 import { analysisPricingService } from "./analysisPricingService";
 import { API_BASE_URL } from "../config/api";
 import { authService } from "./authService";
+import { extractDateFromDateTime } from "../utils/dateUtils";
+import {
+  CheckedInSample,
+  sampleCheckInService,
+} from "./sampleCheckInService";
 
 type ApiWorkOrder = {
   id: number;
@@ -111,6 +116,15 @@ type ApiWorkOrderLineItem = {
   rushed?: boolean;
   sample_type?: string;
   area?: string;
+  area_id?: number | null;
+  company_area?: {
+    id?: number;
+    area?: string | null;
+  } | null;
+  Company_area?: {
+    id?: number;
+    area?: string | null;
+  } | null;
   well_name?: string;
   meter_number?: string;
   applied_rate?: number | string | null;
@@ -120,6 +134,43 @@ type ApiWorkOrderLineItem = {
   spot_composite_fee?: number | string | null;
   amount?: number | string | null;
   customer_cylinder?: boolean;
+  producer?: string;
+  sampled_by_natty?: boolean;
+  sampled_by_lab?: boolean;
+  flow_rate?: string;
+  pressure?: string;
+  temperature?: string;
+  field_h2s?: number | string | null;
+  cost_code?: string;
+  sample_date?: string | null;
+  sampled_date?: string | null;
+  amb_temp?: string | null;
+  sample_time?: string | null;
+  sampled_by?: string | null;
+  remarks?: string;
+  check_in_time?: string;
+  check_in_type?: string;
+  checkin_type?: string;
+  date?: string;
+  billing_reference_type?: string;
+  billing_reference_number?: string;
+  invoice_ref_name?: string;
+  invoice_ref_value?: string;
+  tag_image?: string;
+  company_contact_id?: number;
+  contact_id?: number;
+  company_contact?: {
+    id?: number;
+    name?: string;
+    phone?: string;
+    email?: string;
+  } | null;
+  Company_contact?: {
+    id?: number;
+    name?: string;
+    phone?: string;
+    email?: string;
+  } | null;
 };
 
 type ApiWorkOrderDetails = {
@@ -206,6 +257,150 @@ const normalizeLineItem = (
     amount: applied_rate + sampleFee + h2PopFee + spotCompositeFee,
     customer_cylinder: item.customer_cylinder,
   };
+};
+
+const normalizeCheckInType = (
+  value?: string | null,
+): CheckedInSample["check_in_type"] => {
+  const normalized = (value ?? "").trim().toLowerCase();
+  if (normalized.includes("bottle")) return "Bottle";
+  if (normalized.includes("cp")) return "CP Cylinder";
+  return "Cylinder";
+};
+
+const mapLineItemToCheckedInSample = (
+  item: LineItem,
+  workOrderNumber: string,
+  companyId: number,
+): CheckedInSample => ({
+  id: item.id,
+  company_id: companyId,
+  contact_id: 0,
+  analysis_type: item.analysis_type,
+  area: item.area ?? "",
+  customer_owned_cylinder: Boolean(item.customer_cylinder),
+  cylinder_number: item.cylinder_number,
+  analysis_number: item.analysis_number,
+  date: "",
+  producer: "",
+  sampled_by_natty: false,
+  well_name: item.well_name,
+  meter_number: item.meter_number,
+  flow_rate: "",
+  pressure: "",
+  temperature: "",
+  field_h2s: 0,
+  cost_code: item.cc_number,
+  sample_date: null,
+  amb_temp: "",
+  sample_time: "",
+  sampled_by: null,
+  remarks: "",
+  check_in_type: "Cylinder",
+  sample_type: item.sample_type,
+  check_in_time: "",
+  rushed: item.rushed,
+  tag_image: "",
+  billing_reference_type: "",
+  billing_reference_number: "",
+  work_order_number: workOrderNumber,
+  created_by: 0,
+});
+
+const mapApiLineItemToCheckedInSample = (
+  item: ApiWorkOrderLineItem,
+  workOrderNumber: string,
+  companyId: number,
+  index: number,
+): CheckedInSample => ({
+  id: item.id ?? index + 1,
+  company_id: companyId,
+  company_contact_id:
+    item.company_contact_id ??
+    item.company_contact?.id ??
+    item.Company_contact?.id ??
+    undefined,
+  contact_name:
+    item.company_contact?.name?.trim() ||
+    item.Company_contact?.name?.trim() ||
+    undefined,
+  contact_email:
+    item.company_contact?.email?.trim() ||
+    item.Company_contact?.email?.trim() ||
+    undefined,
+  contact_phone:
+    item.company_contact?.phone?.trim() ||
+    item.Company_contact?.phone?.trim() ||
+    undefined,
+  contact_id:
+    item.contact_id ??
+    item.company_contact_id ??
+    item.company_contact?.id ??
+    item.Company_contact?.id ??
+    0,
+  analysis_type: item.analysis_type ?? "",
+  area:
+    item.area?.trim() ||
+    item.company_area?.area?.trim() ||
+    item.Company_area?.area?.trim() ||
+    "",
+  area_id: item.area_id ?? item.company_area?.id ?? item.Company_area?.id ?? undefined,
+  customer_owned_cylinder: Boolean(item.customer_cylinder),
+  cylinder_number: item.cylinder_number ?? "",
+  analysis_number: item.analysis_number ?? "",
+  date:
+    item.date?.trim() ||
+    extractDateFromDateTime(item.check_in_time) ||
+    "",
+  producer: item.producer ?? "",
+  sampled_by_natty: Boolean(item.sampled_by_lab ?? item.sampled_by_natty),
+  well_name: item.well_name ?? "",
+  meter_number: item.meter_number ?? "",
+  flow_rate: item.flow_rate ?? "",
+  pressure: item.pressure ?? "",
+  temperature: item.temperature ?? "",
+  field_h2s: toNumber(item.field_h2s),
+  cost_code: item.cost_code ?? item.cc_number ?? "",
+  sample_date: item.sample_date ?? item.sampled_date ?? null,
+  amb_temp: item.amb_temp?.trim() ?? "",
+  sample_time: item.sample_time?.trim() ?? "",
+  sampled_by: item.sampled_by ?? null,
+  remarks: item.remarks ?? "",
+  check_in_type: normalizeCheckInType(item.checkin_type ?? item.check_in_type),
+  sample_type: item.sample_type,
+  check_in_time: item.check_in_time ?? "",
+  rushed: Boolean(item.rushed),
+  tag_image: item.tag_image ?? "",
+  billing_reference_type:
+    item.invoice_ref_name ?? item.billing_reference_type ?? "",
+  billing_reference_number:
+    item.invoice_ref_value ?? item.billing_reference_number ?? "",
+  work_order_number: workOrderNumber,
+  created_by: 0,
+});
+
+const fetchWorkOrderDetailsRaw = async (
+  workOrderNumber: string,
+): Promise<ApiWorkOrderDetails> => {
+  const response = await fetch(
+    `${API_BASE_URL}/sample_checkin/workorders/by-number/${encodeURIComponent(
+      workOrderNumber,
+    )}`,
+    {
+      method: "GET",
+      headers: buildAuthHeaders(),
+    },
+  );
+
+  if (!response.ok) {
+    const message =
+      response.status === 401
+        ? "Unauthorized"
+        : "Failed to load work order details";
+    throw new Error(message);
+  }
+
+  return response.json();
 };
 
 // In-memory storage for Work Order Headers and Lines with initial mock data
@@ -365,6 +560,38 @@ export const workOrdersService = {
       hourlyFee,
     };
   },
+  fetchWorkOrderReportSamples: async (
+    workOrderNumber: string,
+    companyId = 0,
+  ): Promise<CheckedInSample[]> => {
+    await analysisPricingService.fetchAnalysisPrices();
+
+    const apiSamples =
+      await sampleCheckInService.fetchSamplesByWorkOrderNumber(workOrderNumber);
+    if (apiSamples.length > 0) {
+      return apiSamples;
+    }
+
+    const data = await fetchWorkOrderDetailsRaw(workOrderNumber);
+    const rawItems = Array.isArray(data.line_items) ? data.line_items : [];
+    if (rawItems.length > 0) {
+      return rawItems.map((item, index) =>
+        mapApiLineItemToCheckedInSample(
+          item,
+          workOrderNumber,
+          companyId,
+          index,
+        ),
+      );
+    }
+
+    const details = await workOrdersService.fetchWorkOrderDetailsByNumber(
+      workOrderNumber,
+    );
+    return details.lineItems.map((item) =>
+      mapLineItemToCheckedInSample(item, workOrderNumber, companyId),
+    );
+  },
   deleteWorkOrder: async (id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/sample_checkin/${id}`, {
       method: "DELETE",
@@ -484,12 +711,7 @@ export const workOrdersService = {
     return items.map((item) => {
       if (item.id.toString() !== id) return item;
 
-      let updatedItem: LineItem;
-      if (field === "sample_fee") {
-        updatedItem = { ...item, sample_fee: Number(value) };
-      } else {
-        updatedItem = { ...item, [field]: value } as LineItem;
-      }
+      let updatedItem: LineItem = { ...item, [field]: value } as LineItem;
 
       // If analysis_type or rushed changed, recalculate rates
       if (field === "analysis_type") {

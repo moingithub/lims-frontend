@@ -42,6 +42,22 @@ function getInvoiceServiceArea(invoice: Invoice): string {
   return "";
 }
 
+function getInvoiceGlCode(invoice: Invoice): string {
+  for (const line of invoice.invoiceLines) {
+    const glCode = line.sample_checkin?.company_area?.gl_code?.trim();
+    if (glCode) return glCode;
+  }
+  return "";
+}
+
+function getInvoicePayKey(invoice: Invoice): string {
+  for (const line of invoice.invoiceLines) {
+    const payKey = line.sample_checkin?.company_area?.pay_key?.trim();
+    if (payKey) return payKey;
+  }
+  return "";
+}
+
 // ---------------------------------------------------------------------------
 // @react-pdf/renderer StyleSheet
 // Sizes in pt. A4 = 595 x 842 pt. Margins = 45pt (~16mm) each side.
@@ -113,7 +129,7 @@ const S = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 16,
   },
-  billToSection: { flex: 1 },
+  billToSection: { flex: 1, maxWidth: "48%" },
   billToLabel: {
     fontFamily: "Helvetica-Bold",
     fontSize: 6.5,
@@ -130,32 +146,33 @@ const S = StyleSheet.create({
   },
   billToDetail: { fontSize: 8, color: "#555555", lineHeight: 1.45 },
 
-  detailsSection: { alignItems: "flex-end" },
+  detailsSection: { flex: 1, maxWidth: "48%" },
   detailRow: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 3,
     gap: 8,
+    width: "100%",
   },
   detailLabel: {
     fontSize: 6.5,
     color: "#888888",
     letterSpacing: 0.7,
     textTransform: "uppercase",
-    minWidth: 75,
+    width: "38%",
     textAlign: "right",
   },
   detailValue: {
     fontFamily: "Helvetica-Bold",
     fontSize: 8,
-    minWidth: 95,
-    textAlign: "right",
+    width: "62%",
+    textAlign: "left",
   },
   authorizedLine: {
     borderBottomWidth: 0.75,
     borderBottomColor: "#aaaaaa",
-    minWidth: 95,
+    width: "62%",
     height: 12,
     alignSelf: "center",
   },
@@ -287,6 +304,8 @@ const S = StyleSheet.create({
 function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
   const fmt = (val: string) => `$${parseFloat(val).toFixed(2)}`;
   const serviceArea = getInvoiceServiceArea(invoice);
+  const glCode = getInvoiceGlCode(invoice);
+  const payKey = getInvoicePayKey(invoice);
 
   return (
     <Document
@@ -356,6 +375,14 @@ function InvoicePDFDocument({ invoice }: { invoice: Invoice }) {
             <View style={S.detailRow}>
               <Text style={S.detailLabel}>Area</Text>
               <Text style={S.detailValue}>{serviceArea}</Text>
+            </View>
+            <View style={S.detailRow}>
+              <Text style={S.detailLabel}>GL Code</Text>
+              <Text style={S.detailValue}>{glCode}</Text>
+            </View>
+            <View style={S.detailRow}>
+              <Text style={S.detailLabel}>Pay Key</Text>
+              <Text style={S.detailValue}>{payKey}</Text>
             </View>
             <View style={S.detailRow}>
               <Text style={S.detailLabel}>Payment Status</Text>
@@ -536,6 +563,8 @@ export function InvoiceDetailsDialog({
 
   const printInvoice = () => window.print();
   const serviceArea = getInvoiceServiceArea(invoice);
+  const glCode = getInvoiceGlCode(invoice);
+  const payKey = getInvoicePayKey(invoice);
 
   /**
    * Uses @react-pdf/renderer to produce a proper vector PDF.
@@ -597,15 +626,17 @@ export function InvoiceDetailsDialog({
         .invoice-title-row { display:flex; align-items:baseline; justify-content:space-between; border-top:2.5px solid #1a1a1a; border-bottom:1px solid #d0d0d0; padding:5px 0 6px; margin-bottom:8mm; }
         .invoice-title-row h1 { font-size:22pt; font-weight:900; letter-spacing:0.04em; margin:0; color:#1a1a1a; }
         .invoice-number { font-size:10pt; color:#555; font-family:'Courier New',monospace; font-weight:600; }
-        .invoice-meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-bottom:8mm; }
+        .invoice-meta-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:6mm; margin-bottom:8mm; align-items:start; }
+        .invoice-bill-to { min-width:0; overflow-wrap:anywhere; }
         .invoice-bill-to h2 { font-size:7.5pt; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888; margin:0 0 3px; }
         .invoice-bill-to .company-name { font-size:11pt; font-weight:700; margin:0 0 2px; }
         .invoice-bill-to .bill-detail { font-size:8.5pt; color:#555; margin:0 0 1px; line-height:1.45; }
         .invoice-bill-to .location { font-size:8.5pt; color:#555; margin:0; }
+        .invoice-details-column { min-width:0; width:100%; }
         .invoice-table { width:100%; border-collapse:collapse; font-size:7.8pt; margin-bottom:8mm; table-layout:fixed; }
-        .invoice-detail-row { display:flex; justify-content:flex-end; align-items:center; gap:10px; margin-bottom:3px; font-size:8.5pt; }
-        .invoice-detail-row .label { color:#888; min-width:90px; text-align:right; font-size:7.5pt; text-transform:uppercase; letter-spacing:0.08em; }
-        .invoice-detail-row .value { font-weight:600; min-width:100px; text-align:right; }
+        .invoice-detail-row { display:grid; grid-template-columns:minmax(0,38%) minmax(0,62%); gap:8px; align-items:center; margin-bottom:3px; font-size:8.5pt; width:100%; }
+        .invoice-detail-row .label { color:#888; text-align:right; font-size:7.5pt; text-transform:uppercase; letter-spacing:0.08em; min-width:0; overflow-wrap:anywhere; }
+        .invoice-detail-row .value { font-weight:600; text-align:left; min-width:0; overflow-wrap:anywhere; }
         .invoice-detail-row .value.authorized-by-line { border-bottom:1px solid #aaa; min-height:14px; }
         .invoice-services-title { font-size:7.5pt; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#888; margin:0 0 4px; }
         .invoice-table thead tr { background:#1a1a1a; color:#fff; }
@@ -697,7 +728,7 @@ export function InvoiceDetailsDialog({
                     <p className="location">{invoice.location}</p>
                   )}
                 </div>
-                <div>
+                <div className="invoice-details-column">
                   <div className="invoice-detail-row">
                     <span className="label">Invoice Date</span>
                     <span className="value">
@@ -719,6 +750,14 @@ export function InvoiceDetailsDialog({
                   <div className="invoice-detail-row">
                     <span className="label">Area</span>
                     <span className="value">{serviceArea}</span>
+                  </div>
+                  <div className="invoice-detail-row">
+                    <span className="label">GL Code</span>
+                    <span className="value">{glCode}</span>
+                  </div>
+                  <div className="invoice-detail-row">
+                    <span className="label">Pay Key</span>
+                    <span className="value">{payKey}</span>
                   </div>
                   <div className="invoice-detail-row">
                     <span className="label">Payment Status</span>
@@ -760,6 +799,16 @@ export function InvoiceDetailsDialog({
 
               <p className="invoice-services-title">Services Rendered</p>
               <table className="invoice-table">
+                <colgroup>
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "28%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "6%" }} />
+                  <col style={{ width: "11%" }} />
+                  <col style={{ width: "11%" }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th>Analysis #</th>

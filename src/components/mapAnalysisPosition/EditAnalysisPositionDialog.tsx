@@ -123,14 +123,20 @@ export function EditAnalysisPositionDialog({
                 <SelectValue placeholder="Select import file" />
               </SelectTrigger>
               <SelectContent>
-                {importRecords.map((importRecord) => (
-                  <SelectItem
-                    key={importRecord.id}
-                    value={String(importRecord.id)}
-                  >
-                    {importRecord.import_id} — {importRecord.file_name}
+                {importRecords.length === 0 ? (
+                  <SelectItem value="__none__" disabled>
+                    No unmapped import files available
                   </SelectItem>
-                ))}
+                ) : (
+                  importRecords.map((importRecord) => (
+                    <SelectItem
+                      key={importRecord.id}
+                      value={String(importRecord.id)}
+                    >
+                      {importRecord.import_id} — {importRecord.file_name}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { Eye, Trash2, Edit } from "lucide-react";
+import { Eye, Edit } from "lucide-react";
 import { isoToUSDate } from "../../utils/dateUtils";
 import { InvoiceListItem } from "../../services/invoicesService";
 
@@ -16,7 +16,6 @@ interface InvoicesTableProps {
   invoices: InvoiceListItem[];
   onViewInvoice: (invoice: InvoiceListItem) => void;
   onEditStatus: (invoice: InvoiceListItem) => void;
-  onDeleteInvoice: (invoice: InvoiceListItem) => void;
   getStatusBadgeClass: (status: string) => string;
 }
 
@@ -24,7 +23,6 @@ export function InvoicesTable({
   invoices,
   onViewInvoice,
   onEditStatus,
-  onDeleteInvoice,
   getStatusBadgeClass,
 }: InvoicesTableProps) {
   return (
@@ -70,20 +68,6 @@ export function InvoicesTable({
                     onClick={() => onEditStatus(invoice)}
                   >
                     <Edit className="w-4 h-4 text-green-600" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDeleteInvoice(invoice)}
-                    disabled={invoice.payment_status === "Paid"}
-                  >
-                    <Trash2
-                      className={`w-4 h-4 ${
-                        invoice.payment_status === "Paid"
-                          ? "text-gray-400"
-                          : "text-red-600"
-                      }`}
-                    />
                   </Button>
                 </div>
               </TableCell>

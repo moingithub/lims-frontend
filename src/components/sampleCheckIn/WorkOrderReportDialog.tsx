@@ -14,44 +14,16 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { Printer } from "lucide-react";
-import { getCurrentDateUS, isoToUSDate } from "../../utils/dateUtils";
-
-interface CylinderDetails {
-  id: number;
-  company_id: number;
-  contact_id: number;
-  analysis_type: string;
-  area: string;
-  customer_owned_cylinder: boolean;
-  cylinder_number: string;
-  analysis_number: string;
-  date: string;
-  producer: string;
-  sampled_by_natty: boolean;
-  well_name: string;
-  meter_number: string;
-  flow_rate: string;
-  pressure: string;
-  temperature: string;
-  field_h2s: number;
-  cost_code: string;
-  remarks: string;
-  check_in_type: "Cylinder" | "Bottle" | "CP Cylinder";
-  check_in_time: string;
-  rushed: boolean;
-  tag_image: string;
-  billing_reference_type: string;
-  billing_reference_number: string;
-  created_by: number;
-}
+import { Printer, Loader2 } from "lucide-react";
+import { getCurrentDateUS, resolveDisplayDate, formatCheckInTime } from "../../utils/dateUtils";
+import { CheckedInSample } from "../../services/sampleCheckInService";
 
 interface WorkOrder {
   id: string;
   customer: string;
   date: string;
-  well_name: string;
-  meter_number: string;
+  well_name?: string;
+  meter_number?: string;
   cylinders?: number;
 }
 
@@ -61,7 +33,7 @@ interface WorkOrderReportDialogProps {
   workOrderNumber?: string;
   customerName?: string;
   customerCode?: string;
-  cylinders?: CylinderDetails[];
+  cylinders?: CheckedInSample[];
   subtotal?: number;
   discountPercentage?: number;
   discountAmount?: number;
@@ -70,45 +42,26 @@ interface WorkOrderReportDialogProps {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
+  reportDate?: string;
+  isLoading?: boolean;
 }
 
-// Function to generate mock cylinders from work order
-function generateMockCylinders(order: WorkOrder): CylinderDetails[] {
-  const cylinderCount = order.cylinders || 3;
-  const mockCylinders: CylinderDetails[] = [];
+function formatSampleType(value?: string): string {
+  if (!value?.trim()) return "N/A";
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "spot") return "Spot";
+  if (normalized === "composite") return "Composite";
+  return value.trim();
+}
 
-  for (let i = 0; i < cylinderCount; i++) {
-    mockCylinders.push({
-      id: i + 1,
-      company_id: 1,
-      contact_id: 1,
-      analysis_type: "Gas Analysis",
-      area: "North Field",
-      customer_owned_cylinder: true,
-      cylinder_number: `C${(i + 1).toString().padStart(3, "0")}`,
-      analysis_number: `${order.id}-A${(i + 1).toString().padStart(3, "0")}`,
-      date: isoToUSDate(order.date),
-      producer: "Sample Producer",
-      sampled_by_natty: true,
-      well_name: order.well_name,
-      meter_number: order.meter_number,
-      flow_rate: "1000 MCFD",
-      pressure: "1000 PSI",
-      temperature: "60 F",
-      field_h2s: 10,
-      cost_code: "N/A",
-      remarks: "N/A",
-      check_in_type: "Cylinder",
-      check_in_time: "10:00 AM",
-      rushed: false,
-      tag_image: "N/A",
-      billing_reference_type: "N/A",
-      billing_reference_number: "N/A",
-      created_by: 1,
-    });
-  }
-
-  return mockCylinders;
+function formatMeasurement(
+  value: string | undefined | null,
+  unit: string,
+): string {
+  const trimmed = value?.trim();
+  if (!trimmed) return "N/A";
+  if (/[a-zA-Z]/.test(trimmed)) return trimmed;
+  return `${trimmed} ${unit}`;
 }
 
 export function WorkOrderReportDialog({
@@ -122,12 +75,21 @@ export function WorkOrderReportDialog({
   contactName,
   contactEmail,
   contactPhone,
+  reportDate: reportDateProp,
+  isLoading = false,
 }: WorkOrderReportDialogProps) {
-  // Use order data if provided, otherwise use individual props
-  const resolvedWorkOrderNumber = order ? order.id : workOrderNumber || "";
-  const customer = order ? order.customer : customerName || "N/A";
-  const code = order ? "" : customerCode || "";
-  const cylinderData = order ? generateMockCylinders(order) : cylinders || [];
+  const resolvedWorkOrderNumber = order?.id ?? workOrderNumber ?? "";
+  const customer = order?.customer ?? customerName ?? "N/A";
+  const code = customerCode?.trim() || "N/A";
+  const cylinderData = cylinders ?? [];
+  const reportDate =
+    resolveDisplayDate(
+      reportDateProp,
+      order?.date,
+      cylinderData[0]?.date,
+      cylinderData[0]?.check_in_time,
+      cylinderData[0]?.sample_date ?? cylinderData[0]?.sampled_date,
+    ) || getCurrentDateUS();
 
   const handlePrint = () => {
     const reportEl = document.getElementById("work-order-report");
@@ -352,6 +314,11 @@ export function WorkOrderReportDialog({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-4">
+          {isLoading ? (
+            <div className="flex min-h-[240px] items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
           <div className="print:p-8" id="work-order-report">
             {/* Header */}
             <div className="mb-6 rounded-lg border bg-white px-6 py-5 text-center shadow-sm">
@@ -381,7 +348,7 @@ export function WorkOrderReportDialog({
                   <p className="text-xs font-medium text-muted-foreground">
                     Date
                   </p>
-                  <p className="text-lg font-semibold">{getCurrentDateUS()}</p>
+                  <p className="text-lg font-semibold">{reportDate}</p>
                 </div>
                 <div className="rounded-md border bg-white px-3 py-2">
                   <p className="text-xs font-medium text-muted-foreground">
@@ -393,7 +360,7 @@ export function WorkOrderReportDialog({
                   <p className="text-xs font-medium text-muted-foreground">
                     Customer Code
                   </p>
-                  <p className="text-lg font-semibold">{code || "N/A"}</p>
+                  <p className="text-lg font-semibold">{code}</p>
                 </div>
                 <div className="rounded-md border bg-white px-3 py-2">
                   <p className="text-xs font-medium text-muted-foreground">
@@ -438,7 +405,12 @@ export function WorkOrderReportDialog({
                       <TableHead className="text-blue-600">
                         Cylinder #
                       </TableHead>
-                      <TableHead className="text-blue-600">Type</TableHead>
+                      <TableHead className="text-blue-600">
+                        Analysis Type
+                      </TableHead>
+                      <TableHead className="text-blue-600">
+                        Sample Type
+                      </TableHead>
                       <TableHead className="text-blue-600">
                         Producer
                       </TableHead>
@@ -446,8 +418,18 @@ export function WorkOrderReportDialog({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {cylinderData.map((cylinder, index) => (
-                      <TableRow key={index}>
+                    {cylinderData.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={7}
+                          className="py-8 text-center text-sm text-muted-foreground"
+                        >
+                          No sample details found for this work order.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                    cylinderData.map((cylinder, index) => (
+                      <TableRow key={cylinder.id ?? index}>
                         <TableCell className="text-sm">{index + 1}</TableCell>
                         <TableCell className="text-sm break-words">
                           {cylinder.analysis_number}
@@ -459,13 +441,17 @@ export function WorkOrderReportDialog({
                           {cylinder.analysis_type}
                         </TableCell>
                         <TableCell className="text-sm break-words">
+                          {formatSampleType(cylinder.sample_type)}
+                        </TableCell>
+                        <TableCell className="text-sm break-words">
                           {cylinder.producer}
                         </TableCell>
                         <TableCell className="text-sm break-words">
                           {cylinder.well_name}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -476,9 +462,14 @@ export function WorkOrderReportDialog({
               <h2 className="mb-3 text-lg font-semibold text-blue-600">
                 Detailed Sample Information
               </h2>
-              {cylinderData.map((cylinder, index) => (
+              {cylinderData.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No detailed sample information available.
+                </p>
+              ) : (
+              cylinderData.map((cylinder, index) => (
                 <div
-                  key={index}
+                  key={cylinder.id ?? index}
                   className={`sample-card mb-4 rounded-lg border p-4 shadow-sm ${
                     index % 2 === 0 ? "bg-white" : "bg-blue-50"
                   }`}
@@ -501,13 +492,27 @@ export function WorkOrderReportDialog({
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Date</p>
-                      <p className="text-sm">{cylinder.date}</p>
+                      <p className="text-sm">
+                        {resolveDisplayDate(
+                          cylinder.date,
+                          cylinder.check_in_time,
+                          cylinder.sample_date ?? cylinder.sampled_date,
+                        ) || "N/A"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">
                         Analysis Type
                       </p>
                       <p className="text-sm">{cylinder.analysis_type}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Sample Type
+                      </p>
+                      <p className="text-sm">
+                        {formatSampleType(cylinder.sample_type)}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">
@@ -519,7 +524,9 @@ export function WorkOrderReportDialog({
                       <p className="text-xs text-muted-foreground">
                         Check-In Time
                       </p>
-                      <p className="text-sm">{cylinder.check_in_time}</p>
+                      <p className="text-sm">
+                        {formatCheckInTime(cylinder.check_in_time) || "N/A"}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Rushed</p>
@@ -545,7 +552,7 @@ export function WorkOrderReportDialog({
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Area</p>
-                      <p className="text-sm">{cylinder.area}</p>
+                      <p className="text-sm">{cylinder.area?.trim() || "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Well Name</p>
@@ -570,15 +577,13 @@ export function WorkOrderReportDialog({
                     <div>
                       <p className="text-xs text-muted-foreground">Flow Rate</p>
                       <p className="text-sm">
-                        {cylinder.flow_rate
-                          ? `${cylinder.flow_rate} MCFD`
-                          : "N/A"}
+                        {formatMeasurement(cylinder.flow_rate, "MCFD")}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Pressure</p>
                       <p className="text-sm">
-                        {cylinder.pressure ? `${cylinder.pressure} PSI` : "N/A"}
+                        {formatMeasurement(cylinder.pressure, "PSI")}
                       </p>
                     </div>
                     <div>
@@ -586,9 +591,7 @@ export function WorkOrderReportDialog({
                         Temperature
                       </p>
                       <p className="text-sm">
-                        {cylinder.temperature
-                          ? `${cylinder.temperature} F`
-                          : "N/A"}
+                        {formatMeasurement(cylinder.temperature, "F")}
                       </p>
                     </div>
                     <div>
@@ -602,6 +605,34 @@ export function WorkOrderReportDialog({
                     <div>
                       <p className="text-xs text-muted-foreground">Cost Code</p>
                       <p className="text-sm">{cylinder.cost_code || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Sample Date
+                      </p>
+                      <p className="text-sm">
+                        {resolveDisplayDate(
+                          cylinder.sample_date ?? cylinder.sampled_date,
+                          cylinder.date,
+                          cylinder.check_in_time,
+                        ) || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Amb Temp</p>
+                      <p className="text-sm">{cylinder.amb_temp || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Sample Time
+                      </p>
+                      <p className="text-sm">{cylinder.sample_time || "N/A"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">
+                        Sampled By
+                      </p>
+                      <p className="text-sm">{cylinder.sampled_by || "N/A"}</p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">
@@ -627,9 +658,11 @@ export function WorkOrderReportDialog({
                     )}
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </div>
+          )}
         </div>
 
         <div className="flex shrink-0 justify-end gap-2 border-t bg-muted/30 px-6 py-4 print:hidden">

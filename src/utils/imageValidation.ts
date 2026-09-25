@@ -464,3 +464,95 @@ export async function validateImageFileForOCR(
     },
   };
 }
+
+/**
+ * Fast pre-upload checks without heavy pixel analysis (blur/edge detection).
+ */
+export async function validateImageFileForOCRQuick(
+  file: File,
+): Promise<ImageValidationResult> {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const fileType = getFileType(file);
+  const isPdf = fileType === "application/pdf";
+
+  if (!isAllowedFile(file)) {
+    errors.push("Unsupported format. Please upload JPG, JPEG, PNG, or PDF.");
+  }
+
+  if (file.size === 0) {
+    errors.push("File is empty or corrupted.");
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    errors.push("File exceeds the maximum size of 10 MB.");
+  }
+
+  if (file.size < MIN_FILE_SIZE) {
+    warnings.push("File is very small. The form may not be readable.");
+  }
+
+  if (errors.length > 0) {
+    return {
+      valid: false,
+      errors,
+      warnings,
+      quality_score: 0,
+      metadata: { fileType, isPdf },
+    };
+  }
+
+  if (isPdf) {
+    warnings.push("PDF upload may take longer to process.");
+    return {
+      valid: true,
+      errors,
+      warnings,
+      quality_score: 70,
+      metadata: { fileType, isPdf },
+    };
+  }
+
+  let width = 0;
+  let height = 0;
+
+  try {
+    const bitmap = await createBitmapFromFile(file);
+    if (bitmap) {
+      width = bitmap.width;
+      height = bitmap.height;
+      if (typeof bitmap.close === "function") {
+        bitmap.close();
+      }
+    } else {
+      const image = await loadImageElement(file);
+      width = image.naturalWidth;
+      height = image.naturalHeight;
+    }
+  } catch {
+    errors.push("Image file is corrupted or not readable.");
+    return {
+      valid: false,
+      errors,
+      warnings,
+      quality_score: 0,
+      metadata: { fileType, isPdf },
+    };
+  }
+
+  if (width < 400 || height < 300) {
+    errors.push("Resolution too low. Please upload a larger image of the form.");
+  } else if (width < MIN_WIDTH || height < MIN_HEIGHT) {
+    warnings.push(
+      "Image will be optimized for upload. Use a clearer, well-lit photo if OCR results are poor.",
+    );
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    quality_score: 80,
+    metadata: { width, height, fileType, isPdf },
+  };
+}

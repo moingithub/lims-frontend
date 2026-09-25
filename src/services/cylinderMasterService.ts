@@ -37,9 +37,12 @@ const mapApiCylinder = (cylinder: ApiCylinder): Cylinder => ({
 
 const buildAuthHeaders = (): HeadersInit => {
   const token = authService.getAuthState().token;
+  if (!token) {
+    throw new Error("Your session has expired. Please log in again.");
+  }
   return {
     "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    Authorization: `Bearer ${token}`,
   };
 };
 

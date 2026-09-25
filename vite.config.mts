@@ -1,9 +1,100 @@
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import http from "node:http";
+import type { IncomingMessage } from "node:http";
+
+const API_PROXY_TARGET = "http://localhost:4000";
+
+const HOP_BY_HOP_HEADERS = new Set([
+  "connection",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailers",
+  "transfer-encoding",
+  "upgrade",
+]);
+
+const getIncomingHeader = (
+  req: IncomingMessage,
+  name: string,
+): string | undefined => {
+  const lower = name.toLowerCase();
+  const value = req.headers[lower];
+  if (typeof value === "string" && value.trim()) return value;
+  if (Array.isArray(value)) {
+    const first = value.find((item) => item?.trim());
+    if (first) return first;
+  }
+  const raw = req.rawHeaders;
+  for (let i = 0; i < raw.length; i += 2) {
+    if (raw[i].toLowerCase() === lower && raw[i + 1]?.trim()) {
+      return raw[i + 1];
+    }
+  }
+  return undefined;
+};
+
+/** Vite's default http-proxy can drop Authorization; copy headers via Node http. */
+const preserveAuthApiProxy = (targetOrigin: string): Plugin => ({
+  name: "preserve-auth-api-proxy",
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      if (!req.url?.startsWith("/api")) {
+        next();
+        return;
+      }
+
+      const target = new URL(req.url, targetOrigin);
+      const headers: http.OutgoingHttpHeaders = {};
+
+      for (const [headerName, headerValue] of Object.entries(req.headers)) {
+        const lower = headerName.toLowerCase();
+        if (HOP_BY_HOP_HEADERS.has(lower)) continue;
+        if (lower === "host" || lower === "accept-encoding") continue;
+        if (headerValue == null) continue;
+        headers[lower] = headerValue;
+      }
+
+      const authorization = getIncomingHeader(req, "authorization");
+      if (authorization) {
+        headers.authorization = authorization;
+      }
+      headers.host = target.host;
+
+      const proxyReq = http.request(
+        {
+          protocol: target.protocol,
+          hostname: target.hostname,
+          port: target.port,
+          path: `${target.pathname}${target.search}`,
+          method: req.method,
+          headers,
+        },
+        (proxyRes) => {
+          const responseHeaders = { ...proxyRes.headers };
+          delete responseHeaders["transfer-encoding"];
+          res.writeHead(proxyRes.statusCode ?? 502, responseHeaders);
+          proxyRes.pipe(res);
+        },
+      );
+
+      proxyReq.on("error", (error) => {
+        if (!res.headersSent) {
+          res.statusCode = 502;
+        }
+        res.end(`API proxy error: ${error.message}`);
+      });
+
+      req.pipe(proxyReq);
+    });
+  },
+});
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), preserveAuthApiProxy(API_PROXY_TARGET)],
   resolve: {
     extensions: [".js", ".jsx", ".ts", ".tsx", ".json"],
     alias: {
@@ -60,17 +151,10 @@ export default defineConfig({
     target: "esnext",
     outDir: "build",
   },
-  // Proxy applies only to `npm run dev` — not to the production build on :8088.
+  // Custom /api proxy (preserveAuthApiProxy) applies only to `npm run dev`.
   // Production uses VITE_API_BASE_URL from .env.production (see src/config/api.ts).
   server: {
     port: 3000,
     open: true,
-    proxy: {
-      "/api": {
-        target: "http://localhost:4000",
-        // target: "http://47.29.134.42:5000",
-        changeOrigin: true,
-      },
-    },
   },
 });

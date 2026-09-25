@@ -1,6 +1,14 @@
 import { API_BASE_URL } from "../config/api";
 import { authService } from "./authService";
 import { companyMasterService } from "./companyMasterService";
+import { analysisPricingService } from "./analysisPricingService";
+import {
+  resolveSampleCheckInAnalysisType,
+  sampleCheckInService,
+  SampleCheckInApiRecord,
+} from "./sampleCheckInService";
+import { extractDateFromDateTime } from "../utils/dateUtils";
+import { mapAnalysisPositionService } from "./mapAnalysisPositionService";
 
 export interface AnalysisReport {
   id: number;
@@ -15,10 +23,20 @@ export interface AnalysisReport {
   meter_number: string;
   status: string;
   created_by: number;
+  tag_image: string;
+  scanned_tag_image?: string | null;
+  import_machine_report_id?: number | null;
+  import_id?: string | null;
 }
 
 export interface GasAnalysisComponentRow {
   component: string;
+  mole_pct: string;
+  wt_pct: string;
+  gpm: string;
+}
+
+export interface GasAnalysisComponentTotals {
   mole_pct: string;
   wt_pct: string;
   gpm: string;
@@ -49,14 +67,25 @@ export interface GasAnalysisReport {
   remarks: string;
   sampled_by: string;
   sample_date: string;
+  sample_time: string;
+  amb_temp: string;
+  pressure_measured: string;
+  pressure_base_factor: string;
   sample_pressure: string;
   sample_temperature: string;
   sample_method: string;
+  instrument: string;
+  last_instrument_verification: string;
+  heating_method: string;
+  hexanes_split: string;
+  effective_start_date: string;
+  effective_end_date: string;
   field_h2s: string;
   flow_rate: string;
   base_condition: string;
   physical_constant: string;
   components: GasAnalysisComponentRow[];
+  component_totals: GasAnalysisComponentTotals;
   gross_heating_value: GasAnalysisConditionValues;
   specific_gravity: GasAnalysisConditionValues;
   compressibility_factor: GasAnalysisConditionValues;
@@ -93,9 +122,19 @@ type ApiAnalysisReportResponse = {
     remarks?: string;
     sampled_by?: string;
     sample_date?: string;
+    sample_time?: string;
+    amb_temp?: string | null;
+    pressure_measured?: string | null;
+    pressure_base_factor?: number | string | null;
     sample_pressure?: string;
     sample_temperature?: string;
     sample_method?: string;
+    instrument?: string | null;
+    last_instrument_verification?: string | null;
+    heating_method?: string | null;
+    hexanes_split?: string | null;
+    effective_start_date?: string | null;
+    effective_end_date?: string | null;
     field_h2s?: number | string | null;
     flow_rate?: string | number | null;
   };
@@ -109,6 +148,11 @@ type ApiAnalysisReportResponse = {
     wt_pct?: string | number | null;
     gpm?: string | number | null;
   }>;
+  component_totals?: {
+    mole_pct?: string | number | null;
+    wt_pct?: string | number | null;
+    gpm?: string | number | null;
+  };
   analysis_results?: {
     gross_heating_value?: ApiDryWetValues;
     specific_gravity?: ApiDryWetValues;
@@ -121,19 +165,46 @@ type ApiAnalysisReportResponse = {
   };
 };
 
-type ApiSampleCheckInListItem = {
-  id: number;
-  work_order_number?: string;
-  analysis_number?: string;
-  analysis_type?: string;
-  cylinder_number?: string;
-  well_name?: string;
-  meter_number?: string;
-  date?: string;
-  status?: string;
-  company_id?: number;
-  company_name?: string;
-  created_by?: number;
+type ApiSampleCheckInListItem = SampleCheckInApiRecord;
+
+const resolveReportDate = (record: SampleCheckInApiRecord): string =>
+  record.date?.trim() ||
+  extractDateFromDateTime(record.check_in_time) ||
+  extractDateFromDateTime(record.created_at) ||
+  "";
+
+const mapSampleCheckInToReport = (
+  record: ApiSampleCheckInListItem,
+  analysisPosition?: {
+    import_machine_report_id: number | null;
+    import_id: string | null;
+  },
+): AnalysisReport => {
+  const company =
+    record.company_id != null
+      ? companyMasterService.getCompanyById(record.company_id)
+      : undefined;
+  const analysisType = resolveSampleCheckInAnalysisType(record);
+
+  return {
+    id: record.id,
+    sample_checkin_id: record.id,
+    work_order_number: record.work_order_number ?? "",
+    customer: record.company_name ?? company?.company_name ?? "",
+    date: resolveReportDate(record),
+    analysis_type: analysisType.name === "Unknown" ? "" : analysisType.name,
+    analysis_number: record.analysis_number ?? "",
+    cylinder_number: record.cylinder_number ?? "",
+    well_name: record.well_name ?? "",
+    meter_number: record.meter_number ?? "",
+    status: record.status ?? "",
+    created_by: record.created_by ?? record.created_by_id ?? 0,
+    tag_image: record.tag_image ?? "",
+    scanned_tag_image: record.scanned_tag_image ?? record.tag_image ?? null,
+    import_machine_report_id:
+      analysisPosition?.import_machine_report_id ?? null,
+    import_id: analysisPosition?.import_id ?? null,
+  };
 };
 
 const buildAuthHeaders = (): HeadersInit => {
@@ -186,9 +257,21 @@ const mapApiGasAnalysisReport = (
     remarks: sample.remarks ?? "",
     sampled_by: sample.sampled_by ?? "",
     sample_date: sample.sample_date ?? "",
+    sample_time: toDisplayString(sample.sample_time),
+    amb_temp: toDisplayString(sample.amb_temp),
+    pressure_measured: toDisplayString(sample.pressure_measured),
+    pressure_base_factor: toDisplayString(sample.pressure_base_factor),
     sample_pressure: toDisplayString(sample.sample_pressure),
     sample_temperature: toDisplayString(sample.sample_temperature),
     sample_method: sample.sample_method ?? "",
+    instrument: toDisplayString(sample.instrument),
+    last_instrument_verification: toDisplayString(
+      sample.last_instrument_verification,
+    ),
+    heating_method: toDisplayString(sample.heating_method),
+    hexanes_split: toDisplayString(sample.hexanes_split),
+    effective_start_date: toDisplayString(sample.effective_start_date),
+    effective_end_date: toDisplayString(sample.effective_end_date),
     field_h2s: toDisplayString(sample.field_h2s),
     flow_rate: toDisplayString(sample.flow_rate),
     base_condition: base.base_condition ?? "",
@@ -199,6 +282,11 @@ const mapApiGasAnalysisReport = (
       wt_pct: toDisplayString(row.wt_pct),
       gpm: toDisplayString(row.gpm),
     })),
+    component_totals: {
+      mole_pct: toDisplayString(data.component_totals?.mole_pct),
+      wt_pct: toDisplayString(data.component_totals?.wt_pct),
+      gpm: toDisplayString(data.component_totals?.gpm),
+    },
     gross_heating_value: mapConditionValues(results.gross_heating_value),
     specific_gravity: mapConditionValues(results.specific_gravity),
     compressibility_factor: mapConditionValues(results.compressibility_factor),
@@ -208,47 +296,23 @@ const mapApiGasAnalysisReport = (
   };
 };
 
-const mapSampleCheckInToReport = (
-  record: ApiSampleCheckInListItem,
-): AnalysisReport => {
-  const company =
-    record.company_id != null
-      ? companyMasterService.getCompanyById(record.company_id)
-      : undefined;
-
-  return {
-    id: record.id,
-    sample_checkin_id: record.id,
-    work_order_number: record.work_order_number ?? "",
-    customer: record.company_name ?? company?.company_name ?? "",
-    date: record.date ?? "",
-    analysis_type: record.analysis_type ?? "",
-    analysis_number: record.analysis_number ?? "",
-    cylinder_number: record.cylinder_number ?? "",
-    well_name: record.well_name ?? "",
-    meter_number: record.meter_number ?? "",
-    status: record.status ?? "",
-    created_by: record.created_by ?? 0,
-  };
-};
-
 export const analysisReportsService = {
   fetchReports: async (): Promise<AnalysisReport[]> => {
-    const response = await fetch(`${API_BASE_URL}/sample_checkin`, {
-      method: "GET",
-      headers: buildAuthHeaders(),
-    });
+    await analysisPricingService.fetchAnalysisPrices();
+    const [data, analysisPositions] = await Promise.all([
+      sampleCheckInService.fetchSampleCheckIns(true),
+      mapAnalysisPositionService.fetchAnalysisPositions(),
+    ]);
+    const positionsBySampleId = new Map(
+      analysisPositions.map((position) => [
+        position.sample_checkin_id,
+        position,
+      ]),
+    );
 
-    if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to load analysis reports";
-      throw new Error(message);
-    }
-
-    const data = (await response.json()) as ApiSampleCheckInListItem[];
-    return Array.isArray(data) ? data.map(mapSampleCheckInToReport) : [];
+    return data.map((record) =>
+      mapSampleCheckInToReport(record, positionsBySampleId.get(record.id)),
+    );
   },
 
   fetchGasAnalysisReport: async (
@@ -271,7 +335,49 @@ export const analysisReportsService = {
     }
 
     const data = (await response.json()) as ApiAnalysisReportResponse;
-    return mapApiGasAnalysisReport(data);
+    const report = mapApiGasAnalysisReport(data);
+
+    const needsSampleFallback =
+      !report.sampled_by.trim() ||
+      !report.analyzed_by.trim() ||
+      !report.base_condition.trim() ||
+      !report.instrument.trim() ||
+      !report.effective_start_date.trim();
+
+    if (!needsSampleFallback) return report;
+
+    const sample =
+      await sampleCheckInService.fetchSampleCheckInById(sampleCheckinId);
+    if (!sample) return report;
+
+    return {
+      ...report,
+      sampled_by: report.sampled_by || sample.sampled_by?.trim() || "",
+      analyzed_by: report.analyzed_by || sample.analyzed_by?.trim() || "",
+      base_condition:
+        report.base_condition || sample.base_condition?.trim() || "",
+      physical_constant:
+        report.physical_constant || sample.physical_constant?.trim() || "",
+      pressure_measured:
+        report.pressure_measured || sample.pressure_measured?.trim() || "",
+      pressure_base_factor:
+        report.pressure_base_factor ||
+        toDisplayString(sample.pressure_base_factor),
+      instrument: report.instrument || sample.instrument?.trim() || "",
+      last_instrument_verification:
+        report.last_instrument_verification ||
+        sample.last_instrument_verification?.trim() ||
+        "",
+      heating_method:
+        report.heating_method || sample.heating_method?.trim() || "",
+      hexanes_split: report.hexanes_split || sample.hexanes_split?.trim() || "",
+      effective_start_date:
+        report.effective_start_date ||
+        sample.effective_start_date?.trim() ||
+        "",
+      effective_end_date:
+        report.effective_end_date || sample.effective_end_date?.trim() || "",
+    };
   },
 
   searchReports: (
@@ -310,12 +416,68 @@ export const analysisReportsService = {
     return reports.filter((report) => report.customer === customer);
   },
 
+  filterByMeterNumber: (
+    reports: AnalysisReport[],
+    meterNumber: string,
+  ): AnalysisReport[] => {
+    if (meterNumber === "all") return reports;
+    return reports.filter((report) => report.meter_number === meterNumber);
+  },
+
+  filterByWellName: (
+    reports: AnalysisReport[],
+    wellName: string,
+  ): AnalysisReport[] => {
+    if (wellName === "all") return reports;
+    return reports.filter((report) => report.well_name === wellName);
+  },
+
+  filterByAnalysisNumber: (
+    reports: AnalysisReport[],
+    analysisNumber: string,
+  ): AnalysisReport[] => {
+    if (analysisNumber === "all") return reports;
+    return reports.filter(
+      (report) => report.analysis_number === analysisNumber,
+    );
+  },
+
   getUniqueStatuses: (reports: AnalysisReport[]): string[] => {
     return Array.from(new Set(reports.map((report) => report.status))).sort();
   },
 
   getUniqueCustomers: (reports: AnalysisReport[]): string[] => {
     return Array.from(new Set(reports.map((report) => report.customer))).sort();
+  },
+
+  getUniqueMeterNumbers: (reports: AnalysisReport[]): string[] => {
+    return Array.from(
+      new Set(
+        reports
+          .map((report) => report.meter_number.trim())
+          .filter((value) => value.length > 0),
+      ),
+    ).sort();
+  },
+
+  getUniqueWellNames: (reports: AnalysisReport[]): string[] => {
+    return Array.from(
+      new Set(
+        reports
+          .map((report) => report.well_name.trim())
+          .filter((value) => value.length > 0),
+      ),
+    ).sort();
+  },
+
+  getUniqueAnalysisNumbers: (reports: AnalysisReport[]): string[] => {
+    return Array.from(
+      new Set(
+        reports
+          .map((report) => report.analysis_number.trim())
+          .filter((value) => value.length > 0),
+      ),
+    ).sort();
   },
 
   getStatusBadgeVariant: (status: string): string => {

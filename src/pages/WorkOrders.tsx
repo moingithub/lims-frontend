@@ -23,7 +23,11 @@ import { WorkOrderReportDialog } from "../components/sampleCheckIn/WorkOrderRepo
 import { useAuth } from "../contexts/AuthContext";
 import { analysisPricingService } from "../services/analysisPricingService";
 import { workorderHeadersService } from "../services/workorderHeadersService";
-import { sampleCheckInService } from "../services/sampleCheckInService";
+import { sampleCheckInService, CheckedInSample } from "../services/sampleCheckInService";
+import { companyMasterService } from "../services/companyMasterService";
+import { contactsService } from "../services/contactsService";
+import { resolveWorkOrderReportContact } from "../utils/workOrderReportContact";
+import { resolveDisplayDate } from "../utils/dateUtils";
 
 export function WorkOrders() {
   const { filterDataByAccess, hasOwnDataRestriction } = useAuth();
@@ -34,6 +38,13 @@ export function WorkOrders() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [isReportLoading, setIsReportLoading] = useState(false);
+  const [reportCylinders, setReportCylinders] = useState<CheckedInSample[]>([]);
+  const [reportCustomerCode, setReportCustomerCode] = useState("");
+  const [reportContactName, setReportContactName] = useState("");
+  const [reportContactEmail, setReportContactEmail] = useState("");
+  const [reportContactPhone, setReportContactPhone] = useState("");
+  const [reportDate, setReportDate] = useState("");
   const [selectedOrder, setSelectedOrder] = useState<WorkOrderWithId | null>(
     null,
   );
@@ -112,39 +123,40 @@ export function WorkOrders() {
     return matchesSearch && matchesStatus;
   });
 
+  const loadWorkOrderDetails = async (order: WorkOrderWithId) => {
+    await analysisPricingService.fetchAnalysisPrices();
+    const [details, header] = await Promise.all([
+      workOrdersService.fetchWorkOrderDetailsByNumber(order.id),
+      workorderHeadersService.getByNumber(order.id),
+    ]);
+    setLineItems(details.lineItems);
+    const loadedMiles =
+      header?.miles != null ? Number(header.miles) : details.miles;
+    const loadedRatePerMile =
+      header?.rate_per_mile != null
+        ? Number(header.rate_per_mile)
+        : details.ratePerMile;
+    setMiles(loadedMiles);
+    setRatePerMile(loadedRatePerMile);
+    setMileageFee(
+      header?.mileage_fee != null
+        ? Number(header.mileage_fee)
+        : details.mileageFee,
+    );
+    setMiscellaneousCharges(
+      header?.miscellaneous_charges != null
+        ? Number(header.miscellaneous_charges)
+        : details.miscCharges,
+    );
+    setHourlyFee(
+      header?.hourly_fee != null ? Number(header.hourly_fee) : details.hourlyFee,
+    );
+  };
+
   const handleEditOrder = async (order: WorkOrderWithId) => {
     setSelectedOrder(order);
     try {
-      // Ensure analysis prices are loaded before opening dialog
-      await analysisPricingService.fetchAnalysisPrices();
-      const [details, header] = await Promise.all([
-        workOrdersService.fetchWorkOrderDetailsByNumber(order.id),
-        workorderHeadersService.getByNumber(order.id),
-      ]);
-      setLineItems(details.lineItems);
-      const loadedMiles =
-        header?.miles != null ? Number(header.miles) : details.miles;
-      const loadedRatePerMile =
-        header?.rate_per_mile != null
-          ? Number(header.rate_per_mile)
-          : details.ratePerMile;
-      setMiles(loadedMiles);
-      setRatePerMile(loadedRatePerMile);
-      setMileageFee(
-        header?.mileage_fee != null
-          ? Number(header.mileage_fee)
-          : details.mileageFee,
-      );
-      setMiscellaneousCharges(
-        header?.miscellaneous_charges != null
-          ? Number(header.miscellaneous_charges)
-          : details.miscCharges,
-      );
-      setHourlyFee(
-        header?.hourly_fee != null
-          ? Number(header.hourly_fee)
-          : details.hourlyFee,
-      );
+      await loadWorkOrderDetails(order);
       setIsEditDialogOpen(true);
     } catch (error) {
       const message =
@@ -273,16 +285,18 @@ export function WorkOrders() {
     }
   };
 
-  const handleViewOrder = (order: WorkOrderWithId) => {
+  const handleViewOrder = async (order: WorkOrderWithId) => {
     setSelectedOrder(order);
-    const mockLineItems = workOrdersService.getMockLineItemsForView(order.id);
-    setLineItems(mockLineItems);
-    setMiles(0);
-    setRatePerMile(0);
-    setMileageFee(0);
-    setMiscellaneousCharges(0);
-    setHourlyFee(0);
-    setIsViewDialogOpen(true);
+    try {
+      await loadWorkOrderDetails(order);
+      setIsViewDialogOpen(true);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to load work order details";
+      toast.error(message);
+    }
   };
 
   const handleDeleteOrder = (order: WorkOrderWithId) => {
@@ -344,9 +358,67 @@ export function WorkOrders() {
     }
   };
 
-  const handleGenerateReport = (order: WorkOrderWithId) => {
+  const handleGenerateReport = async (order: WorkOrderWithId) => {
     setSelectedOrder(order);
     setIsReportDialogOpen(true);
+    setIsReportLoading(true);
+    setReportCylinders([]);
+    setReportCustomerCode("");
+    setReportContactName("");
+    setReportContactEmail("");
+    setReportContactPhone("");
+    setReportDate("");
+
+    try {
+      await Promise.all([
+        analysisPricingService.fetchAnalysisPrices(),
+        companyMasterService.fetchCompanies(),
+        contactsService.fetchContacts(),
+      ]);
+
+      const [samples, header] = await Promise.all([
+        workOrdersService.fetchWorkOrderReportSamples(
+          order.id,
+          order.company_id ?? 0,
+        ),
+        workorderHeadersService.getByNumber(order.id),
+      ]);
+
+      const company = order.company_id
+        ? companyMasterService.getCompanyById(order.company_id)
+        : undefined;
+      const contact = resolveWorkOrderReportContact(
+        samples,
+        header,
+        (id) => contactsService.getContactById(id),
+      );
+
+      setReportCylinders(samples);
+      setReportCustomerCode(company?.company_code ?? "");
+      setReportContactName(contact.name);
+      setReportContactEmail(contact.email);
+      setReportContactPhone(contact.phone);
+      setReportDate(
+        resolveDisplayDate(
+          order.date,
+          typeof header?.date === "string" ? header.date : undefined,
+          typeof header?.work_order_date === "string"
+            ? header.work_order_date
+            : undefined,
+          samples[0]?.date,
+          samples[0]?.check_in_time,
+          samples[0]?.sample_date ?? samples[0]?.sampled_date,
+        ),
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Failed to load work order report";
+      toast.error(message);
+    } finally {
+      setIsReportLoading(false);
+    }
   };
 
   return (
@@ -441,6 +513,7 @@ export function WorkOrders() {
       <WorkOrderReportDialog
         open={isReportDialogOpen}
         onOpenChange={setIsReportDialogOpen}
+        isLoading={isReportLoading}
         order={
           selectedOrder
             ? {
@@ -457,9 +530,12 @@ export function WorkOrders() {
               }
             : null
         }
-        contactName="John Doe"
-        contactEmail="john.doe@example.com"
-        contactPhone="(555) 123-4567"
+        cylinders={reportCylinders}
+        customerCode={reportCustomerCode}
+        contactName={reportContactName}
+        contactEmail={reportContactEmail}
+        contactPhone={reportContactPhone}
+        reportDate={reportDate}
       />
     </div>
   );

@@ -2,12 +2,8 @@
  * Email Service
  * Handles email notifications for the LIMS system
  * 
- * NOTE: This is a mock implementation for demonstration purposes.
- * In production, this would integrate with a real email service like:
- * - SendGrid
- * - AWS SES
- * - Mailgun
- * - Your own SMTP server
+ * NOTE: Frontend notification stub — logs email content until a backend
+ * mail service is connected.
  */
 
 export interface EmailData {

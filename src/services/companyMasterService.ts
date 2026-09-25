@@ -88,8 +88,8 @@ const serializeCompanyPayload = (
   billing_address: company.billing_address || null,
   charge_h2_pop_fee: company.charge_h2_pop_fee,
   h2_pop_fee_rate: company.h2_pop_fee_rate,
-  pressure_base: company.pressure_base,
-  pressure_base_factor: company.pressure_base_factor,
+  pressure_base: company.pressure_base || null,
+  pressure_base_factor: company.pressure_base_factor || null,
   active: company.active,
 });
 
@@ -101,7 +101,7 @@ const buildAuthHeaders = (): HeadersInit => {
   };
 };
 
-export const billingReferenceTypes = ["GL Code", "PO", "AFE#"];
+export const billingReferenceTypes = ["PO", "AFE#"];
 
 export const companyMasterService = {
   // ========== CRUD Operations ==========

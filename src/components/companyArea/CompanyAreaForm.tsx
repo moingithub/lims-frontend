@@ -1,6 +1,12 @@
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { companyMasterService } from "../../services/companyMasterService";
 import { ActiveSelect } from "../shared/ActiveSelect";
 
@@ -8,8 +14,12 @@ export interface CompanyAreaFormData {
   id: number;
   company_id: number;
   area: string;
-  region: string;
   description: string;
+  gl_code: string;
+  pay_key: string;
+  po: string;
+  authorized_by: string;
+  cost_code: string;
   active: boolean;
 }
 
@@ -28,7 +38,9 @@ export function CompanyAreaForm({ formData, onChange }: CompanyAreaFormProps) {
         <Label>Company *</Label>
         <Select
           value={formData.company_id.toString()}
-          onValueChange={(value) => onChange({ ...formData, company_id: parseInt(value) })}
+          onValueChange={(value) =>
+            onChange({ ...formData, company_id: parseInt(value) })
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Select company" />
@@ -50,19 +62,59 @@ export function CompanyAreaForm({ formData, onChange }: CompanyAreaFormProps) {
           placeholder="Enter area name"
         />
       </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>GL Code</Label>
+          <Input
+            value={formData.gl_code}
+            onChange={(e) => onChange({ ...formData, gl_code: e.target.value })}
+            placeholder="Enter GL code"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Pay Key</Label>
+          <Input
+            value={formData.pay_key}
+            onChange={(e) => onChange({ ...formData, pay_key: e.target.value })}
+            placeholder="Enter pay key"
+          />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>PO</Label>
+          <Input
+            value={formData.po}
+            onChange={(e) => onChange({ ...formData, po: e.target.value })}
+            placeholder="Enter PO"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Authorized By</Label>
+          <Input
+            value={formData.authorized_by}
+            onChange={(e) =>
+              onChange({ ...formData, authorized_by: e.target.value })
+            }
+            placeholder="Enter authorizer"
+          />
+        </div>
+      </div>
       <div className="space-y-2">
-        <Label>Region *</Label>
+        <Label>Cost Code</Label>
         <Input
-          value={formData.region}
-          onChange={(e) => onChange({ ...formData, region: e.target.value })}
-          placeholder="Enter region"
+          value={formData.cost_code}
+          onChange={(e) => onChange({ ...formData, cost_code: e.target.value })}
+          placeholder="Enter cost code"
         />
       </div>
       <div className="space-y-2">
         <Label>Description</Label>
         <Input
           value={formData.description}
-          onChange={(e) => onChange({ ...formData, description: e.target.value })}
+          onChange={(e) =>
+            onChange({ ...formData, description: e.target.value })
+          }
           placeholder="Enter description"
         />
       </div>

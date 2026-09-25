@@ -100,9 +100,9 @@ export function CylinderCheckOut({ currentUser }: CylinderCheckOutProps) {
       billing_reference_number: "",
       billing_address: "",
       charge_h2_pop_fee: false,
-      h2_pop_fee_rate: 0,
-      pressure_base: 14.73,
-      pressure_base_factor: 0.0174,
+      h2_pop_fee_rate: "",
+      pressure_base: "",
+      pressure_base_factor: "",
       active: true,
     },
   );
@@ -171,9 +171,16 @@ export function CylinderCheckOut({ currentUser }: CylinderCheckOutProps) {
         billing_reference_number: companyFormData.billing_reference_number,
         billing_address: companyFormData.billing_address,
         charge_h2_pop_fee: companyFormData.charge_h2_pop_fee,
-        h2_pop_fee_rate: companyFormData.h2_pop_fee_rate,
-        pressure_base: companyFormData.pressure_base,
-        pressure_base_factor: companyFormData.pressure_base_factor,
+        h2_pop_fee_rate:
+          companyFormData.h2_pop_fee_rate === ""
+            ? 0
+            : companyFormData.h2_pop_fee_rate,
+        pressure_base:
+          companyFormData.pressure_base === "" ? 0 : companyFormData.pressure_base,
+        pressure_base_factor:
+          companyFormData.pressure_base_factor === ""
+            ? 0
+            : companyFormData.pressure_base_factor,
         active: companyFormData.active,
       });
       const updatedCompanies = [...companies, addedCompany];
@@ -198,8 +205,8 @@ export function CylinderCheckOut({ currentUser }: CylinderCheckOutProps) {
         billing_address: "",
         charge_h2_pop_fee: false,
         h2_pop_fee_rate: 0,
-        pressure_base: 14.73,
-        pressure_base_factor: 0.0174,
+        pressure_base: "",
+        pressure_base_factor: "",
         active: true,
       });
 
@@ -408,10 +415,10 @@ export function CylinderCheckOut({ currentUser }: CylinderCheckOutProps) {
 
     if (emailSent) {
       toast.success(
-        `Check-out completed! Email sent to ${contactDetails.email}`,
+        `Check-out completed. Notification queued for ${contactDetails.email}.`,
       );
     } else {
-      toast.warning("Check-out completed, but email notification failed");
+      toast.warning("Check-out completed, but notification could not be queued");
     }
 
     // Clear the cylinders list but preserve customer information

@@ -58,8 +58,12 @@ export function CompanyArea() {
     id: 0,
     company_id: 0,
     area: "",
-    region: "",
     description: "",
+    gl_code: "",
+    pay_key: "",
+    po: "",
+    authorized_by: "",
+    cost_code: "",
     active: true,
   });
 
@@ -69,8 +73,12 @@ export function CompanyArea() {
       id: 0,
       company_id: 0,
       area: "",
-      region: "",
       description: "",
+      gl_code: "",
+      pay_key: "",
+      po: "",
+      authorized_by: "",
+      cost_code: "",
       active: true,
     });
     setIsDialogOpen(true);
@@ -82,8 +90,12 @@ export function CompanyArea() {
       id: companyArea.id,
       company_id: companyArea.company_id,
       area: companyArea.area,
-      region: companyArea.region,
       description: companyArea.description,
+      gl_code: companyArea.gl_code,
+      pay_key: companyArea.pay_key,
+      po: companyArea.po,
+      authorized_by: companyArea.authorized_by,
+      cost_code: companyArea.cost_code,
       active: companyArea.active,
     });
     setIsDialogOpen(true);
@@ -104,8 +116,12 @@ export function CompanyArea() {
             id: editingArea.id,
             company_id: formData.company_id,
             area: formData.area,
-            region: formData.region,
             description: formData.description,
+            gl_code: formData.gl_code,
+            pay_key: formData.pay_key,
+            po: formData.po,
+            authorized_by: formData.authorized_by,
+            cost_code: formData.cost_code,
             active: formData.active,
           },
         );
@@ -128,8 +144,12 @@ export function CompanyArea() {
         const newCompanyArea = await companyAreaService.addCompanyArea({
           company_id: formData.company_id,
           area: formData.area,
-          region: formData.region,
           description: formData.description,
+          gl_code: formData.gl_code,
+          pay_key: formData.pay_key,
+          po: formData.po,
+          authorized_by: formData.authorized_by,
+          cost_code: formData.cost_code,
           active: formData.active,
         });
         const updatedAreas = [...companyAreas, newCompanyArea];

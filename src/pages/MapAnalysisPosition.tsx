@@ -194,7 +194,11 @@ export function MapAnalysisPosition() {
       <EditAnalysisPositionDialog
         open={isDialogOpen}
         record={selectedRecord}
-        importRecords={importRecords}
+        importRecords={mapAnalysisPositionService.getAvailableImportRecords(
+          importRecords,
+          records,
+          selectedRecord,
+        )}
         isSaving={isSaving}
         onOpenChange={(open) => {
           setIsDialogOpen(open);

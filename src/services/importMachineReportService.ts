@@ -17,7 +17,8 @@ export interface ImportRecord {
 let importRecordsCache: ImportRecord[] = [];
 
 const buildAuthHeaders = (includeJson = false): HeadersInit => {
-  const token = authService.getAuthState().token;
+  const token =
+    authService.getAccessToken?.() ?? authService.getAuthState().token;
   return {
     ...(includeJson ? { "Content-Type": "application/json" } : {}),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -29,7 +30,12 @@ async function parseApiError(
   fallback: string,
 ): Promise<string> {
   const body = await response.json().catch(() => ({}));
-  return body?.error || body?.message || fallback;
+  return (
+    body?.error ||
+    body?.message ||
+    (typeof body?.detail === "string" ? body.detail : undefined) ||
+    fallback
+  );
 }
 
 const getFileExtension = (file: File): string => {
@@ -57,14 +63,19 @@ export const importMachineReportService = {
       headers: buildAuthHeaders(),
     });
     if (!response.ok) {
-      throw new Error(await parseApiError(response, "Failed to load import records"));
+      throw new Error(
+        await parseApiError(response, "Failed to load import records"),
+      );
     }
     const records: ImportRecord[] = await response.json();
     importRecordsCache = records;
     return records;
   },
 
-  searchRecords: (records: ImportRecord[], searchTerm: string): ImportRecord[] => {
+  searchRecords: (
+    records: ImportRecord[],
+    searchTerm: string,
+  ): ImportRecord[] => {
     if (!searchTerm.trim()) return records;
     const term = searchTerm.toLowerCase();
     return records.filter((record) =>
@@ -92,13 +103,13 @@ export const importMachineReportService = {
   formatDateTime: (dateString: string): string => {
     const date = new Date(dateString);
     if (Number.isNaN(date.getTime())) return "";
-    const day = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
     const year = date.getFullYear();
     const hours = date.getHours() % 12 || 12;
     const minutes = String(date.getMinutes()).padStart(2, "0");
     const ampm = date.getHours() >= 12 ? "PM" : "AM";
-    return `${day}/${month}/${year} ${hours}:${minutes} ${ampm}`;
+    return `${month}/${day}/${year} ${hours}:${minutes} ${ampm}`;
   },
 
   validateFile: (file: File): { valid: boolean; error?: string } => {
@@ -145,6 +156,7 @@ export const importMachineReportService = {
     file: File,
     sourceMachine: string,
     companyId: number,
+    extraFields?: Record<string, string | number | null | undefined>,
   ): Promise<ImportRecord> => {
     const validation = importMachineReportService.validateFile(file);
     if (!validation.valid) {
@@ -155,6 +167,12 @@ export const importMachineReportService = {
     formData.append("file", file);
     formData.append("source_machine", sourceMachine);
     formData.append("company_id", String(companyId));
+    if (extraFields) {
+      Object.entries(extraFields).forEach(([key, value]) => {
+        if (value == null || value === "") return;
+        formData.append(key, String(value));
+      });
+    }
 
     const response = await fetch(getUploadEndpoint(file), {
       method: "POST",
@@ -169,6 +187,43 @@ export const importMachineReportService = {
     const created: ImportRecord = await response.json();
     importRecordsCache = [created, ...importRecordsCache];
     return created;
+  },
+
+  downloadUserReport: async (
+    id: number,
+    fallbackFileName = "report.xlsx",
+  ): Promise<void> => {
+    const response = await fetch(
+      `${API_BASE_URL}/import_user_reports/${id}/download`,
+      {
+        method: "GET",
+        headers: buildAuthHeaders(),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        await parseApiError(response, "Failed to download report"),
+      );
+    }
+
+    const blob = await response.blob();
+    const contentDisposition = response.headers.get("Content-Disposition");
+    const fileNameMatch = contentDisposition?.match(
+      /filename\*?=(?:UTF-8'')?["']?([^;"']+)["']?/i,
+    );
+    const fileName = fileNameMatch?.[1]
+      ? decodeURIComponent(fileNameMatch[1])
+      : fallbackFileName;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   },
 
   updateStatus: async (
@@ -212,6 +267,8 @@ export const importMachineReportService = {
       );
     }
 
-    importRecordsCache = importRecordsCache.filter((record) => record.id !== id);
+    importRecordsCache = importRecordsCache.filter(
+      (record) => record.id !== id,
+    );
   },
 };

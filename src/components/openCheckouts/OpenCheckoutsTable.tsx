@@ -9,6 +9,7 @@ import {
   TableHead,
   TableCell,
 } from "../ui/table";
+import { formatDateUS } from "../../utils/dateUtils";
 
 interface Props {
   checkouts: OpenCheckout[];
@@ -63,9 +64,7 @@ export function OpenCheckoutsTable({ checkouts, searchTerm }: Props) {
                 <TableCell>{row.contact_name}</TableCell>
                 <TableCell>{row.phone}</TableCell>
                 <TableCell>{row.email}</TableCell>
-                <TableCell>
-                  {new Date(row.checkout_date).toLocaleDateString()}
-                </TableCell>
+                <TableCell>{formatDateUS(row.checkout_date)}</TableCell>
               </TableRow>
             ))
           )}

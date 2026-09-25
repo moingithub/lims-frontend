@@ -1,4 +1,11 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Trash2 } from "lucide-react";
 import { CompanyArea } from "../../services/companyAreaService";
@@ -30,15 +37,12 @@ export function DeleteCompanyAreaDialog({
           <DialogTitle>Delete Company Area</DialogTitle>
           <DialogDescription>
             Are you sure you want to delete "{companyArea?.area}" from{" "}
-            {companyArea && getCompanyName(companyArea.company_id)} ({companyArea?.region})? This action
+            {companyArea && getCompanyName(companyArea.company_id)}? This action
             cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button variant="destructive" onClick={onConfirm}>

@@ -1,8 +1,161 @@
 import { cylinderCheckOutService } from './cylinderCheckOutService';
-import { sampleCheckInService } from './sampleCheckInService';
-import { importMachineReportService } from './importMachineReportService';
-import { workOrdersService } from './workOrdersService';
+import {
+  sampleCheckInService,
+  parseSampleCheckInAnalysisPosition,
+  resolveSampleCheckInAnalysisType,
+  SampleCheckInApiRecord,
+} from './sampleCheckInService';
+import { workOrdersService, WorkOrderWithId } from './workOrdersService';
 import { companyMasterService } from './companyMasterService';
+import { analysisPricingService } from './analysisPricingService';
+import { mapAnalysisPositionService } from './mapAnalysisPositionService';
+
+export interface DashboardSample {
+  id: number;
+  company_id: number;
+  company_name: string;
+  analysis_type: string;
+  analysis_type_id: number | null;
+  rushed: boolean;
+  check_in_time: string;
+  work_order_number: string;
+  analysis_position: number | null;
+  created_by: number;
+}
+
+const getSampleRevenueEstimate = (
+  analysisType: string,
+  rushed = false,
+): number => {
+  const pricing = analysisPricingService.getAnalysisPriceByCode(analysisType);
+  if (!pricing) return 0;
+
+  const baseRate = rushed ? pricing.rushed_rate : pricing.standard_rate;
+  return baseRate + (pricing.sample_fee ?? 0);
+};
+
+let dashboardDataLoaded = false;
+let dashboardSamples: DashboardSample[] = [];
+let dashboardCheckOutTimestamps: string[] = [];
+let dashboardWorkOrders: WorkOrderWithId[] = [];
+
+const mapSampleCheckInForDashboard = (
+  record: SampleCheckInApiRecord,
+  analysisPositionBySampleId: Map<number, number>,
+): DashboardSample => {
+  const company =
+    record.company_id != null
+      ? companyMasterService.getCompanyById(record.company_id)
+      : undefined;
+  const analysisType = resolveSampleCheckInAnalysisType(record);
+  const analysisPosition =
+    parseSampleCheckInAnalysisPosition(record.analysis_position) ??
+    (analysisPositionBySampleId.has(record.id)
+      ? analysisPositionBySampleId.get(record.id) ?? null
+      : null);
+
+  return {
+    id: record.id,
+    company_id: record.company_id ?? 0,
+    company_name: record.company_name ?? company?.company_name ?? "",
+    analysis_type: analysisType.name,
+    analysis_type_id: analysisType.id,
+    rushed: Boolean(record.rushed),
+    check_in_time:
+      record.check_in_time ?? record.created_at ?? record.date ?? "",
+    work_order_number: record.work_order_number ?? "",
+    analysis_position: analysisPosition,
+    created_by: record.created_by ?? record.created_by_id ?? 0,
+  };
+};
+
+const matchesAnalysisTypeFilter = (
+  sample: DashboardSample,
+  filterType: string,
+): boolean => {
+  if (sample.analysis_type === filterType) return true;
+
+  const pricing = analysisPricingService.getAnalysisPriceByCode(filterType);
+  if (pricing && sample.analysis_type_id === pricing.id) return true;
+
+  return false;
+};
+
+const parseFilterStartDate = (value?: string): Date | null => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const parseFilterEndDate = (value?: string): Date | null => {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setHours(23, 59, 59, 999);
+  return date;
+};
+
+const isWithinDateRange = (
+  value: string | undefined,
+  fromDate: Date | null,
+  toDate: Date | null,
+): boolean => {
+  if (!value) return false;
+  const recordDate = new Date(value);
+  if (Number.isNaN(recordDate.getTime())) return false;
+  if (fromDate && recordDate < fromDate) return false;
+  if (toDate && recordDate > toDate) return false;
+  return true;
+};
+
+const filterSamples = (
+  samples: DashboardSample[],
+  filters?: DashboardFilters,
+): DashboardSample[] => {
+  const fromDate = parseFilterStartDate(filters?.dateFrom);
+  const toDate = parseFilterEndDate(filters?.dateTo);
+
+  return samples.filter((sample) => {
+    if (!isWithinDateRange(sample.check_in_time, fromDate, toDate)) {
+      return false;
+    }
+    if (
+      filters?.analysisType &&
+      filters.analysisType !== "all" &&
+      !matchesAnalysisTypeFilter(sample, filters.analysisType)
+    ) {
+      return false;
+    }
+    return true;
+  });
+};
+
+const getLastSixMonthLabels = (): string[] => {
+  const labels: string[] = [];
+  const now = new Date();
+  for (let i = 5; i >= 0; i -= 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    labels.push(date.toLocaleString("en-US", { month: "short" }));
+  }
+  return labels;
+};
+
+const buildAnalysisTypesByWorkOrder = (
+  samples: DashboardSample[],
+): Map<string, Set<string>> => {
+  const map = new Map<string, Set<string>>();
+  samples.forEach((sample) => {
+    if (!sample.work_order_number) return;
+    const current = map.get(sample.work_order_number) ?? new Set<string>();
+    if (sample.analysis_type && sample.analysis_type !== "Unknown") {
+      current.add(sample.analysis_type);
+    }
+    map.set(sample.work_order_number, current);
+  });
+  return map;
+};
 
 export interface DashboardStat {
   id: number;
@@ -60,6 +213,78 @@ export interface DashboardFilters {
 }
 
 export const dashboardService = {
+  fetchDashboardSourceData: async (force = false): Promise<void> => {
+    if (dashboardDataLoaded && !force) return;
+
+    const [
+      sampleResult,
+      checkOutResult,
+      workOrderResult,
+      companyResult,
+      pricingResult,
+      positionsResult,
+    ] = await Promise.allSettled([
+      sampleCheckInService.fetchSampleCheckIns(force),
+      cylinderCheckOutService.fetchCheckOutRecords(force),
+      workOrdersService.fetchWorkOrders(),
+      companyMasterService.fetchCompanies(force),
+      analysisPricingService.fetchAnalysisPrices(force),
+      mapAnalysisPositionService.fetchAnalysisPositions(),
+    ]);
+
+    const analysisPositionBySampleId = new Map<number, number>();
+
+    if (positionsResult.status === "fulfilled") {
+      positionsResult.value.forEach((record) => {
+        const position = parseSampleCheckInAnalysisPosition(
+          record.analysis_position,
+        );
+        if (position != null) {
+          analysisPositionBySampleId.set(record.sample_checkin_id, position);
+        }
+      });
+    }
+
+    if (sampleResult.status === "fulfilled") {
+      sampleResult.value.forEach((record) => {
+        const position = parseSampleCheckInAnalysisPosition(
+          record.analysis_position,
+        );
+        if (position != null) {
+          analysisPositionBySampleId.set(record.id, position);
+        }
+      });
+    }
+
+    if (sampleResult.status === "fulfilled") {
+      dashboardSamples = sampleResult.value.map((record) =>
+        mapSampleCheckInForDashboard(record, analysisPositionBySampleId),
+      );
+    }
+
+    if (checkOutResult.status === "fulfilled") {
+      dashboardCheckOutTimestamps = checkOutResult.value.map(
+        (record) => record.created_at,
+      );
+    } else {
+      dashboardCheckOutTimestamps = cylinderCheckOutService
+        .getCheckOutRecords()
+        .map((record) => record.created_at)
+        .filter((value): value is string => Boolean(value));
+    }
+
+    if (workOrderResult.status === "fulfilled") {
+      dashboardWorkOrders = workOrderResult.value;
+    }
+
+    dashboardDataLoaded =
+      sampleResult.status === "fulfilled" ||
+      checkOutResult.status === "fulfilled" ||
+      workOrderResult.status === "fulfilled" ||
+      pricingResult.status === "fulfilled" ||
+      companyResult.status === "fulfilled";
+  },
+
   // Returns date in YYYY-MM-DD format (required for HTML5 date inputs)
   // Browser will display in user's locale (MM/DD/YYYY for US users)
   getFirstDayOfMonth: (): string => {
@@ -85,54 +310,21 @@ export const dashboardService = {
    * - Checked Out: Cylinder Check Out (cylinderCheckOutService)
    * - Checked In: Sample Check In (sampleCheckInService)
    * - Rushed Samples: Sample Check In with rushed=true (sampleCheckInService)
-   * - Samples Tested: Import Machine Report with status=Validated (importMachineReportService)
+   * - Samples Tested: Sample Check In with analysis_position set (mapped samples)
    */
   getStats: (filters?: DashboardFilters): DashboardStat[] => {
-    // Get real data from services
-    let checkOutRecords = cylinderCheckOutService.getCheckOutRecords();
-    let checkedInSamples = sampleCheckInService.getCheckedInSamples();
-    let importRecords = importMachineReportService.getImportRecords();
+    const fromDate = parseFilterStartDate(filters?.dateFrom);
+    const toDate = parseFilterEndDate(filters?.dateTo);
+    const checkedInSamples = filterSamples(dashboardSamples, filters);
 
-    // Apply date filters
-    if (filters?.dateFrom || filters?.dateTo) {
-      const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
-      const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
-      
-      if (fromDate || toDate) {
-        checkOutRecords = checkOutRecords.filter(record => {
-          if (!record.created_at) return false;
-          const recordDate = new Date(record.created_at);
-          if (fromDate && recordDate < fromDate) return false;
-          if (toDate && recordDate > toDate) return false;
-          return true;
-        });
-
-        checkedInSamples = checkedInSamples.filter(sample => {
-          const sampleDate = new Date(sample.check_in_time);
-          if (fromDate && sampleDate < fromDate) return false;
-          if (toDate && sampleDate > toDate) return false;
-          return true;
-        });
-
-        importRecords = importRecords.filter(record => {
-          const recordDate = new Date(record.imported_date_time);
-          if (fromDate && recordDate < fromDate) return false;
-          if (toDate && recordDate > toDate) return false;
-          return true;
-        });
-      }
-    }
-
-    // Apply analysis type filter
-    if (filters?.analysisType && filters.analysisType !== "all") {
-      checkedInSamples = checkedInSamples.filter(sample => sample.analysis_type === filters.analysisType);
-    }
-
-    // Calculate statistics
-    const checkedOutCount = checkOutRecords.length;
+    const checkedOutCount = dashboardCheckOutTimestamps.filter((createdAt) =>
+      isWithinDateRange(createdAt, fromDate, toDate),
+    ).length;
     const checkedInCount = checkedInSamples.length;
-    const rushedCount = checkedInSamples.filter(sample => sample.rushed).length;
-    const testedCount = importRecords.filter(record => record.status === "Validated").length;
+    const rushedCount = checkedInSamples.filter((sample) => sample.rushed).length;
+    const testedCount = checkedInSamples.filter(
+      (sample) => sample.analysis_position != null,
+    ).length;
 
     return [
       { id: 1, title: "Checked Out", value: String(checkedOutCount), color: "orange" },
@@ -148,41 +340,14 @@ export const dashboardService = {
    * Groups checked-in samples by analysis type with revenue calculations
    */
   getAnalysisTypeData: (filters?: DashboardFilters): AnalysisTypeData[] => {
-    let checkedInSamples = sampleCheckInService.getCheckedInSamples();
+    const checkedInSamples = filterSamples(dashboardSamples, filters);
     
-    // Apply date filters
-    if (filters?.dateFrom || filters?.dateTo) {
-      const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
-      const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
-      
-      if (fromDate || toDate) {
-        checkedInSamples = checkedInSamples.filter(sample => {
-          const sampleDate = new Date(sample.check_in_time);
-          if (fromDate && sampleDate < fromDate) return false;
-          if (toDate && sampleDate > toDate) return false;
-          return true;
-        });
-      }
-    }
-
-    // Apply analysis type filter
-    if (filters?.analysisType && filters.analysisType !== "all") {
-      checkedInSamples = checkedInSamples.filter(sample => sample.analysis_type === filters.analysisType);
-    }
-    
-    // Group by analysis type
     const analysisTypeMap = new Map<string, { count: number; revenue: number }>();
     
     checkedInSamples.forEach(sample => {
       const type = sample.analysis_type || "Unknown";
       const current = analysisTypeMap.get(type) || { count: 0, revenue: 0 };
-      
-      // Estimate revenue based on analysis type (these are standard rates)
-      let rate = 150; // default rate
-      if (type === "GPA 2261") rate = 150;
-      else if (type === "GPA 2172") rate = 200;
-      else if (type === "BTU Analysis") rate = 150;
-      else if (type === "Extended Analysis") rate = 250;
+      const rate = getSampleRevenueEstimate(type, sample.rushed);
       
       analysisTypeMap.set(type, {
         count: current.count + 1,
@@ -209,42 +374,16 @@ export const dashboardService = {
    * Aggregates samples and revenue by month
    */
   getMonthlyTrendData: (filters?: DashboardFilters): MonthlyTrendData[] => {
-    let checkedInSamples = sampleCheckInService.getCheckedInSamples();
+    const checkedInSamples = filterSamples(dashboardSamples, filters);
     
-    // Apply date filters
-    if (filters?.dateFrom || filters?.dateTo) {
-      const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
-      const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
-      
-      if (fromDate || toDate) {
-        checkedInSamples = checkedInSamples.filter(sample => {
-          const sampleDate = new Date(sample.check_in_time);
-          if (fromDate && sampleDate < fromDate) return false;
-          if (toDate && sampleDate > toDate) return false;
-          return true;
-        });
-      }
-    }
-
-    // Apply analysis type filter
-    if (filters?.analysisType && filters.analysisType !== "all") {
-      checkedInSamples = checkedInSamples.filter(sample => sample.analysis_type === filters.analysisType);
-    }
-    
-    // Group by month
     const monthlyMap = new Map<string, { samples: number; revenue: number }>();
     
     checkedInSamples.forEach(sample => {
       const date = new Date(sample.check_in_time);
+      if (Number.isNaN(date.getTime())) return;
       const monthKey = date.toLocaleString('en-US', { month: 'short' });
       const current = monthlyMap.get(monthKey) || { samples: 0, revenue: 0 };
-      
-      // Estimate revenue
-      let rate = 150;
-      if (sample.analysis_type === "GPA 2261") rate = 150;
-      else if (sample.analysis_type === "GPA 2172") rate = 200;
-      else if (sample.analysis_type === "BTU Analysis") rate = 150;
-      else if (sample.analysis_type === "Extended Analysis") rate = 250;
+      const rate = getSampleRevenueEstimate(sample.analysis_type, sample.rushed);
       
       monthlyMap.set(monthKey, {
         samples: current.samples + 1,
@@ -252,8 +391,7 @@ export const dashboardService = {
       });
     });
 
-    // Convert to array with last 6 months
-    const months = ["Jun", "Jul", "Aug", "Sep", "Oct", "Nov"];
+    const months = getLastSixMonthLabels();
     return months.map((month, index) => {
       const data = monthlyMap.get(month) || { samples: 0, revenue: 0 };
       return {
@@ -271,65 +409,87 @@ export const dashboardService = {
    * Shows work orders with status "Pending" or "In Progress" awaiting processing
    */
   getPendingWorkOrders: (filters?: DashboardFilters): PendingWorkOrder[] => {
-    // Get all work order headers with Pending or In Progress status
-    let allHeaders = workOrdersService.getWorkOrderHeaders();
-    
-    // Apply date filters
-    if (filters?.dateFrom || filters?.dateTo) {
-      const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
-      const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
-      
-      if (fromDate || toDate) {
-        allHeaders = allHeaders.filter(header => {
-          const headerDate = new Date(header.date);
-          if (fromDate && headerDate < fromDate) return false;
-          if (toDate && headerDate > toDate) return false;
-          return true;
-        });
-      }
-    }
-    
-    const pendingHeaders = allHeaders.filter(
-      header => header.status === "Pending" || header.status === "In Progress"
+    const fromDate = parseFilterStartDate(filters?.dateFrom);
+    const toDate = parseFilterEndDate(filters?.dateTo);
+    const analysisTypesByWorkOrder = buildAnalysisTypesByWorkOrder(
+      dashboardSamples,
     );
 
-    // Map to PendingWorkOrder format
-    return pendingHeaders.map(header => {
-      // Get work order lines for cylinder count and analysis type
-      let lines = workOrdersService.getWorkOrderLinesByHeaderId(header.id);
-      
-      // Apply analysis type filter to lines
-      if (filters?.analysisType && filters.analysisType !== "all") {
-        lines = lines.filter(line => line.analysis_type === filters.analysisType);
-      }
-      const cylinderCount = lines.length;
-      
-      // Get analysis type from first line (or "Mixed" if multiple types)
-      const analysisTypes = [...new Set(lines.map(line => line.analysis_type))];
-      const analysisType = analysisTypes.length === 1 ? analysisTypes[0] : "Mixed";
-      
-      // Get customer name from company master
-      const company = companyMasterService.getCompanyById(header.company_id);
-      const customerName = company?.company_name || `Company ${header.company_id}`;
-      
-      // Calculate hours in queue
-      const dateReceived = new Date(header.date);
-      const now = new Date();
-      const hoursInQueue = Math.floor((now.getTime() - dateReceived.getTime()) / (1000 * 60 * 60));
-      
-      return {
-        id: header.id,
-        work_order_number: header.work_order_number,
-        customer: customerName,
-        cylinders: cylinderCount,
-        analysis_type: analysisType,
-        date_received: header.date,
-        hours_in_queue: hoursInQueue,
-        created_by: header.created_by,
-      };
-    })
-    .filter(order => order.cylinders > 0) // Remove work orders with no matching lines after filtering
-    .sort((a, b) => b.hours_in_queue - a.hours_in_queue); // Sort by urgency (longest wait first)
+    let pendingOrders = dashboardWorkOrders.filter(
+      (order) => order.status === "Pending" || order.status === "In Progress",
+    );
+
+    if (fromDate || toDate) {
+      pendingOrders = pendingOrders.filter((order) =>
+        isWithinDateRange(order.date, fromDate, toDate),
+      );
+    }
+
+    return pendingOrders
+      .map((order) => {
+        const analysisTypes = analysisTypesByWorkOrder.get(order.id);
+        let analysisType = "N/A";
+        if (analysisTypes && analysisTypes.size === 1) {
+          analysisType = [...analysisTypes][0];
+        } else if (analysisTypes && analysisTypes.size > 1) {
+          analysisType = "Mixed";
+        }
+
+        if (
+          filters?.analysisType &&
+          filters.analysisType !== "all" &&
+          analysisType !== filters.analysisType &&
+          analysisType !== "Mixed"
+        ) {
+          return null;
+        }
+
+        if (
+          filters?.analysisType &&
+          filters.analysisType !== "all" &&
+          analysisType === "Mixed" &&
+          !analysisTypes?.has(filters.analysisType)
+        ) {
+          return null;
+        }
+
+        const cylinders =
+          typeof order.cylinders === "number"
+            ? order.cylinders
+            : typeof order.cylinders === "string" &&
+                order.cylinders.trim() !== "" &&
+                !Number.isNaN(Number(order.cylinders))
+              ? Number(order.cylinders)
+              : dashboardSamples.filter(
+                  (sample) => sample.work_order_number === order.id,
+                ).length;
+
+        if (cylinders <= 0) return null;
+
+        const hoursInQueue =
+          order.pending_since != null
+            ? order.pending_since * 24
+            : (() => {
+                const dateReceived = new Date(order.date);
+                if (Number.isNaN(dateReceived.getTime())) return 0;
+                return Math.floor(
+                  (Date.now() - dateReceived.getTime()) / (1000 * 60 * 60),
+                );
+              })();
+
+        return {
+          id: order.api_id ?? 0,
+          work_order_number: order.id,
+          customer: order.customer,
+          cylinders,
+          analysis_type: analysisType,
+          date_received: order.date,
+          hours_in_queue: hoursInQueue,
+          created_by: order.created_by,
+        };
+      })
+      .filter((order): order is PendingWorkOrder => order !== null)
+      .sort((a, b) => b.hours_in_queue - a.hours_in_queue);
   },
 
   /**
@@ -338,55 +498,22 @@ export const dashboardService = {
    * Ranks customers by sample count and revenue
    */
   getTopCustomersData: (filters?: DashboardFilters): CustomerData[] => {
-    let checkedInSamples = sampleCheckInService.getCheckedInSamples();
+    const checkedInSamples = filterSamples(dashboardSamples, filters);
     
-    // Apply date filters
-    if (filters?.dateFrom || filters?.dateTo) {
-      const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : null;
-      const toDate = filters.dateTo ? new Date(filters.dateTo) : null;
-      
-      if (fromDate || toDate) {
-        checkedInSamples = checkedInSamples.filter(sample => {
-          const sampleDate = new Date(sample.check_in_time);
-          if (fromDate && sampleDate < fromDate) return false;
-          if (toDate && sampleDate > toDate) return false;
-          return true;
-        });
-      }
-    }
-
-    // Apply analysis type filter
-    if (filters?.analysisType && filters.analysisType !== "all") {
-      checkedInSamples = checkedInSamples.filter(sample => sample.analysis_type === filters.analysisType);
-    }
-    
-    // Group by company
     const companyMap = new Map<number, { name: string; samples: number; revenue: number; created_by: number }>();
     
     checkedInSamples.forEach(sample => {
       const current = companyMap.get(sample.company_id) || { 
-        name: `Company ${sample.company_id}`, 
+        name: sample.company_name || `Company ${sample.company_id}`, 
         samples: 0, 
         revenue: 0,
         created_by: sample.created_by
       };
       
-      // Get company name from sample check-in service
-      const customers = sampleCheckInService.getCustomers();
-      const customer = customers.find(c => c.id === sample.company_id);
-      if (customer) {
-        current.name = customer.name;
-      }
-      
-      // Estimate revenue
-      let rate = 150;
-      if (sample.analysis_type === "GPA 2261") rate = 150;
-      else if (sample.analysis_type === "GPA 2172") rate = 200;
-      else if (sample.analysis_type === "BTU Analysis") rate = 150;
-      else if (sample.analysis_type === "Extended Analysis") rate = 250;
+      const rate = getSampleRevenueEstimate(sample.analysis_type, sample.rushed);
       
       companyMap.set(sample.company_id, {
-        name: current.name,
+        name: current.name || sample.company_name || `Company ${sample.company_id}`,
         samples: current.samples + 1,
         revenue: current.revenue + rate,
         created_by: current.created_by
@@ -414,37 +541,41 @@ export const dashboardService = {
    * Tracks last 7 days of check-in and check-out activity
    */
   getDailyActivityData: (filters?: DashboardFilters): DailyActivityData[] => {
-    let checkOutRecords = cylinderCheckOutService.getCheckOutRecords();
-    let checkedInSamples = sampleCheckInService.getCheckedInSamples();
+    const checkedInSamples = filterSamples(dashboardSamples, filters);
+    const fromDate = parseFilterStartDate(filters?.dateFrom);
+    const toDate = parseFilterEndDate(filters?.dateTo);
+    const analysisTypeFiltered =
+      Boolean(filters?.analysisType) && filters?.analysisType !== "all";
     
-    // Apply analysis type filter
-    if (filters?.analysisType && filters.analysisType !== "all") {
-      checkedInSamples = checkedInSamples.filter(sample => sample.analysis_type === filters.analysisType);
-    }
-    
-    // Get data for last 7 days
     const today = new Date();
     const dailyData: DailyActivityData[] = [];
     
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
+      date.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      if (fromDate && dayEnd < fromDate) continue;
+      if (toDate && date > toDate) continue;
+
       const dayNumber = date.getDate();
       
-      // Count check-ins and check-outs for this day
       const checkInCount = checkedInSamples.filter(sample => {
         const sampleDate = new Date(sample.check_in_time);
         return sampleDate.toDateString() === date.toDateString();
       }).length;
       
-      const checkOutCount = checkOutRecords.filter(record => {
-        if (!record.created_at) return false;
-        const recordDate = new Date(record.created_at);
-        return recordDate.toDateString() === date.toDateString();
-      }).length;
+      const checkOutCount = analysisTypeFiltered
+        ? 0
+        : dashboardCheckOutTimestamps.filter(createdAt => {
+            const recordDate = new Date(createdAt);
+            return recordDate.toDateString() === date.toDateString();
+          }).length;
       
       dailyData.push({
-        id: 7 - i,
+        id: dailyData.length + 1,
         day: String(dayNumber),
         check_in: checkInCount,
         check_out: checkOutCount,
@@ -466,5 +597,9 @@ export const dashboardService = {
     const days = Math.floor(hours / 24);
     const remainingHours = hours % 24;
     return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+  },
+
+  getAnalysisTypeFilterOptions: (): { value: string; label: string }[] => {
+    return analysisPricingService.getActiveAnalysisOptions();
   },
 };

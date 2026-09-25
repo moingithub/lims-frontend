@@ -28,8 +28,8 @@ export function GenerateInvoices() {
   const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(
     null,
   );
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateFrom, setDateFrom] = useState(getFirstDayOfMonth());
+  const [dateTo, setDateTo] = useState(getCurrentDate());
   const [selectedOrders, setSelectedOrders] = useState<number[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -138,8 +138,8 @@ export function GenerateInvoices() {
       // Reset form and refresh work orders
       setSelectedOrders([]);
       setSelectedCompanyId(null);
-      setDateFrom("");
-      setDateTo("");
+      setDateFrom(getFirstDayOfMonth());
+      setDateTo(getCurrentDate());
       const orders = await getWorkOrders();
       setAllWorkOrders(orders);
     } catch (err: any) {

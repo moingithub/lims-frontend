@@ -1,4 +1,11 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Edit, Trash2, MapPin } from "lucide-react";
@@ -12,11 +19,18 @@ interface CompanyAreaTableProps {
   onToggleStatus: (id: number) => void;
 }
 
-export function CompanyAreaTable({ companyAreas, onEdit, onDelete, onToggleStatus }: CompanyAreaTableProps) {
+export function CompanyAreaTable({
+  companyAreas,
+  onEdit,
+  onDelete,
+  onToggleStatus,
+}: CompanyAreaTableProps) {
   // Helper to get company name and code by ID
   const getCompanyDisplay = (companyId: number): string => {
     const company = companyMasterService.getCompanyById(companyId);
-    return company ? `${company.company_name} (${company.company_code})` : `Company #${companyId}`;
+    return company
+      ? `${company.company_name} (${company.company_code})`
+      : `Company #${companyId}`;
   };
 
   return (
@@ -25,7 +39,11 @@ export function CompanyAreaTable({ companyAreas, onEdit, onDelete, onToggleStatu
         <TableRow>
           <TableHead>Company</TableHead>
           <TableHead>Area</TableHead>
-          <TableHead>Region</TableHead>
+          <TableHead>GL Code</TableHead>
+          <TableHead>Pay Key</TableHead>
+          <TableHead>PO</TableHead>
+          <TableHead>Authorized By</TableHead>
+          <TableHead>Cost Code</TableHead>
           <TableHead>Description</TableHead>
           <TableHead>Active</TableHead>
           <TableHead className="text-right">Actions</TableHead>
@@ -42,7 +60,19 @@ export function CompanyAreaTable({ companyAreas, onEdit, onDelete, onToggleStatu
               </div>
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
-              {companyArea.region}
+              {companyArea.gl_code || "—"}
+            </TableCell>
+            <TableCell className="text-sm text-muted-foreground">
+              {companyArea.pay_key || "—"}
+            </TableCell>
+            <TableCell className="text-sm text-muted-foreground">
+              {companyArea.po || "—"}
+            </TableCell>
+            <TableCell className="text-sm text-muted-foreground">
+              {companyArea.authorized_by || "—"}
+            </TableCell>
+            <TableCell className="text-sm text-muted-foreground">
+              {companyArea.cost_code || "—"}
             </TableCell>
             <TableCell className="text-sm text-muted-foreground">
               {companyArea.description}
