@@ -33,7 +33,6 @@ export function AnalysisReportsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Work Order #</TableHead>
             <TableHead>Customer</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Analysis Type</TableHead>
@@ -50,7 +49,7 @@ export function AnalysisReportsTable({
           {reports.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={11}
+                colSpan={10}
                 className="text-center text-muted-foreground py-8"
               >
                 No records found
@@ -59,7 +58,6 @@ export function AnalysisReportsTable({
           ) : (
             reports.map((report) => (
               <TableRow key={report.id}>
-                <TableCell>{report.work_order_number}</TableCell>
                 <TableCell>{report.customer}</TableCell>
                 <TableCell>
                   {resolveDisplayDate(report.date) || "N/A"}
