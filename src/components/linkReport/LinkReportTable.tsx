@@ -7,8 +7,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
-import { Download, Image, Upload, Unlink } from "lucide-react";
+import { Download, Image, Upload } from "lucide-react";
 import {
   AnalysisPositionRecord,
   mapAnalysisPositionService,
@@ -18,7 +17,6 @@ interface LinkReportTableProps {
   records: AnalysisPositionRecord[];
   onImport: (record: AnalysisPositionRecord) => void;
   onDownload: (record: AnalysisPositionRecord) => void;
-  onUnmap: (record: AnalysisPositionRecord) => void;
   onViewImage: (imageUrl: string, filename?: string) => void;
 }
 
@@ -31,7 +29,6 @@ export function LinkReportTable({
   records,
   onImport,
   onDownload,
-  onUnmap,
   onViewImage,
 }: LinkReportTableProps) {
   return (
@@ -42,9 +39,6 @@ export function LinkReportTable({
             <TableHead>Company</TableHead>
             <TableHead>Work Order #</TableHead>
             <TableHead>Analysis #</TableHead>
-            <TableHead>Import ID</TableHead>
-            <TableHead>Analysis Position</TableHead>
-            <TableHead>Status</TableHead>
             <TableHead className="text-center">Tag Image</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -53,7 +47,7 @@ export function LinkReportTable({
           {records.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={8}
+                colSpan={5}
                 className="text-center text-muted-foreground py-8"
               >
                 No records found
@@ -69,22 +63,6 @@ export function LinkReportTable({
                     {displayValue(record.work_order_number)}
                   </TableCell>
                   <TableCell>{record.analysis_number}</TableCell>
-                  <TableCell>{displayValue(record.import_id)}</TableCell>
-                  <TableCell>
-                    {displayValue(record.analysis_position)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        unmapped
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-green-100 text-green-800"
-                      }
-                    >
-                      {unmapped ? "Unmapped" : "Mapped"}
-                    </Badge>
-                  </TableCell>
                   <TableCell className="text-center">
                     <Button
                       variant="ghost"
@@ -121,17 +99,6 @@ export function LinkReportTable({
                       >
                         <Download className="w-4 h-4 text-green-600" />
                       </Button>
-                      {!unmapped && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          title="Unmap"
-                          onClick={() => onUnmap(record)}
-                          disabled
-                        >
-                          <Unlink className="w-4 h-4 text-red-600" />
-                        </Button>
-                      )}
                     </div>
                   </TableCell>
                 </TableRow>

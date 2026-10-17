@@ -20,7 +20,7 @@ import {
   MapPin,
   Wrench,
   FileInput,
-  Link2,
+  Files,
 } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
@@ -93,8 +93,8 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
     },
     {
       id: "link-report",
-      label: "Link Report",
-      icon: <Link2 className="w-5 h-5 text-teal-500" />,
+      label: "Report Files",
+      icon: <Files className="w-5 h-5 text-teal-500" />,
       moduleName: "sample_checkin",
     },
   ];

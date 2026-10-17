@@ -137,8 +137,6 @@ export function SampleCheckIn({
   >("Cylinder");
   const [customerCylinder, setCustomerCylinder] = useState(false);
   const [rushed, setRushed] = useState(false);
-  const [invoiceRefName, setInvoiceRefName] = useState("NA");
-  const [invoiceRefValue, setInvoiceRefValue] = useState("");
   const [date, setDate] = useState("");
   const [producer, setProducer] = useState("");
   const [company, setCompany] = useState("");
@@ -152,7 +150,6 @@ export function SampleCheckIn({
   const [temperature, setTemperature] = useState("");
   const [fieldH2S, setFieldH2S] = useState("");
   const [costCode, setCostCode] = useState("");
-  const [authorizedBy, setAuthorizedBy] = useState("");
   const [sampleDate, setSampleDate] = useState("");
   const [ambTemp, setAmbTemp] = useState("");
   const [sampleTime, setSampleTime] = useState("");
@@ -310,12 +307,6 @@ export function SampleCheckIn({
     }
   };
 
-  const applyCompanyBillingRefs = (company: Company) => {
-    const billingRef = company.billing_reference_type?.trim() || "NA";
-    setInvoiceRefName(billingRef);
-    setInvoiceRefValue(company.billing_reference_number?.trim() || "");
-  };
-
   const handleCustomerSelect = (code: string) => {
     const company = companies.find((c) => c.company_code === code);
     if (company) {
@@ -326,8 +317,6 @@ export function SampleCheckIn({
       setSelectedCompanyId(company.id);
       setArea("NA");
       setCostCode("");
-      setAuthorizedBy("");
-      applyCompanyBillingRefs(company);
     }
   };
 
@@ -351,7 +340,6 @@ export function SampleCheckIn({
       if (linkedArea) {
         setArea(linkedArea.area);
         setCostCode(linkedArea.cost_code);
-        setAuthorizedBy(linkedArea.authorized_by);
       }
     }
   };
@@ -366,7 +354,6 @@ export function SampleCheckIn({
         areaItem.active,
     );
     setCostCode(selectedArea?.cost_code ?? "");
-    setAuthorizedBy(selectedArea?.authorized_by ?? "");
   };
 
   const handleAddCompanyConfirm = () => {
@@ -415,7 +402,6 @@ export function SampleCheckIn({
         setCustomerName(companyFormData.company_name);
         setCurrentCustomer(companyFormData.company_name);
         setSelectedCompanyId(addedCompany.id);
-        applyCompanyBillingRefs(addedCompany);
 
         // Reset form data
         setCompanyFormData({
@@ -822,7 +808,6 @@ export function SampleCheckIn({
       temperature,
       field_h2s: fieldH2S.trim() ? parseFloat(fieldH2S) : 0,
       cost_code: costCode,
-      authorized_by: authorizedBy,
       sample_date: sampleDate,
       amb_temp: ambTemp,
       sample_time: sampleTime,
@@ -834,10 +819,6 @@ export function SampleCheckIn({
       rushed: rushed,
       tag_image: uploadedTagImageFilename || "",
       scanned_tag_image: uploadedTagImagePath || null,
-      billing_reference_type: invoiceRefName,
-      billing_reference_number: invoiceRefValue,
-      invoice_ref_name: invoiceRefName,
-      invoice_ref_value: invoiceRefValue,
       work_order_number: "",
       status: "Pending",
     };
@@ -864,15 +845,6 @@ export function SampleCheckIn({
     setAnalysisType(getDefaultAnalysisType());
     setCustomerCylinder(false);
     setRushed(false);
-    const selectedCompany = selectedCompanyId
-      ? companies.find((c) => c.id === selectedCompanyId)
-      : undefined;
-    if (selectedCompany) {
-      applyCompanyBillingRefs(selectedCompany);
-    } else {
-      setInvoiceRefName("NA");
-      setInvoiceRefValue("");
-    }
     setDate("");
     setProducer("");
     setCompany("");
@@ -885,7 +857,6 @@ export function SampleCheckIn({
     setTemperature("");
     setFieldH2S("");
     setCostCode("");
-    setAuthorizedBy("");
     setSampleDate("");
     setAmbTemp("");
     setSampleTime("");
@@ -1013,8 +984,6 @@ export function SampleCheckIn({
           work_order_number:
             createdCheckIns[index]?.work_order_number ??
             generatedWorkOrderNumber,
-          invoice_ref_name: "WO",
-          invoice_ref_value: generatedWorkOrderNumber,
         })),
       );
       toast.success("Work order generated and sample check-ins submitted");
@@ -1184,14 +1153,11 @@ export function SampleCheckIn({
               temperature={temperature}
               fieldH2S={fieldH2S}
               costCode={costCode}
-              authorizedBy={authorizedBy}
               sampleDate={sampleDate}
               ambTemp={ambTemp}
               sampleTime={sampleTime}
               sampledBy={sampledBy}
               checkInType={checkInType}
-              billingReferenceType={invoiceRefName}
-              billingReferenceNumber={invoiceRefValue}
               remarks={remarks}
               onCylinderNumberChange={setCylinderNumber}
               onProducerChange={setProducer}
@@ -1209,8 +1175,6 @@ export function SampleCheckIn({
               onSampleTimeChange={setSampleTime}
               onSampledByChange={setSampledBy}
               onCheckInTypeChange={setCheckInType}
-              onBillingReferenceTypeChange={setInvoiceRefName}
-              onBillingReferenceNumberChange={setInvoiceRefValue}
               onRemarksChange={setRemarks}
             />
 

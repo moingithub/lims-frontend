@@ -26,14 +26,11 @@ interface SampleDetailsFormProps {
   temperature: string;
   fieldH2S: string;
   costCode: string;
-  authorizedBy: string;
   sampleDate: string;
   ambTemp: string;
   sampleTime: string;
   sampledBy: string;
   checkInType: "Cylinder" | "Bottle" | "CP Cylinder";
-  billingReferenceType: string;
-  billingReferenceNumber: string;
   remarks: string;
   onCylinderNumberChange: (value: string) => void;
   onProducerChange: (value: string) => void;
@@ -51,8 +48,6 @@ interface SampleDetailsFormProps {
   onSampleTimeChange: (value: string) => void;
   onSampledByChange: (value: string) => void;
   onCheckInTypeChange: (value: "Cylinder" | "Bottle" | "CP Cylinder") => void;
-  onBillingReferenceTypeChange: (value: string) => void;
-  onBillingReferenceNumberChange: (value: string) => void;
   onRemarksChange: (value: string) => void;
 }
 
@@ -68,14 +63,11 @@ export function SampleDetailsForm({
   temperature,
   fieldH2S,
   costCode,
-  authorizedBy,
   sampleDate,
   ambTemp,
   sampleTime,
   sampledBy,
   checkInType,
-  billingReferenceType,
-  billingReferenceNumber,
   remarks,
   onCylinderNumberChange,
   onProducerChange,
@@ -93,8 +85,6 @@ export function SampleDetailsForm({
   onSampleTimeChange,
   onSampledByChange,
   onCheckInTypeChange,
-  onBillingReferenceTypeChange,
-  onBillingReferenceNumberChange,
   onRemarksChange,
 }: SampleDetailsFormProps) {
   return (
@@ -255,44 +245,12 @@ export function SampleDetailsForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Billing Ref</Label>
-          <Select
-            value={billingReferenceType}
-            onValueChange={onBillingReferenceTypeChange}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select reference type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="NA">NA</SelectItem>
-              <SelectItem value="GL Code">GL Code</SelectItem>
-              <SelectItem value="PO">PO</SelectItem>
-              <SelectItem value="AFE#">AFE#</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Billing Ref No</Label>
-          <Input
-            value={billingReferenceNumber}
-            onChange={(e) => onBillingReferenceNumberChange(e.target.value)}
-            placeholder="Enter reference value"
-          />
-        </div>
-
-        <div className="space-y-2">
           <Label>Cost Code</Label>
           <Input
             value={costCode}
             onChange={(e) => onCostCodeChange(e.target.value)}
             placeholder="Cost code"
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Authorized By</Label>
-          <Input value={authorizedBy} placeholder="Authorized by" readOnly />
         </div>
 
         <div className="space-y-2">

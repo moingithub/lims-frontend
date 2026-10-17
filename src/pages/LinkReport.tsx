@@ -170,27 +170,6 @@ export function LinkReport() {
     }
   };
 
-  const handleUnmap = async (sampleCheckinId: number) => {
-    setIsSaving(true);
-    try {
-      await mapAnalysisPositionService.unmapAnalysisPosition(sampleCheckinId);
-
-      applyRecordUpdate(sampleCheckinId, {
-        import_id: null,
-        import_machine_report_id: null,
-        analysis_position: null,
-      });
-
-      toast.success("Report unlinked successfully");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to unlink report",
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleDownload = async (record: AnalysisPositionRecord) => {
     try {
       await linkReportService.downloadAnalysisReport(
@@ -206,18 +185,11 @@ export function LinkReport() {
     }
   };
 
-  const handleUnmapFromTable = (record: AnalysisPositionRecord) => {
-    if (!confirm(`Remove the linked report for ${record.analysis_number}?`)) {
-      return;
-    }
-    handleUnmap(record.sample_checkin_id);
-  };
-
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="font-bold">Link Report</CardTitle>
+          <CardTitle className="font-bold">Report Files</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-6">
@@ -241,7 +213,6 @@ export function LinkReport() {
               records={filteredRecords}
               onImport={handleImportClick}
               onDownload={handleDownload}
-              onUnmap={handleUnmapFromTable}
               onViewImage={(imageUrl, filename) => {
                 setSelectedTagImage(imageUrl);
                 setSelectedTagImageFilename(filename ?? null);

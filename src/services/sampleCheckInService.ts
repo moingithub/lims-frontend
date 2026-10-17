@@ -61,7 +61,6 @@ export interface CheckedInSample {
   temperature: string;
   field_h2s: number;
   cost_code: string;
-  authorized_by: string;
   sample_date: string | null;
   amb_temp: string;
   sample_time: string;
@@ -86,10 +85,8 @@ export interface CheckedInSample {
   check_in_time: string;
   rushed: boolean;
   tag_image: string;
-  billing_reference_type: string;
-  billing_reference_number: string;
-  invoice_ref_name?: string;
-  invoice_ref_value?: string;
+  billing_reference_type?: string;
+  billing_reference_number?: string;
   scanned_tag_image?: string | null;
   work_order_number?: string;
   status?: string;
@@ -135,14 +132,11 @@ export interface SampleCheckInPayload {
   temperature: string;
   field_h2s: number;
   cost_code: string;
-  authorized_by: string;
   sample_date: string | null;
   amb_temp: string;
   sample_time: string | null;
   sampled_by: string | null;
   checkin_type: string;
-  invoice_ref_name: string;
-  invoice_ref_value: string;
   remarks: string;
   scanned_tag_image: string | null;
   work_order_number?: string;
@@ -241,7 +235,6 @@ export type SampleCheckInApiRecord = {
   temperature?: string;
   field_h2s?: number | string | null;
   cost_code?: string;
-  authorized_by?: string;
   sample_date?: string | null;
   sampled_date?: string | null;
   amb_temp?: string | null;
@@ -711,7 +704,6 @@ export const mapApiRecordToCheckedInSample = (
     temperature: record.temperature?.trim() ?? "",
     field_h2s: parseApiNumber(record.field_h2s),
     cost_code: record.cost_code?.trim() ?? "",
-    authorized_by: record.authorized_by?.trim() ?? "",
     sample_date: record.sample_date ?? record.sampled_date ?? null,
     amb_temp: record.amb_temp?.trim() ?? "",
     sample_time: record.sample_time?.trim() ?? "",
@@ -1796,7 +1788,6 @@ export const sampleCheckInService = {
       temperature: sample.temperature || "",
       field_h2s: sample.field_h2s ?? 0,
       cost_code: sample.cost_code || "",
-      authorized_by: sample.authorized_by || "",
       sample_date: sample.sample_date?.trim() || null,
       amb_temp: sample.amb_temp?.trim() || "",
       sample_time: sample.sample_time?.trim() || "",
@@ -1809,12 +1800,6 @@ export const sampleCheckInService = {
       check_in_time: sample.check_in_time || now,
       rushed: sample.rushed || false,
       tag_image: sample.tag_image || "",
-      billing_reference_type: sample.billing_reference_type || "",
-      billing_reference_number: sample.billing_reference_number || "",
-      invoice_ref_name:
-        sample.invoice_ref_name ?? sample.billing_reference_type,
-      invoice_ref_value:
-        sample.invoice_ref_value ?? sample.billing_reference_number,
       scanned_tag_image: sample.scanned_tag_image ?? sample.tag_image ?? null,
       work_order_number: sample.work_order_number || "",
       status: sample.status || "Pending",
@@ -1866,16 +1851,11 @@ export const sampleCheckInService = {
       temperature: sample.temperature,
       field_h2s: Number.isFinite(fieldH2s) ? fieldH2s : 0,
       cost_code: sample.cost_code,
-      authorized_by: sample.authorized_by,
       sample_date: isoSampleDate,
       amb_temp: sample.amb_temp?.trim() ?? "",
       sample_time: sampleTime,
       sampled_by: sample.sampled_by?.trim() ? sample.sampled_by.trim() : null,
       checkin_type: sample.checkin_type ?? sample.check_in_type,
-      invoice_ref_name:
-        sample.invoice_ref_name ?? sample.billing_reference_type,
-      invoice_ref_value:
-        sample.invoice_ref_value ?? sample.billing_reference_number,
       remarks: sample.remarks,
       scanned_tag_image: sample.scanned_tag_image ?? sample.tag_image ?? null,
       status: sample.status ?? "Pending",
@@ -1963,8 +1943,6 @@ export const sampleCheckInService = {
         ? {
             ...payloadBase,
             work_order_number: workOrderNumber,
-            invoice_ref_name: "WO",
-            invoice_ref_value: workOrderNumber,
           }
         : payloadBase;
 
