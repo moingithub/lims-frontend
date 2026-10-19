@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "../ui/table";
 import { Button } from "../ui/button";
-import { Download, Image, Upload } from "lucide-react";
+import { Download, FileDown, Image, Upload } from "lucide-react";
 import {
   AnalysisPositionRecord,
   mapAnalysisPositionService,
@@ -17,6 +17,7 @@ interface LinkReportTableProps {
   records: AnalysisPositionRecord[];
   onImport: (record: AnalysisPositionRecord) => void;
   onDownload: (record: AnalysisPositionRecord) => void;
+  onDownloadTemplate: (record: AnalysisPositionRecord) => void;
   onViewImage: (imageUrl: string, filename?: string) => void;
 }
 
@@ -29,6 +30,7 @@ export function LinkReportTable({
   records,
   onImport,
   onDownload,
+  onDownloadTemplate,
   onViewImage,
 }: LinkReportTableProps) {
   return (
@@ -85,7 +87,7 @@ export function LinkReportTable({
                         variant="ghost"
                         size="sm"
                         title="Import and link report"
-                        onClick={() => onImport(record)}
+                        disabled
                       >
                         <Upload
                           className={`w-4 h-4 ${unmapped ? "text-amber-600" : "text-blue-600"}`}
@@ -98,6 +100,14 @@ export function LinkReportTable({
                         onClick={() => onDownload(record)}
                       >
                         <Download className="w-4 h-4 text-green-600" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        title="Download Report Template"
+                        onClick={() => onDownloadTemplate(record)}
+                      >
+                        <FileDown className="w-4 h-4 text-purple-600" />
                       </Button>
                     </div>
                   </TableCell>

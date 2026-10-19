@@ -19,6 +19,7 @@ import {
 import { linkReportService } from "../services/linkReportService";
 import { LinkReportTable } from "../components/linkReport/LinkReportTable";
 import { LinkReportImportDialog } from "../components/linkReport/LinkReportImportDialog";
+import { ReportTemplateDialog } from "../components/linkReport/ReportTemplateDialog";
 import { TagImageDialog } from "../components/sampleCheckIn/TagImageDialog";
 import { sampleCheckInService } from "../services/sampleCheckInService";
 
@@ -28,9 +29,13 @@ export function LinkReport() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const [selectedRecord, setSelectedRecord] =
     useState<AnalysisPositionRecord | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
+  const [selectedTemplateRecord, setSelectedTemplateRecord] =
+    useState<AnalysisPositionRecord | null>(null);
   const [selectedTagImage, setSelectedTagImage] = useState<string | null>(null);
   const [selectedTagImageFilename, setSelectedTagImageFilename] = useState<
     string | null
@@ -125,6 +130,37 @@ export function LinkReport() {
     setIsDialogOpen(true);
   };
 
+  const handleDownloadTemplateClick = (record: AnalysisPositionRecord) => {
+    setSelectedTemplateRecord(record);
+    setIsTemplateDialogOpen(true);
+  };
+
+  const handleDownloadTemplate = async (
+    sampleCheckinId: number,
+    reportTemplateName: string,
+    pressureMeasured: string,
+  ) => {
+    setIsDownloadingTemplate(true);
+    try {
+      await linkReportService.downloadReportTemplate(
+        sampleCheckinId,
+        reportTemplateName,
+        pressureMeasured,
+      );
+      toast.success("Report template downloaded");
+      setIsTemplateDialogOpen(false);
+      setSelectedTemplateRecord(null);
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to download report template",
+      );
+    } finally {
+      setIsDownloadingTemplate(false);
+    }
+  };
+
   const handleImport = async (
     sampleCheckinId: number,
     file: File,
@@ -213,6 +249,7 @@ export function LinkReport() {
               records={filteredRecords}
               onImport={handleImportClick}
               onDownload={handleDownload}
+              onDownloadTemplate={handleDownloadTemplateClick}
               onViewImage={(imageUrl, filename) => {
                 setSelectedTagImage(imageUrl);
                 setSelectedTagImageFilename(filename ?? null);
@@ -238,6 +275,17 @@ export function LinkReport() {
           if (!open) setSelectedRecord(null);
         }}
         onImport={handleImport}
+      />
+
+      <ReportTemplateDialog
+        open={isTemplateDialogOpen}
+        record={selectedTemplateRecord}
+        isSaving={isDownloadingTemplate}
+        onOpenChange={(open) => {
+          setIsTemplateDialogOpen(open);
+          if (!open) setSelectedTemplateRecord(null);
+        }}
+        onDownload={handleDownloadTemplate}
       />
 
       <TagImageDialog

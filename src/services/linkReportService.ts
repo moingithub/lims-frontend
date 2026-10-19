@@ -27,6 +27,48 @@ async function parseApiError(
 }
 
 export const linkReportService = {
+  downloadReportTemplate: async (
+    sampleCheckinId: number,
+    reportTemplateName: string,
+    pressureMeasured: string,
+  ): Promise<void> => {
+      const headers = new Headers(buildAuthHeaders());
+      headers.set("Content-Type", "application/json");
+      const response = await fetch(`${API_BASE_URL}/report_files`, {
+        method: "POST",
+        headers,
+      body: JSON.stringify({
+        sample_checkin: sampleCheckinId,
+        report_template_name: reportTemplateName,
+        pressure_measured: pressureMeasured,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        await parseApiError(response, "Failed to download report template"),
+      );
+    }
+
+    const blob = await response.blob();
+    const contentDisposition = response.headers.get("Content-Disposition");
+    const fileNameMatch = contentDisposition?.match(
+      /filename\*?=(?:UTF-8'')?["']?([^;"']+)["']?/i,
+    );
+    const fileName = fileNameMatch?.[1]
+      ? decodeURIComponent(fileNameMatch[1])
+      : reportTemplateName;
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  },
+
   downloadAnalysisReport: async (
     sampleCheckinId: number,
     fallbackFileName: string,
