@@ -29,6 +29,9 @@ type StoredAuthState = AuthState & {
 
 let memoryAuthState: AuthState | null = null;
 
+let sessionExpiredNotified = false;
+const sessionExpiredListeners = new Set<() => void>();
+
 const asTokenString = (value: unknown): string | undefined => {
   if (typeof value === "string") {
     const trimmed = value.trim();
@@ -149,6 +152,33 @@ export const authService = {
     localStorage.removeItem(AUTH_STORAGE_KEY);
   },
 
+  onSessionExpired: (listener: () => void): (() => void) => {
+    sessionExpiredListeners.add(listener);
+    return () => {
+      sessionExpiredListeners.delete(listener);
+    };
+  },
+
+  resetSessionExpiredGuard: (): void => {
+    sessionExpiredNotified = false;
+  },
+
+  notifySessionExpired: (): void => {
+    if (sessionExpiredNotified) return;
+    const hadSession =
+      Boolean(authService.getAccessToken()) ||
+      authService.getAuthState().isAuthenticated;
+    if (!hadSession) return;
+
+    sessionExpiredNotified = true;
+    authService.logout();
+    sessionExpiredListeners.forEach((listener) => listener());
+  },
+
+  handleUnauthorizedApiResponse: (): void => {
+    authService.notifySessionExpired();
+  },
+
   // Clear only localStorage so a full page load shows login,
   // without dropping an in-memory token from the current session (HMR remounts).
   clearPersistedSession: (): void => {
@@ -192,6 +222,9 @@ export const authService = {
     const token = asTokenString(state.token);
     memoryAuthState = { ...state, token };
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(memoryAuthState));
+    if (state.isAuthenticated && token) {
+      authService.resetSessionExpiredGuard();
+    }
   },
 
   // Check if user is authenticated

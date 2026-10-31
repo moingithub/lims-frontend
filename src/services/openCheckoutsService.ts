@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 
 export interface OpenCheckout {
@@ -27,11 +28,9 @@ export const openCheckoutsService = {
       headers: buildAuthHeaders(),
     });
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to load open checkouts";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to load open checkouts"),
+      );
     }
     return await response.json();
   },

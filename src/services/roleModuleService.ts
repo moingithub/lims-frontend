@@ -1,5 +1,6 @@
 // Unified Role Module Service - Handles CRUD operations, search, validation, and helper methods
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 
 export interface RoleModule {
@@ -72,9 +73,9 @@ export const roleModuleService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to load permissions";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to load permissions"),
+      );
     }
 
     const data: ApiRoleModule[] = await response.json();
@@ -105,11 +106,9 @@ export const roleModuleService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to create permission";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to create permission"),
+      );
     }
 
     const data: ApiRoleModule = await response.json();
@@ -136,11 +135,9 @@ export const roleModuleService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to update permission";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to update permission"),
+      );
     }
 
     const data: ApiRoleModule = await response.json();
@@ -160,11 +157,9 @@ export const roleModuleService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to delete permission";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to delete permission"),
+      );
     }
 
     permissionsCache = permissionsCache.filter(

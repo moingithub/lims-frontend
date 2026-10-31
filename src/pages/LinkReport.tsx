@@ -1,41 +1,39 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "../components/ui/card";
-import { Input } from "../components/ui/input";
-import { Search } from "lucide-react";
+import { Button } from "../components/ui/button";
+import { FileDown } from "lucide-react";
 import { toast } from "sonner";
 import {
-  AnalysisPositionRecord,
-  mapAnalysisPositionService,
-} from "../services/mapAnalysisPositionService";
-import {
-  companyMasterService,
-  Company,
-} from "../services/companyMasterService";
-import { linkReportService } from "../services/linkReportService";
+  REJECTED_LOW_PRESSURE_STATUS,
+  ReportFileRecord,
+  ReportTemplateDownloadFields,
+  reportFilesService,
+} from "../services/reportFilesService";
+import { SearchBar } from "../components/shared/SearchBar";
 import { LinkReportTable } from "../components/linkReport/LinkReportTable";
-import { LinkReportImportDialog } from "../components/linkReport/LinkReportImportDialog";
+import { ReportFilesFilters } from "../components/linkReport/ReportFilesFilters";
 import { ReportTemplateDialog } from "../components/linkReport/ReportTemplateDialog";
 import { TagImageDialog } from "../components/sampleCheckIn/TagImageDialog";
-import { sampleCheckInService } from "../services/sampleCheckInService";
 
 export function LinkReport() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [records, setRecords] = useState<AnalysisPositionRecord[]>([]);
-  const [companies, setCompanies] = useState<Company[]>([]);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [companyFilter, setCompanyFilter] = useState("all");
+  const [meterNumberFilter, setMeterNumberFilter] = useState("all");
+  const [wellNameFilter, setWellNameFilter] = useState("all");
+  const [analysisNumberFilter, setAnalysisNumberFilter] = useState("all");
+  const [records, setRecords] = useState<ReportFileRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
-  const [selectedRecord, setSelectedRecord] =
-    useState<AnalysisPositionRecord | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
-  const [selectedTemplateRecord, setSelectedTemplateRecord] =
-    useState<AnalysisPositionRecord | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(
+    null,
+  );
   const [selectedTagImage, setSelectedTagImage] = useState<string | null>(null);
   const [selectedTagImageFilename, setSelectedTagImageFilename] = useState<
     string | null
@@ -44,45 +42,11 @@ export function LinkReport() {
   const loadRecords = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [positions, , sampleCheckIns] = await Promise.all([
-        mapAnalysisPositionService.fetchAnalysisPositions(),
-        companyMasterService.fetchCompanies(),
-        sampleCheckInService.fetchSampleCheckIns(true),
-      ]);
-      const imagesById = new Map(
-        sampleCheckIns.map((sample) => [sample.id, sample]),
-      );
-      setRecords(
-        positions.map((record) => {
-          const sample = imagesById.get(record.sample_checkin_id);
-          return {
-            ...record,
-            pressure_base_factor: sample?.pressure_base_factor,
-            pressure_measured: sample?.pressure_measured,
-            amb_temp: sample?.amb_temp,
-            sample_time: sample?.sample_time,
-            sample_date: sample?.sample_date ?? sample?.sampled_date,
-            sampled_by: sample?.sampled_by,
-            analyzed_by: sample?.analyzed_by,
-            base_condition: sample?.base_condition,
-            physical_constant: sample?.physical_constant,
-            instrument: sample?.instrument,
-            last_instrument_verification: sample?.last_instrument_verification,
-            heating_method: sample?.heating_method,
-            hexanes_split: sample?.hexanes_split,
-            sample_method: sample?.sample_method,
-            effective_start_date: sample?.effective_start_date,
-            effective_end_date: sample?.effective_end_date,
-            tag_image: sample?.tag_image ?? "",
-            scanned_tag_image:
-              sample?.scanned_tag_image ?? sample?.tag_image ?? null,
-          };
-        }),
-      );
-      setCompanies(companyMasterService.getActiveCompanies());
+      const data = await reportFilesService.fetchReportFiles();
+      setRecords(data);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Failed to load analyses",
+        error instanceof Error ? error.message : "Failed to load report files",
       );
     } finally {
       setIsLoading(false);
@@ -93,45 +57,153 @@ export function LinkReport() {
     loadRecords();
   }, [loadRecords]);
 
-  const filteredRecords = mapAnalysisPositionService.searchRecords(
-    records,
-    searchTerm,
+  const statuses = reportFilesService.getUniqueStatuses(records);
+
+  const getCascadeFilteredRecords = (
+    company: string,
+    wellName: string,
+    meterNumber: string,
+  ): ReportFileRecord[] => {
+    let source =
+      company === "all"
+        ? records
+        : reportFilesService.filterByCompany(records, company);
+
+    if (wellName !== "all") {
+      source = reportFilesService.filterByWellName(source, wellName);
+    }
+    if (meterNumber !== "all") {
+      source = reportFilesService.filterByMeterNumber(source, meterNumber);
+    }
+
+    return source;
+  };
+
+  const resetAnalysisNumberIfInvalid = (
+    company: string,
+    wellName: string,
+    meterNumber: string,
+  ) => {
+    const availableAnalysisNumbers =
+      reportFilesService.getUniqueAnalysisNumbers(
+        getCascadeFilteredRecords(company, wellName, meterNumber),
+      );
+
+    if (
+      analysisNumberFilter !== "all" &&
+      !availableAnalysisNumbers.includes(analysisNumberFilter)
+    ) {
+      setAnalysisNumberFilter("all");
+    }
+  };
+
+  const companyFilteredData = getCascadeFilteredRecords(
+    companyFilter,
+    "all",
+    "all",
+  );
+  const companies = reportFilesService.getUniqueCompanies(records);
+  const meterNumbers = reportFilesService.getUniqueMeterNumbers(
+    getCascadeFilteredRecords(companyFilter, wellNameFilter, "all"),
+  );
+  const wellNames =
+    reportFilesService.getUniqueWellNames(companyFilteredData);
+  const analysisNumbers = reportFilesService.getUniqueAnalysisNumbers(
+    getCascadeFilteredRecords(
+      companyFilter,
+      wellNameFilter,
+      meterNumberFilter,
+    ),
   );
 
-  const unmappedCount = records.filter((record) =>
-    mapAnalysisPositionService.needsMapping(record),
-  ).length;
+  const handleCompanyChange = (value: string) => {
+    setCompanyFilter(value);
 
-  const resolveCompanyId = (record: AnalysisPositionRecord): number | null => {
-    if (record.company_id != null) return record.company_id;
-    const match = companies.find(
-      (company) =>
-        company.company_name.toLowerCase() ===
-        record.company_name.toLowerCase(),
+    const filteredByCompany = getCascadeFilteredRecords(value, "all", "all");
+    const availableWells =
+      reportFilesService.getUniqueWellNames(filteredByCompany);
+    const nextWell =
+      wellNameFilter !== "all" && !availableWells.includes(wellNameFilter)
+        ? "all"
+        : wellNameFilter;
+
+    if (nextWell !== wellNameFilter) {
+      setWellNameFilter("all");
+    }
+
+    const availableMeters = reportFilesService.getUniqueMeterNumbers(
+      getCascadeFilteredRecords(value, nextWell, "all"),
     );
-    return match?.id ?? null;
+    const nextMeter =
+      meterNumberFilter !== "all" &&
+      !availableMeters.includes(meterNumberFilter)
+        ? "all"
+        : meterNumberFilter;
+
+    if (nextMeter !== meterNumberFilter) {
+      setMeterNumberFilter("all");
+    }
+
+    resetAnalysisNumberIfInvalid(value, nextWell, nextMeter);
   };
 
-  const applyRecordUpdate = (
-    sampleCheckinId: number,
-    updates: Partial<AnalysisPositionRecord>,
-  ) => {
-    setRecords((prev) =>
-      prev.map((record) =>
-        record.sample_checkin_id === sampleCheckinId
-          ? { ...record, ...updates }
-          : record,
-      ),
+  const handleWellNameChange = (value: string) => {
+    setWellNameFilter(value);
+
+    const availableMeters = reportFilesService.getUniqueMeterNumbers(
+      getCascadeFilteredRecords(companyFilter, value, "all"),
     );
+    const nextMeter =
+      meterNumberFilter !== "all" &&
+      !availableMeters.includes(meterNumberFilter)
+        ? "all"
+        : meterNumberFilter;
+
+    if (nextMeter !== meterNumberFilter) {
+      setMeterNumberFilter("all");
+    }
+
+    resetAnalysisNumberIfInvalid(companyFilter, value, nextMeter);
   };
 
-  const handleImportClick = (record: AnalysisPositionRecord) => {
-    setSelectedRecord(record);
-    setIsDialogOpen(true);
+  const handleMeterNumberChange = (value: string) => {
+    setMeterNumberFilter(value);
+    resetAnalysisNumberIfInvalid(companyFilter, wellNameFilter, value);
   };
 
-  const handleDownloadTemplateClick = (record: AnalysisPositionRecord) => {
-    setSelectedTemplateRecord(record);
+  let filteredRecords = reportFilesService.searchRecords(records, searchTerm);
+  filteredRecords = reportFilesService.filterByCompany(
+    filteredRecords,
+    companyFilter,
+  );
+  filteredRecords = reportFilesService.filterByStatus(
+    filteredRecords,
+    statusFilter,
+  );
+  filteredRecords = reportFilesService.filterByMeterNumber(
+    filteredRecords,
+    meterNumberFilter,
+  );
+  filteredRecords = reportFilesService.filterByWellName(
+    filteredRecords,
+    wellNameFilter,
+  );
+  filteredRecords = reportFilesService.filterByAnalysisNumber(
+    filteredRecords,
+    analysisNumberFilter,
+  );
+
+  const selectedTemplateRecord = useMemo(() => {
+    if (selectedTemplateId == null) return null;
+    return (
+      records.find(
+        (record) => record.sample_checkin_id === selectedTemplateId,
+      ) ?? null
+    );
+  }, [records, selectedTemplateId]);
+
+  const handleDownloadTemplateClick = (record: ReportFileRecord) => {
+    setSelectedTemplateId(record.sample_checkin_id);
     setIsTemplateDialogOpen(true);
   };
 
@@ -139,86 +211,62 @@ export function LinkReport() {
     sampleCheckinId: number,
     reportTemplateName: string,
     pressureMeasured: string,
+    templateFields: ReportTemplateDownloadFields,
   ) => {
     setIsDownloadingTemplate(true);
     try {
-      await linkReportService.downloadReportTemplate(
-        sampleCheckinId,
-        reportTemplateName,
-        pressureMeasured,
+      const currentRecord = records.find(
+        (row) => row.sample_checkin_id === sampleCheckinId,
       );
-      toast.success("Report template downloaded");
+      const updated =
+        await reportFilesService.updatePressureAndDownloadTemplate(
+          sampleCheckinId,
+          reportTemplateName,
+          pressureMeasured,
+          currentRecord,
+          templateFields,
+        );
+      setRecords((prev) =>
+        prev.map((record) =>
+          record.sample_checkin_id === sampleCheckinId
+            ? { ...record, ...updated, pressure_measured: pressureMeasured.trim() }
+            : record,
+        ),
+      );
+      if (updated.status === REJECTED_LOW_PRESSURE_STATUS) {
+        toast.warning(
+          "Measured pressure is 75% or more below sample pressure. Status set to Rejected – Low Pressure.",
+        );
+      } else {
+        toast.success("Report template downloaded");
+      }
       setIsTemplateDialogOpen(false);
-      setSelectedTemplateRecord(null);
+      setSelectedTemplateId(null);
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to download report template",
-      );
+      const message =
+        error instanceof Error ? error.message : "Request failed";
+      toast.error(message);
     } finally {
       setIsDownloadingTemplate(false);
     }
   };
 
-  const handleImport = async (
-    sampleCheckinId: number,
-    file: File,
-    pressureMeasured: string,
-  ) => {
-    const record = records.find(
-      (item) => item.sample_checkin_id === sampleCheckinId,
+  const handleExportAll = () => {
+    const csvContent = reportFilesService.exportToCSV(filteredRecords);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `report_files_${new Date().toISOString().split("T")[0]}.csv`,
     );
-    if (!record) return;
-
-    const companyId =
-      record.company_id ??
-      resolveCompanyId(record) ??
-      (await sampleCheckInService.fetchSampleCheckInById(sampleCheckinId))
-        ?.company_id ??
-      null;
-    if (companyId == null) {
-      toast.error("Could not resolve company for this analysis");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const result = await linkReportService.linkReport(
-        sampleCheckinId,
-        file,
-        companyId,
-        pressureMeasured,
-      );
-
-      applyRecordUpdate(sampleCheckinId, result.record);
-      toast.success(
-        `Report linked to ${record.analysis_number} (${result.importId})`,
-      );
-      setIsDialogOpen(false);
-      setSelectedRecord(null);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Failed to link report",
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleDownload = async (record: AnalysisPositionRecord) => {
-    try {
-      await linkReportService.downloadAnalysisReport(
-        record.sample_checkin_id,
-        `Analysis-${record.analysis_number}.xlsx`,
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to download analysis report",
-      );
-    }
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Report files exported successfully");
   };
 
   return (
@@ -228,27 +276,44 @@ export function LinkReport() {
           <CardTitle className="font-bold">Report Files</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 mb-6">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-              <Input
-                placeholder="Search..."
+          <div className="flex flex-col gap-4 mb-6">
+            <div className="flex justify-between items-center gap-4">
+              <SearchBar
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                onChange={setSearchTerm}
+                placeholder="Search report files..."
               />
+              <Button onClick={handleExportAll} disabled={isLoading}>
+                <FileDown className="w-4 h-4 mr-2" />
+                Export All
+              </Button>
             </div>
+            <ReportFilesFilters
+              statusFilter={statusFilter}
+              companyFilter={companyFilter}
+              meterNumberFilter={meterNumberFilter}
+              wellNameFilter={wellNameFilter}
+              analysisNumberFilter={analysisNumberFilter}
+              statuses={statuses}
+              companies={companies}
+              meterNumbers={meterNumbers}
+              wellNames={wellNames}
+              analysisNumbers={analysisNumbers}
+              onStatusChange={setStatusFilter}
+              onCompanyChange={handleCompanyChange}
+              onMeterNumberChange={handleMeterNumberChange}
+              onWellNameChange={handleWellNameChange}
+              onAnalysisNumberChange={setAnalysisNumberFilter}
+            />
           </div>
 
           {isLoading ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              Loading analyses...
+              Loading report files...
             </p>
           ) : (
             <LinkReportTable
               records={filteredRecords}
-              onImport={handleImportClick}
-              onDownload={handleDownload}
               onDownloadTemplate={handleDownloadTemplateClick}
               onViewImage={(imageUrl, filename) => {
                 setSelectedTagImage(imageUrl);
@@ -257,25 +322,11 @@ export function LinkReport() {
             />
           )}
 
-          <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
-            <p>
-              Showing {filteredRecords.length} of {records.length} records
-              {unmappedCount > 0 ? ` · ${unmappedCount} unmapped` : ""}
-            </p>
+          <div className="mt-4 text-sm text-muted-foreground">
+            Showing {filteredRecords.length} of {records.length} records
           </div>
         </CardContent>
       </Card>
-
-      <LinkReportImportDialog
-        open={isDialogOpen}
-        record={selectedRecord}
-        isSaving={isSaving}
-        onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) setSelectedRecord(null);
-        }}
-        onImport={handleImport}
-      />
 
       <ReportTemplateDialog
         open={isTemplateDialogOpen}
@@ -283,7 +334,7 @@ export function LinkReport() {
         isSaving={isDownloadingTemplate}
         onOpenChange={(open) => {
           setIsTemplateDialogOpen(open);
-          if (!open) setSelectedTemplateRecord(null);
+          if (!open) setSelectedTemplateId(null);
         }}
         onDownload={handleDownloadTemplate}
       />

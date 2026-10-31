@@ -1,5 +1,6 @@
 // Unified Contacts Service - Handles CRUD operations, search, validation, contact management, and helper methods
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 
 export interface Contact {
@@ -65,9 +66,7 @@ export const contactsService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to load contacts";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to load contacts"));
     }
 
     const data: ApiContact[] = await response.json();
@@ -100,9 +99,9 @@ export const contactsService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to create contact";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to create contact"),
+      );
     }
 
     const data: ApiContact = await response.json();
@@ -131,9 +130,9 @@ export const contactsService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to update contact";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to update contact"),
+      );
     }
 
     const data: ApiContact = await response.json();
@@ -153,9 +152,9 @@ export const contactsService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to delete contact";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to delete contact"),
+      );
     }
 
     contactsCache = contactsCache.filter((contact) => contact.id !== id);

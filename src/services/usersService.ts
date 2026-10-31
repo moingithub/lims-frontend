@@ -1,5 +1,6 @@
 // Unified User Service - Handles CRUD operations, search, validation, and helper methods
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 
 export interface User {
@@ -63,9 +64,7 @@ export const usersService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to load users";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to load users"));
     }
 
     const data: ApiUser[] = await response.json();
@@ -97,9 +96,7 @@ export const usersService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to create user";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to create user"));
     }
 
     const data: ApiUser = await response.json();
@@ -139,9 +136,7 @@ export const usersService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to update user";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to update user"));
     }
 
     const data: ApiUser = await response.json();
@@ -159,9 +154,7 @@ export const usersService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to delete user";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to delete user"));
     }
 
     usersCache = usersCache.filter((user) => user.id !== id);
@@ -180,9 +173,9 @@ export const usersService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to reset password";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to reset password"),
+      );
     }
 
     const data: { message?: string } = await response.json();
@@ -208,9 +201,9 @@ export const usersService = {
     );
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to change password";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to change password"),
+      );
     }
 
     const data: { message?: string } = await response.json();

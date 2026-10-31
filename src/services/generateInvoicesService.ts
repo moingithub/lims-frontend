@@ -5,6 +5,7 @@ import {
   InvoiceTotals,
 } from "../types/generateInvoices";
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 import { companyMasterService } from "./companyMasterService";
 import { workorderHeadersService } from "./workorderHeadersService";
@@ -36,9 +37,9 @@ export const getWorkOrders = async (): Promise<WorkOrder[]> => {
     },
   );
   if (!response.ok) {
-    const message =
-      response.status === 401 ? "Unauthorized" : "Failed to load work orders";
-    throw new Error(message);
+    throw new Error(
+      await parseApiError(response, "Failed to load work orders"),
+    );
   }
   const data = await response.json();
   // Map API response to ensure company_name is present on each WorkOrder
@@ -281,10 +282,9 @@ export const createInvoice = async (
   });
 
   if (!response.ok) {
-    const errorData = await response
-      .json()
-      .catch(() => ({ message: "Failed to create invoice" }));
-    throw new Error(errorData.message || "Failed to create invoice");
+    throw new Error(
+      await parseApiError(response, "Failed to create invoice"),
+    );
   }
 
   const result = await response.json();

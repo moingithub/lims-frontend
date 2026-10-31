@@ -1,5 +1,6 @@
 // Unified Module Service - Handles CRUD operations, search, validation, and helper methods
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 
 export interface Module {
@@ -55,9 +56,7 @@ export const modulesService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to load modules";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to load modules"));
     }
 
     const data: ApiModule[] = await response.json();
@@ -87,9 +86,7 @@ export const modulesService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to create module";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to create module"));
     }
 
     const data: ApiModule = await response.json();
@@ -115,9 +112,7 @@ export const modulesService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to update module";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to update module"));
     }
 
     const data: ApiModule = await response.json();
@@ -137,9 +132,7 @@ export const modulesService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to delete module";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to delete module"));
     }
 
     modulesCache = modulesCache.filter((module) => module.id !== id);

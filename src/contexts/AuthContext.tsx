@@ -8,6 +8,7 @@ import {
 } from "react";
 import { authService, AuthUser } from "../services/authService";
 import { RoleModule } from "../services/roleModuleService";
+import { toast } from "sonner";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -49,6 +50,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // so HMR remounts do not strip Authorization from API calls.
   useEffect(() => {
     authService.clearPersistedSession();
+  }, []);
+
+  useEffect(() => {
+    return authService.onSessionExpired(() => {
+      setAuthState({ isAuthenticated: false, user: null, permissions: [] });
+      toast.error("Your session has expired. Please sign in again.");
+    });
   }, []);
 
   const login = async (email: string, password: string) => {

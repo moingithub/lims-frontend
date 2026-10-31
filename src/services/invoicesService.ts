@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 import { downloadInvoicePdf } from "../components/invoices/Invoice";
 
@@ -79,7 +80,7 @@ export async function fetchInvoices(): Promise<InvoiceListItem[]> {
     },
   });
   if (!response.ok) {
-    throw new Error("Failed to fetch invoices");
+    throw new Error(await parseApiError(response, "Failed to fetch invoices"));
   }
   const invoices: InvoiceListItem[] = await response.json();
   return sortInvoicesByNumber(invoices);
@@ -101,7 +102,7 @@ export async function fetchInvoiceById(id: number): Promise<Invoice> {
     },
   });
   if (!response.ok) {
-    throw new Error("Failed to fetch invoice");
+    throw new Error(await parseApiError(response, "Failed to fetch invoice"));
   }
   return response.json();
 }
@@ -154,8 +155,9 @@ export async function updateInvoicePaymentStatus(
     },
   );
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody?.message || `Server error: ${response.status}`);
+    throw new Error(
+      await parseApiError(response, "Failed to update payment status"),
+    );
   }
 }
 
@@ -169,12 +171,7 @@ export async function deleteInvoice(id: number): Promise<void> {
   });
 
   if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new Error(
-      errorBody?.error ||
-        errorBody?.message ||
-        `Failed to delete invoice (${response.status})`,
-    );
+    throw new Error(await parseApiError(response, "Failed to delete invoice"));
   }
 }
 

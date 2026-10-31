@@ -1,5 +1,6 @@
 // Unified Role Service - Handles both CRUD operations and dropdown options
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 
 export interface Role {
@@ -55,9 +56,7 @@ export const rolesService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to load roles";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to load roles"));
     }
 
     const data: ApiRole[] = await response.json();
@@ -85,9 +84,7 @@ export const rolesService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to create role";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to create role"));
     }
 
     const data: ApiRole = await response.json();
@@ -113,9 +110,7 @@ export const rolesService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to update role";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to update role"));
     }
 
     const data: ApiRole = await response.json();
@@ -133,9 +128,7 @@ export const rolesService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to delete role";
-      throw new Error(message);
+      throw new Error(await parseApiError(response, "Failed to delete role"));
     }
 
     rolesCache = rolesCache.filter((role) => role.id !== id);

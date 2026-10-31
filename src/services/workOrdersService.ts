@@ -80,6 +80,7 @@ export interface LineItem {
 // Import analysisPricingService for price calculations
 import { analysisPricingService } from "./analysisPricingService";
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 import { extractDateFromDateTime } from "../utils/dateUtils";
 import {
@@ -393,11 +394,9 @@ const fetchWorkOrderDetailsRaw = async (
   );
 
   if (!response.ok) {
-    const message =
-      response.status === 401
-        ? "Unauthorized"
-        : "Failed to load work order details";
-    throw new Error(message);
+    throw new Error(
+      await parseApiError(response, "Failed to load work order details"),
+    );
   }
 
   return response.json();
@@ -487,9 +486,9 @@ export const workOrdersService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to load work orders";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to load work orders"),
+      );
     }
 
     const data: ApiWorkOrder[] = await response.json();
@@ -517,11 +516,9 @@ export const workOrdersService = {
     );
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to load work order details";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to load work order details"),
+      );
     }
 
     const data: ApiWorkOrderDetails = await response.json();
@@ -599,11 +596,9 @@ export const workOrdersService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to delete work order";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to delete work order"),
+      );
     }
   },
 

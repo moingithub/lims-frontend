@@ -1,5 +1,6 @@
 // Unified Company Area Service - Handles CRUD operations, search, validation, geographic management, and helper methods
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 
 export interface CompanyArea {
@@ -68,15 +69,6 @@ const buildAuthHeaders = (): HeadersInit => {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 };
-
-async function parseApiError(
-  response: Response,
-  fallback: string,
-): Promise<string> {
-  if (response.status === 401) return "Unauthorized";
-  const body = await response.json().catch(() => ({}));
-  return body?.error || body?.message || fallback;
-}
 
 export const companyAreaService = {
   // ========== CRUD Operations ==========

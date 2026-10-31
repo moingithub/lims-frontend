@@ -1,5 +1,6 @@
 // Unified Analysis Pricing Service - Handles CRUD operations, search, validation, pricing calculations, and helper methods
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 
 export interface AnalysisPrice {
@@ -59,18 +60,6 @@ const buildAuthHeaders = (): HeadersInit => {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
-};
-
-const parseApiError = async (
-  response: Response,
-  fallback: string,
-): Promise<string> => {
-  try {
-    const body = (await response.json()) as { error?: string; detail?: string };
-    return body.error || body.detail || fallback;
-  } catch {
-    return fallback;
-  }
 };
 
 const isValidRate = (value: number | undefined): boolean =>
@@ -150,6 +139,7 @@ export const analysisPricingService = {
       method: "PUT",
       headers: buildAuthHeaders(),
       body: JSON.stringify({
+        analysis_type: updatedAnalysisPrice.analysis_code,
         description: updatedAnalysisPrice.description,
         standard_rate: updatedAnalysisPrice.standard_rate.toString(),
         rushed_rate: updatedAnalysisPrice.rushed_rate.toString(),

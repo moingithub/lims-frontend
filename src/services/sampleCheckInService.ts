@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 import {
   extractDateFromDateTime,
@@ -27,7 +28,11 @@ const updateStatusByWorkOrderNumber = async (
       body: JSON.stringify(payload),
     },
   );
-  if (!response.ok) throw await response.json();
+  if (!response.ok) {
+    throw new Error(
+      await parseApiError(response, "Failed to update sample check-in status"),
+    );
+  }
   return await response.json();
 };
 
@@ -242,6 +247,7 @@ export type SampleCheckInApiRecord = {
   pressure_measured?: string | null;
   sampled_by?: string | null;
   analyzed_by?: string;
+  analyzed_on?: string | null;
   base_condition?: string;
   physical_constant?: string;
   instrument?: string;
@@ -793,46 +799,6 @@ const buildAuthHeaders = (): HeadersInit => {
   };
 };
 
-async function parseApiError(
-  response: Response,
-  fallback: string,
-): Promise<string> {
-  const rawBody = await response.text().catch(() => "");
-  let body: any = {};
-  try {
-    body = rawBody ? JSON.parse(rawBody) : {};
-  } catch {
-    body = {};
-  }
-  if (typeof body?.detail === "string") return body.detail;
-  if (Array.isArray(body?.detail)) {
-    return body.detail
-      .map((item: { msg?: string; loc?: string[] }) =>
-        item.loc?.length
-          ? `${item.loc.join(".")}: ${item.msg ?? "Invalid value"}`
-          : (item.msg ?? "Invalid value"),
-      )
-      .join("; ");
-  }
-  if (
-    body?.detail &&
-    typeof body.detail === "object" &&
-    !Array.isArray(body.detail)
-  ) {
-    return (
-      body.detail.message ||
-      body.detail.error ||
-      JSON.stringify(body.detail)
-    );
-  }
-  return (
-    body?.error ||
-    body?.message ||
-    rawBody ||
-    `${fallback} (${response.status})`
-  );
-}
-
 let sampleCheckInApiCache: SampleCheckInApiRecord[] = [];
 let sampleCheckInApiCacheLoaded = false;
 
@@ -1378,10 +1344,7 @@ export const sampleCheckInService = {
     });
 
     if (!response.ok) {
-      const responseBody = await response.text();
-      throw new Error(
-        `OCR upload failed: ${response.status} ${response.statusText} - ${responseBody}`,
-      );
+      throw new Error(await parseApiError(response, "OCR upload failed"));
     }
 
     const result = await response.json();
@@ -1585,9 +1548,9 @@ export const sampleCheckInService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to load check-ins";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to load check-ins"),
+      );
     }
 
     const data = (await response.json()) as SampleCheckInApiRecord[];
@@ -2114,7 +2077,11 @@ export const sampleCheckInService = {
         body: JSON.stringify(payload),
       },
     );
-    if (!response.ok) throw await response.json();
+    if (!response.ok) {
+      throw new Error(
+        await parseApiError(response, "Failed to update work order line"),
+      );
+    }
     return await response.json();
   },
 

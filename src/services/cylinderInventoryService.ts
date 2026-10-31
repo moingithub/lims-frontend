@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 
 const buildAuthHeaders = (): HeadersInit => {
@@ -31,7 +32,9 @@ const cylinderInventoryService = {
       headers: buildAuthHeaders(),
     });
     if (!response.ok) {
-      throw new Error("Failed to fetch cylinder inventory");
+      throw new Error(
+        await parseApiError(response, "Failed to fetch cylinder inventory"),
+      );
     }
     return response.json();
   },

@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 import { companyMasterService } from "./companyMasterService";
 import { analysisPricingService } from "./analysisPricingService";
@@ -327,11 +328,9 @@ export const analysisReportsService = {
     );
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to load gas analysis report";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to load gas analysis report"),
+      );
     }
 
     const data = (await response.json()) as ApiAnalysisReportResponse;

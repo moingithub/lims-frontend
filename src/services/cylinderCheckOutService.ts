@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 import { cylinderMasterService } from "./cylinderMasterService";
 import { companyMasterService } from "./companyMasterService";
@@ -407,11 +408,9 @@ export const cylinderCheckOutService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401
-          ? "Unauthorized"
-          : "Failed to load cylinder checkouts";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to load cylinder checkouts"),
+      );
     }
 
     const data = (await response.json()) as CylinderCheckOutApiRecord[];
@@ -478,11 +477,12 @@ export const cylinderCheckOutService = {
         );
 
         if (!response.ok) {
-          const message =
-            response.status === 401
-              ? "Unauthorized"
-              : "Failed to update cylinder checkout status";
-          throw new Error(message);
+          throw new Error(
+            await parseApiError(
+              response,
+              "Failed to update cylinder checkout status",
+            ),
+          );
         }
       }),
     );
@@ -516,11 +516,9 @@ export const cylinderCheckOutService = {
         });
 
         if (!response.ok) {
-          const message =
-            response.status === 401
-              ? "Unauthorized"
-              : "Failed to create cylinder checkout";
-          throw new Error(message);
+          throw new Error(
+            await parseApiError(response, "Failed to create cylinder checkout"),
+          );
         }
       }),
     );

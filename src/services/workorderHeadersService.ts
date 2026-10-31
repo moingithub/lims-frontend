@@ -1,4 +1,5 @@
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 
 export interface WorkOrderHeaderPayload {
@@ -38,7 +39,11 @@ export const workorderHeadersService = {
       },
       body: JSON.stringify(payload),
     });
-    if (!response.ok) throw await response.json();
+    if (!response.ok) {
+      throw new Error(
+        await parseApiError(response, "Failed to create work order header"),
+      );
+    }
     return await response.json();
   },
 
@@ -58,7 +63,11 @@ export const workorderHeadersService = {
         body: JSON.stringify(payload),
       },
     );
-    if (!response.ok) throw await response.json();
+    if (!response.ok) {
+      throw new Error(
+        await parseApiError(response, "Failed to update work order header"),
+      );
+    }
     return await response.json();
   },
 };

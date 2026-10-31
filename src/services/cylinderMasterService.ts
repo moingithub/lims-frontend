@@ -1,5 +1,6 @@
 // Unified Cylinder Master Service - Handles CRUD operations, search, validation, inventory tracking, and helper methods
 import { API_BASE_URL } from "../config/api";
+import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 
 export interface Cylinder {
@@ -69,9 +70,9 @@ export const cylinderMasterService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to load cylinders";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to load cylinders"),
+      );
     }
 
     const data: ApiCylinder[] = await response.json();
@@ -103,39 +104,10 @@ export const cylinderMasterService = {
     });
 
     if (!response.ok) {
-      let message = "Failed to create cylinder";
-      try {
-        const errorData = await response.json();
-        // Try to extract error from common structures
-        if (errorData) {
-          if (typeof errorData.message === "string") {
-            message = errorData.message;
-          } else if (typeof errorData.error === "string") {
-            message = errorData.error;
-          } else if (errorData.errors && typeof errorData.errors === "object") {
-            // Look for cylinder_number errors
-            if (Array.isArray(errorData.errors.cylinder_number)) {
-              message = errorData.errors.cylinder_number.join(" ");
-            } else {
-              // Fallback: join all error messages
-              message = Object.values(errorData.errors).flat().join(" ");
-            }
-          } else if (typeof errorData === "string") {
-            message = errorData;
-          }
-        }
-        // Refine known error
-        if (message.includes("cylinder_number must be unique")) {
-          message =
-            "Cylinder number already exists. Please use a unique cylinder number.";
-        }
-      } catch (e) {
-        // fallback to status text if JSON parse fails
-        if (response.status === 401) {
-          message = "Unauthorized";
-        } else if (response.statusText) {
-          message = response.statusText;
-        }
+      let message = await parseApiError(response, "Failed to create cylinder");
+      if (message.includes("cylinder_number must be unique")) {
+        message =
+          "Cylinder number already exists. Please use a unique cylinder number.";
       }
       throw new Error(message);
     }
@@ -165,9 +137,9 @@ export const cylinderMasterService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to update cylinder";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to update cylinder"),
+      );
     }
 
     const data: ApiCylinder = await response.json();
@@ -187,9 +159,9 @@ export const cylinderMasterService = {
     });
 
     if (!response.ok) {
-      const message =
-        response.status === 401 ? "Unauthorized" : "Failed to delete cylinder";
-      throw new Error(message);
+      throw new Error(
+        await parseApiError(response, "Failed to delete cylinder"),
+      );
     }
 
     cylindersCache = cylindersCache.filter((cylinder) => cylinder.id !== id);
