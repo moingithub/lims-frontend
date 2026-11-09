@@ -130,8 +130,15 @@ export function SampleCheckIn({
     return preferredType?.analysis_code ?? activeTypes[0]?.analysis_code ?? "";
   };
 
+  const getDefaultAnalysisTypes = (): string[] => {
+    const defaultType = getDefaultAnalysisType();
+    return defaultType ? [defaultType] : [];
+  };
+
   // Form fields for scanned data
-  const [analysisType, setAnalysisType] = useState(getDefaultAnalysisType());
+  const [selectedAnalysisTypes, setSelectedAnalysisTypes] = useState<string[]>(
+    getDefaultAnalysisTypes(),
+  );
   const [checkInType, setCheckInType] = useState<
     "Cylinder" | "Bottle" | "CP Cylinder"
   >("Cylinder");
@@ -242,12 +249,13 @@ export function SampleCheckIn({
               (analysis) =>
                 analysis.analysis_code.trim().toLowerCase() === "gpa 2261",
             )?.analysis_code ?? activeAnalysisTypes[0].analysis_code;
-          if (
-            !analysisType ||
-            !activeAnalysisTypes.some((a) => a.analysis_code === analysisType)
-          ) {
-            setAnalysisType(defaultAnalysisType);
-          }
+          setSelectedAnalysisTypes((current) => {
+            const valid = current.filter((code) =>
+              activeAnalysisTypes.some((a) => a.analysis_code === code),
+            );
+            if (valid.length > 0) return valid;
+            return defaultAnalysisType ? [defaultAnalysisType] : [];
+          });
         }
 
         setAnalysisCounter(nextSequence);
@@ -690,21 +698,26 @@ export function SampleCheckIn({
       return;
     }
 
-    // Normalize cylinder number to uppercase
+    if (selectedAnalysisTypes.length === 0) {
+      toast.error("Select at least one analysis type");
+      return;
+    }
+
     const normalizedCylinderNumber = cylinderNumber.trim().toUpperCase();
 
-    // Check for duplicate cylinder number in the check-in list (case-insensitive)
-    const isDuplicate = checkedInCylinders.some(
-      (cylinder) =>
-        cylinder.cylinder_number.toUpperCase() === normalizedCylinderNumber,
-    );
-
-    if (isDuplicate) {
-      toast.error(
-        `Cylinder Number "${normalizedCylinderNumber}" has already been added to the check-in list. Please use a different cylinder.`,
-        { duration: 5000 },
+    for (const type of selectedAnalysisTypes) {
+      const isDuplicate = checkedInCylinders.some(
+        (cylinder) =>
+          cylinder.cylinder_number.toUpperCase() === normalizedCylinderNumber &&
+          cylinder.analysis_type === type,
       );
-      return;
+      if (isDuplicate) {
+        toast.error(
+          `Cylinder "${normalizedCylinderNumber}" with analysis type "${type}" is already on the check-in list.`,
+          { duration: 5000 },
+        );
+        return;
+      }
     }
 
     // Validate cylinder number against Cylinder Master if NOT customer-owned
@@ -773,26 +786,16 @@ export function SampleCheckIn({
       }
     }
 
-    // Generate unique analysis number
-    const generatedAnalysisNumber =
-      sampleCheckInService.generateAnalysisNumber(analysisCounter);
-
-    const analysisTypeId =
-      analysisPricingService.getAnalysisPriceByCode(analysisType)?.id;
     const areaId = companyAreaService.getAreaByName(area)?.id;
     const normalizedSampleType = sampleType === "spot" ? "Spot" : "Composite";
 
-    // Prepare cylinder data (without id, created_by - service will add them)
-    const cylinderData: Partial<CheckedInCylinder> = {
+    const sharedCylinderFields: Partial<CheckedInCylinder> = {
       company_id: selectedCompanyId ?? 0,
       company_contact_id: selectedContactId ?? undefined,
-      analysis_type_id: analysisTypeId,
       area_id: areaId,
       customer_cylinder: customerCylinder,
       sampled_by_lab: sampledByNatty,
       cylinder_id: matchedCylinder?.id ?? null,
-      analysis_number: generatedAnalysisNumber,
-      analysis_type: analysisType,
       area,
       customer_owned_cylinder: customerCylinder,
       cylinder_number: normalizedCylinderNumber,
@@ -823,26 +826,45 @@ export function SampleCheckIn({
       status: "Pending",
     };
 
-    // ✅ SAVE cylinder individually to sampleCheckInService
-    const savedCylinder = sampleCheckInService.saveCheckIn(
-      selectedCompanyId!,
-      selectedContactId!,
-      cylinderData,
-      1, // TODO: Replace with actual logged-in user ID
+    let nextSequence = analysisCounter;
+    const newRows: CheckedInCylinder[] = [];
+
+    for (const type of selectedAnalysisTypes) {
+      const generatedAnalysisNumber =
+        sampleCheckInService.generateAnalysisNumber(nextSequence);
+      nextSequence += 1;
+
+      const analysisTypeId =
+        analysisPricingService.getAnalysisPriceByCode(type)?.id;
+
+      const savedCylinder = sampleCheckInService.saveCheckIn(
+        selectedCompanyId!,
+        selectedContactId!,
+        {
+          ...sharedCylinderFields,
+          analysis_type_id: analysisTypeId,
+          analysis_number: generatedAnalysisNumber,
+          analysis_type: type,
+        },
+        1,
+      );
+      newRows.push(savedCylinder);
+    }
+
+    setCheckedInCylinders([...checkedInCylinders, ...newRows]);
+    setAnalysisCounter(nextSequence);
+
+    toast.success(
+      newRows.length === 1
+        ? "Sample added to check-in list"
+        : `${newRows.length} samples added to check-in list`,
     );
 
-    // Add to component state for display in the table
-    setCheckedInCylinders([...checkedInCylinders, savedCylinder]);
-
-    // Increment the analysis counter for next cylinder
-    setAnalysisCounter(analysisCounter + 1);
-
-    // Clear all fields except customer/contact
     clearForm();
   };
 
   const clearForm = () => {
-    setAnalysisType(getDefaultAnalysisType());
+    setSelectedAnalysisTypes(getDefaultAnalysisTypes());
     setCustomerCylinder(false);
     setRushed(false);
     setDate("");
@@ -1043,7 +1065,7 @@ export function SampleCheckIn({
               />
 
               <AnalysisOptionsForm
-                analysisType={analysisType}
+                selectedAnalysisTypes={selectedAnalysisTypes}
                 area={area}
                 customerCylinder={customerCylinder}
                 rushed={rushed}
@@ -1051,7 +1073,7 @@ export function SampleCheckIn({
                 companyAreas={companyAreas}
                 customerName={customerName}
                 selectedCompanyId={selectedCompanyId}
-                onAnalysisTypeChange={setAnalysisType}
+                onSelectedAnalysisTypesChange={setSelectedAnalysisTypes}
                 onAreaChange={handleAreaSelect}
                 onCustomerCylinderChange={setCustomerCylinder}
                 onRushedChange={setRushed}

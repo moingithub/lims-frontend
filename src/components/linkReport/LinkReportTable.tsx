@@ -47,7 +47,7 @@ export function LinkReportTable({
             <TableHead>Analysis Type</TableHead>
             <TableHead>Cylinder #</TableHead>
             <TableHead>Analysis #</TableHead>
-            <TableHead>Well Name</TableHead>
+            <TableHead>Well/Facility</TableHead>
             <TableHead>Meter #</TableHead>
             <TableHead>Sample Date</TableHead>
             <TableHead>Status</TableHead>

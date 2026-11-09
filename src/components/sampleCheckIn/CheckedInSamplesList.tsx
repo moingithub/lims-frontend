@@ -36,7 +36,7 @@ export function CheckedInSamplesList({
             <TableHeader>
               <TableRow>
                 <TableHead>Analysis #</TableHead>
-                <TableHead>Well Name</TableHead>
+                <TableHead>Well/Facility</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Rushed</TableHead>
                 <TableHead className="text-right">Action</TableHead>

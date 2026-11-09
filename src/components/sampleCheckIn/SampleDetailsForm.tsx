@@ -142,11 +142,11 @@ export function SampleDetailsForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Well/Facility Name</Label>
+          <Label>Well/Facility</Label>
           <Input
             value={wellName}
             onChange={(e) => onWellNameChange(e.target.value)}
-            placeholder="Well/Facility name"
+            placeholder="Well/Facility"
           />
         </div>
 

@@ -62,7 +62,7 @@ export interface GasAnalysisReport {
   analyzed_on: string;
   analyzed_by: string;
   producer: string;
-  well_lease: string;
+  well_name: string;
   meter_number: string;
   sample_type: string;
   remarks: string;
@@ -117,6 +117,7 @@ type ApiAnalysisReportResponse = {
   };
   sample_information?: {
     producer?: string;
+    well_name?: string;
     well_lease?: string;
     meter_number?: string;
     sample_type?: string;
@@ -252,7 +253,7 @@ const mapApiGasAnalysisReport = (
     analyzed_on: report.analyzed_on ?? "",
     analyzed_by: report.analyzed_by ?? "",
     producer: sample.producer ?? "",
-    well_lease: sample.well_lease ?? "",
+    well_name: sample.well_name ?? sample.well_lease ?? "",
     meter_number: sample.meter_number ?? "",
     sample_type: sample.sample_type ?? "",
     remarks: sample.remarks ?? "",
@@ -502,7 +503,7 @@ export const analysisReportsService = {
       "Analysis Type",
       "Analysis #",
       "Cylinder #",
-      "Well Name",
+      "Well/Facility",
       "Meter #",
       "Status",
     ];

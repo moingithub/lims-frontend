@@ -523,7 +523,7 @@ export const reportFilesService = {
       "Analysis Type",
       "Cylinder #",
       "Analysis #",
-      "Well Name",
+      "Well/Facility",
       "Meter #",
       "Sample Date",
       "Status",

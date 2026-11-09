@@ -414,7 +414,9 @@ export function WorkOrderReportDialog({
                       <TableHead className="text-blue-600">
                         Producer
                       </TableHead>
-                      <TableHead className="text-blue-600">Well</TableHead>
+                      <TableHead className="text-blue-600">
+                        Well/Facility
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -555,7 +557,7 @@ export function WorkOrderReportDialog({
                       <p className="text-sm">{cylinder.area?.trim() || "N/A"}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Well Name</p>
+                      <p className="text-xs text-muted-foreground">Well/Facility</p>
                       <p className="text-sm">{cylinder.well_name || "N/A"}</p>
                     </div>
                     <div>

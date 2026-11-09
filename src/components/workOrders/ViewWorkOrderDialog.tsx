@@ -125,7 +125,7 @@ export function ViewWorkOrderDialog({
                       <TableHead>CC #</TableHead>
                       <TableHead>Analysis Type</TableHead>
                       <TableHead>Priority</TableHead>
-                      <TableHead>Well Name</TableHead>
+                      <TableHead>Well/Facility</TableHead>
                       <TableHead>Meter #</TableHead>
                       <TableHead className="text-right">Rate</TableHead>
                       <TableHead className="text-right">Sample Fee</TableHead>

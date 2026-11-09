@@ -244,11 +244,11 @@ export function SampleCheckInForm({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Well Name</Label>
+          <Label>Well/Facility</Label>
           <Input
             value={formData.wellName}
             onChange={(e) => onFormChange({ wellName: e.target.value })}
-            placeholder="Enter well name"
+            placeholder="Well/Facility"
           />
         </div>
         <div className="space-y-2">

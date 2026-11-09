@@ -53,7 +53,7 @@ export function SelectedOrdersDetails({ orders }: SelectedOrdersDetailsProps) {
                     <TableHead>Analysis #</TableHead>
                     <TableHead>Analysis Type</TableHead>
                     <TableHead>Meter #</TableHead>
-                    <TableHead>Well Name</TableHead>
+                    <TableHead>Well/Facility</TableHead>
                     <TableHead>Rushed</TableHead>
                     <TableHead className="text-right">Price</TableHead>
                   </TableRow>

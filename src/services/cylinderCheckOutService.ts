@@ -292,7 +292,7 @@ export const cylinderCheckOutService = {
                 </div>
 
                 <div class="form-row">
-                  <span class="label">Well Name:</span>
+                  <span class="label">Well/Facility:</span>
                   <span class="value"></span>
                 </div>
 

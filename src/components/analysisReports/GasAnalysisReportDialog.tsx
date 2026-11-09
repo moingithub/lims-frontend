@@ -390,7 +390,7 @@ function GasAnalysisReportPDFDocument({
           <View style={S.sampleColumn}>
             {[
               ["Producer", report.producer],
-              ["Well/Lease", report.well_lease],
+              ["Well/Facility", report.well_name],
               ["Meter#", report.meter_number],
               ["Pressure Measured", report.pressure_measured],
               ["Amb. Temp", report.amb_temp],
@@ -785,8 +785,8 @@ export function GasAnalysisReportDialog({
                         value={displayValue(report.producer)}
                       />
                       <InfoField
-                        label="Well/Lease:"
-                        value={displayValue(report.well_lease)}
+                        label="Well/Facility:"
+                        value={displayValue(report.well_name)}
                       />
                       <InfoField
                         label="Meter#:"

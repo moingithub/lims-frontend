@@ -38,7 +38,7 @@ export function AnalysisReportsTable({
             <TableHead>Analysis Type</TableHead>
             <TableHead>Analysis #</TableHead>
             <TableHead>Cylinder #</TableHead>
-            <TableHead>Well Name</TableHead>
+            <TableHead>Well/Facility</TableHead>
             <TableHead>Meter #</TableHead>
             <TableHead>Status</TableHead>
             <TableHead className="text-center">Tag Image</TableHead>

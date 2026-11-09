@@ -1249,8 +1249,13 @@ export const sampleCheckInService = {
     if (ocrApiData.Area) {
       mapped.area = String(ocrApiData.Area);
     }
-    if (ocrApiData.Well_Lease) {
-      mapped.well_name = String(ocrApiData.Well_Lease);
+    const wellName = getOcrFieldValue(ocrApiData, [
+      "well_name",
+      "Well_Name",
+      "Well_Lease",
+    ]);
+    if (wellName) {
+      mapped.well_name = wellName;
     }
     if (ocrApiData.Meter_Number) {
       mapped.meter_number = String(ocrApiData.Meter_Number);

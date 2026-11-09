@@ -60,10 +60,10 @@ export function AnalysisReportsFilters({
       </Select>
       <Select value={wellNameFilter} onValueChange={onWellNameChange}>
         <SelectTrigger className="w-[220px]">
-          <SelectValue placeholder="Filter by well name" />
+          <SelectValue placeholder="Filter by well/facility" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Well Names</SelectItem>
+          <SelectItem value="all">All Well/Facility</SelectItem>
           {wellNames.map((wellName) => (
             <SelectItem key={wellName} value={wellName}>
               {wellName}
