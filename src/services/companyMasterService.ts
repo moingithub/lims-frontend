@@ -60,6 +60,10 @@ export const getPressureBaseFactor = (pressureBase: number): number => {
   return match?.factor ?? 0;
 };
 
+export const DEFAULT_PRESSURE_BASE = 14.65;
+export const DEFAULT_PRESSURE_BASE_FACTOR =
+  getPressureBaseFactor(DEFAULT_PRESSURE_BASE);
+
 const mapApiCompany = (company: ApiCompany): Company => ({
   id: company.id,
   company_code: company.code,

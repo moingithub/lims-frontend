@@ -11,6 +11,9 @@ import { toast } from "sonner";
 import {
   Company,
   companyMasterService,
+  DEFAULT_PRESSURE_BASE,
+  DEFAULT_PRESSURE_BASE_FACTOR,
+  PRESSURE_BASE_OPTIONS,
 } from "../services/companyMasterService";
 import { SearchBar } from "../components/shared/SearchBar";
 import { CompanyMasterTable } from "../components/companyMaster/CompanyMasterTable";
@@ -38,8 +41,8 @@ export function CompanyMaster() {
     billing_address: "",
     charge_h2_pop_fee: false,
     h2_pop_fee_rate: "",
-    pressure_base: "",
-    pressure_base_factor: "",
+    pressure_base: DEFAULT_PRESSURE_BASE,
+    pressure_base_factor: DEFAULT_PRESSURE_BASE_FACTOR,
     active: true,
   });
 
@@ -88,8 +91,8 @@ export function CompanyMaster() {
       billing_address: "",
       charge_h2_pop_fee: false,
       h2_pop_fee_rate: "",
-      pressure_base: "",
-      pressure_base_factor: "",
+      pressure_base: DEFAULT_PRESSURE_BASE,
+      pressure_base_factor: DEFAULT_PRESSURE_BASE_FACTOR,
       active: true,
     });
     setIsAddDialogOpen(true);
@@ -108,8 +111,16 @@ export function CompanyMaster() {
       billing_address: company.billing_address,
       charge_h2_pop_fee: company.charge_h2_pop_fee,
       h2_pop_fee_rate: company.h2_pop_fee_rate,
-      pressure_base: company.pressure_base || "",
-      pressure_base_factor: company.pressure_base_factor || "",
+      pressure_base: PRESSURE_BASE_OPTIONS.some(
+        (option) => option.value === company.pressure_base,
+      )
+        ? company.pressure_base
+        : DEFAULT_PRESSURE_BASE,
+      pressure_base_factor: PRESSURE_BASE_OPTIONS.some(
+        (option) => option.value === company.pressure_base,
+      )
+        ? company.pressure_base_factor
+        : DEFAULT_PRESSURE_BASE_FACTOR,
       active: company.active,
     });
     setIsEditDialogOpen(true);
@@ -139,10 +150,12 @@ export function CompanyMaster() {
         h2_pop_fee_rate:
           formData.h2_pop_fee_rate === "" ? 0 : formData.h2_pop_fee_rate,
         pressure_base:
-          formData.pressure_base === "" ? 0 : formData.pressure_base,
+          formData.pressure_base === ""
+            ? DEFAULT_PRESSURE_BASE
+            : formData.pressure_base,
         pressure_base_factor:
           formData.pressure_base_factor === ""
-            ? 0
+            ? DEFAULT_PRESSURE_BASE_FACTOR
             : formData.pressure_base_factor,
         active: formData.active,
       });
@@ -183,10 +196,12 @@ export function CompanyMaster() {
           h2_pop_fee_rate:
           formData.h2_pop_fee_rate === "" ? 0 : formData.h2_pop_fee_rate,
           pressure_base:
-            formData.pressure_base === "" ? 0 : formData.pressure_base,
+            formData.pressure_base === ""
+              ? DEFAULT_PRESSURE_BASE
+              : formData.pressure_base,
           pressure_base_factor:
             formData.pressure_base_factor === ""
-              ? 0
+              ? DEFAULT_PRESSURE_BASE_FACTOR
               : formData.pressure_base_factor,
           active: formData.active,
         },

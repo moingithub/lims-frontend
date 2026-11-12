@@ -9,6 +9,7 @@ import {
 } from "../ui/select";
 import {
   billingReferenceTypes,
+  DEFAULT_PRESSURE_BASE,
   getPressureBaseFactor,
   PRESSURE_BASE_OPTIONS,
 } from "../../services/companyMasterService";
@@ -170,24 +171,15 @@ export function CompanyMasterForm({
         <div className="space-y-2">
           <Label>Pressure Base</Label>
           <Select
-            value={
-              formData.pressure_base === ""
-                ? "__none__"
-                : PRESSURE_BASE_OPTIONS.some(
-                      (option) => option.value === formData.pressure_base,
-                    )
-                  ? String(formData.pressure_base)
-                  : "__none__"
-            }
+            value={String(
+              formData.pressure_base === "" ||
+                !PRESSURE_BASE_OPTIONS.some(
+                  (option) => option.value === formData.pressure_base,
+                )
+                ? DEFAULT_PRESSURE_BASE
+                : formData.pressure_base,
+            )}
             onValueChange={(value) => {
-              if (value === "__none__") {
-                onChange({
-                  ...formData,
-                  pressure_base: "",
-                  pressure_base_factor: "",
-                });
-                return;
-              }
               const pressure_base = parseFloat(value);
               onChange({
                 ...formData,
@@ -197,10 +189,9 @@ export function CompanyMasterForm({
             }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select pressure base (optional)" />
+              <SelectValue placeholder="Select pressure base" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__none__">None</SelectItem>
               {PRESSURE_BASE_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={String(option.value)}>
                   {option.label}
