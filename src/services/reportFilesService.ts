@@ -1,5 +1,11 @@
 import { API_BASE_URL } from "../config/api";
-import { formatDateUS, toIsoDateInputValue } from "../utils/dateUtils";
+import {
+  dateTimeLocalInputToIso,
+  formatDateUS,
+  getCurrentDateTimeLocalInputValue,
+  toDateTimeLocalInputValue,
+  toIsoDateInputValue,
+} from "../utils/dateUtils";
 import { authService } from "./authService";
 import { sampleCheckInService } from "./sampleCheckInService";
 
@@ -164,11 +170,9 @@ export function isoDateInputToEffectiveApiDate(isoDate: string): string {
   return `${day.padStart(2, "0")}-${month.padStart(2, "0")}-${year}`;
 }
 
-/** HTML date input → ISO datetime for analyzed_on. */
+/** datetime-local input → ISO datetime for analyzed_on. */
 export function isoDateInputToAnalyzedOnIso(isoDate: string): string {
-  const trimmed = isoDate.trim();
-  if (!trimmed) return "";
-  return `${trimmed}T12:00:00.000Z`;
+  return dateTimeLocalInputToIso(isoDate);
 }
 
 export function buildReportTemplatePatchPayload(
@@ -196,11 +200,8 @@ export function buildReportTemplatePatchPayload(
   };
 }
 
-function todayIsoDateInputValue(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
+function todayDateTimeLocalInputValue(): string {
+  return getCurrentDateTimeLocalInputValue();
 }
 
 function firstNonEmpty(...values: (string | null | undefined)[]): string {
@@ -227,9 +228,9 @@ export async function loadReportTemplateDownloadFields(
   const instrument = firstNonEmpty(record.instrument, sample?.instrument);
   const analyzedBy = firstNonEmpty(record.analyzed_by, sample?.analyzed_by);
   const analyzedOn =
-    dateToIsoInput(record.analyzed_on) ||
-    dateToIsoInput(sample?.analyzed_on) ||
-    todayIsoDateInputValue();
+    toDateTimeLocalInputValue(record.analyzed_on ?? "") ||
+    toDateTimeLocalInputValue(sample?.analyzed_on ?? "") ||
+    todayDateTimeLocalInputValue();
   const effectiveStartDate =
     dateToIsoInput(record.effective_start_date) ||
     dateToIsoInput(sample?.effective_start_date);

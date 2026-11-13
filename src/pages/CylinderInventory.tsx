@@ -13,7 +13,6 @@ import { CylinderInventoryFilters } from "../components/cylinderInventory/Cylind
 export function CylinderInventory() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [locationFilter, setLocationFilter] = useState("all");
 
   const [inventoryData, setInventoryData] = useState<CylinderInventoryItem[]>(
     [],
@@ -29,7 +28,6 @@ export function CylinderInventory() {
   }, []);
 
   const statuses = cylinderInventoryService.getUniqueStatuses(inventoryData);
-  const locations = cylinderInventoryService.getUniqueLocations(inventoryData);
 
   // Apply filters
   let filteredData = cylinderInventoryService.searchInventory(
@@ -40,11 +38,6 @@ export function CylinderInventory() {
     filteredData,
     statusFilter,
   );
-  filteredData = cylinderInventoryService.filterByLocation(
-    filteredData,
-    locationFilter,
-  );
-
   return (
     <div className="space-y-6">
       <Card>
@@ -63,11 +56,8 @@ export function CylinderInventory() {
             <div className="flex gap-2">
               <CylinderInventoryFilters
                 statusFilter={statusFilter}
-                locationFilter={locationFilter}
                 statuses={statuses}
-                locations={locations}
                 onStatusChange={setStatusFilter}
-                onLocationChange={setLocationFilter}
               />
             </div>
           </div>

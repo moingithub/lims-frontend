@@ -47,7 +47,7 @@ export function LoginForm({
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@lims.com"
+                placeholder="Enter your email"
                 value={formData.email}
                 onChange={(e) =>
                   onFormChange({ ...formData, email: e.target.value })
@@ -107,25 +107,6 @@ export function LoginForm({
             {isLoading ? "Signing in..." : "Sign In"}
           </Button>
         </form>
-
-        <div className="mt-6 pt-6 border-t">
-          <div className="text-center text-sm text-muted-foreground space-y-3">
-            <div>
-              <p className="mb-2">Quick Login Credentials:</p>
-            </div>
-            <div className="space-y-2">
-              <div className="bg-blue-50 p-3 rounded-md">
-                <p className="text-xs text-blue-600 mb-1">
-                  Administrator (Full Access)
-                </p>
-                <p className="text-foreground">
-                  <span className="font-semibold">admin@lims.com</span> /{" "}
-                  <span className="font-semibold">admin123!</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
       </CardContent>
     </Card>
   );

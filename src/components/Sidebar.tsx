@@ -21,6 +21,7 @@ import {
   Wrench,
   FileInput,
   Files,
+  SprayCan,
 } from "lucide-react";
 import { ScrollArea } from "./ui/scroll-area";
 import { Separator } from "./ui/separator";
@@ -78,6 +79,12 @@ export function Sidebar({ activePage, onNavigate }: SidebarProps) {
       label: "Dashboard",
       icon: <LayoutDashboard className="w-5 h-5 text-blue-500" />,
       moduleName: "dashboard",
+    },
+    {
+      id: "cylinder-cleanup",
+      label: "Cylinder Clean-Up",
+      icon: <SprayCan className="w-5 h-5 text-slate-600" />,
+      moduleName: "cylinder_master",
     },
     {
       id: "cylinder-checkout",

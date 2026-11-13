@@ -1,7 +1,12 @@
 import { API_BASE_URL } from "../config/api";
 import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
-import { cylinderMasterService } from "./cylinderMasterService";
+import {
+  CYLINDER_STATUS_CHECKED_IN,
+  CYLINDER_STATUS_CHECKED_OUT,
+  CYLINDER_STATUS_CLEAN,
+  cylinderMasterService,
+} from "./cylinderMasterService";
 import { companyMasterService } from "./companyMasterService";
 import { contactsService } from "./contactsService";
 
@@ -136,11 +141,14 @@ export const cylinderCheckOutService = {
       };
     }
 
-    // Check cylinder location - only allow check-out from "Clean Cylinder" location
-    if (cylinder.location === "Checked Out") {
+    if (cylinder.status !== CYLINDER_STATUS_CLEAN) {
+      const message =
+        cylinder.status === CYLINDER_STATUS_CHECKED_OUT
+          ? `Cylinder Number "${normalizedBarcode}" is already checked out.`
+          : `Cylinder Number "${normalizedBarcode}" cannot be checked out. Current status: "${cylinder.status}". Only "${CYLINDER_STATUS_CLEAN}" cylinders can be checked out.`;
       return {
         valid: false,
-        error: `Cylinder Number "${normalizedBarcode}" is already checked out. Current location: ${cylinder.location}`,
+        error: message,
       };
     }
 
@@ -152,7 +160,7 @@ export const cylinderCheckOutService = {
         id: cylinder.id,
         cylinder_number: cylinder.cylinder_number,
         cylinder_type: cylinder.cylinder_type,
-        location: cylinder.location,
+        status: cylinder.status,
         track_inventory: cylinder.track_inventory,
       },
     };
@@ -487,6 +495,18 @@ export const cylinderCheckOutService = {
       }),
     );
 
+    const returnedCylinderIds = pendingRecords.map(
+      (record) => record.cylinder_id,
+    );
+    await Promise.all(
+      returnedCylinderIds.map((cylinderId) =>
+        cylinderMasterService.setCylinderStatus(
+          cylinderId,
+          CYLINDER_STATUS_CHECKED_IN,
+        ),
+      ),
+    );
+
     checkOutApiCacheLoaded = false;
   },
 
@@ -521,6 +541,15 @@ export const cylinderCheckOutService = {
           );
         }
       }),
+    );
+
+    await Promise.all(
+      payloads.map((payload) =>
+        cylinderMasterService.setCylinderStatus(
+          payload.cylinder_id,
+          CYLINDER_STATUS_CHECKED_OUT,
+        ),
+      ),
     );
 
     checkOutApiCacheLoaded = false;

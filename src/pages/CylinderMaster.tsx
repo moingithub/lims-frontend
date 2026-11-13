@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import {
   Cylinder,
   cylinderMasterService,
-  DEFAULT_CYLINDER_LOCATION,
+  DEFAULT_CYLINDER_STATUS,
 } from "../services/cylinderMasterService";
 import { SearchBar } from "../components/shared/SearchBar";
 import { CylinderMasterTable } from "../components/cylinderMaster/CylinderMasterTable";
@@ -39,7 +39,7 @@ export function CylinderMaster({ currentUser }: CylinderMasterProps) {
     cylinder_number: "",
     cylinder_type: "",
     track_inventory: "",
-    location: DEFAULT_CYLINDER_LOCATION,
+    status: DEFAULT_CYLINDER_STATUS,
     active: true,
   });
 
@@ -82,7 +82,7 @@ export function CylinderMaster({ currentUser }: CylinderMasterProps) {
       cylinder_number: "",
       cylinder_type: "",
       track_inventory: "",
-      location: DEFAULT_CYLINDER_LOCATION,
+      status: DEFAULT_CYLINDER_STATUS,
       active: true,
     });
     setIsAddDialogOpen(true);
@@ -95,7 +95,7 @@ export function CylinderMaster({ currentUser }: CylinderMasterProps) {
       cylinder_number: cylinder.cylinder_number,
       cylinder_type: cylinder.cylinder_type,
       track_inventory: cylinder.track_inventory,
-      location: DEFAULT_CYLINDER_LOCATION,
+      status: cylinder.status,
       active: cylinder.active,
     });
     setIsEditDialogOpen(true);
@@ -117,7 +117,7 @@ export function CylinderMaster({ currentUser }: CylinderMasterProps) {
         cylinder_number: formData.cylinder_number,
         cylinder_type: formData.cylinder_type,
         track_inventory: formData.track_inventory,
-        location: formData.location,
+        status: formData.status,
         active: formData.active,
       });
       const updatedCylinders = [...cylinderData, created];
@@ -149,7 +149,7 @@ export function CylinderMaster({ currentUser }: CylinderMasterProps) {
           cylinder_number: formData.cylinder_number,
           cylinder_type: formData.cylinder_type,
           track_inventory: formData.track_inventory,
-          location: formData.location,
+          status: formData.status,
           active: formData.active,
         },
       );

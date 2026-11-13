@@ -26,6 +26,7 @@ import { Invoices } from "./pages/Invoices";
 import { ImportMachineReport } from "./pages/ImportMachineReport";
 import { MapAnalysisPosition } from "./pages/MapAnalysisPosition";
 import { LinkReport } from "./pages/LinkReport";
+import { CylinderCleanUp } from "./pages/CylinderCleanUp";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 
@@ -124,6 +125,13 @@ function AppContent() {
         return (
           <ProtectedRoute moduleName="dashboard">
             <Dashboard />
+          </ProtectedRoute>
+        );
+
+      case "cylinder-cleanup":
+        return (
+          <ProtectedRoute moduleName="cylinder_master">
+            <CylinderCleanUp />
           </ProtectedRoute>
         );
 

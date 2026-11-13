@@ -232,6 +232,66 @@ export function formatCheckInTime(value: string | null | undefined): string {
  * @param isoDateTime - ISO datetime string (YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD HH:MM:SS)
  * @returns Formatted datetime string in MM/DD/YYYY h:mm AM/PM format
  */
+/**
+ * Normalize assorted datetimes to YYYY-MM-DDTHH:mm for HTML datetime-local inputs.
+ */
+export function toDateTimeLocalInputValue(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return `${trimmed}T12:00`;
+  }
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) {
+    const dateOnly = toIsoDateInputValue(trimmed);
+    return dateOnly ? `${dateOnly}T12:00` : "";
+  }
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  const hours = String(parsed.getHours()).padStart(2, "0");
+  const minutes = String(parsed.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+/**
+ * Convert datetime-local value (YYYY-MM-DDTHH:mm) to ISO-8601 for APIs.
+ */
+export function dateTimeLocalInputToIso(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(trimmed)) {
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString();
+    }
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return `${trimmed}T12:00:00.000Z`;
+  }
+
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString();
+  }
+
+  return "";
+}
+
+/** Current local date/time for datetime-local inputs. */
+export function getCurrentDateTimeLocalInputValue(): string {
+  return toDateTimeLocalInputValue(new Date().toISOString());
+}
+
 export function formatDateTimeUS(isoDateTime: string): string {
   if (!isoDateTime) return "";
 

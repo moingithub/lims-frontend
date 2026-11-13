@@ -16,7 +16,6 @@ export function CylinderInventoryTable({ inventory }: CylinderInventoryTableProp
           <TableRow>
             <TableHead>Cylinder Number</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Location</TableHead>
             <TableHead>Issued To</TableHead>
             <TableHead>Since Days</TableHead>
             <TableHead>Email</TableHead>
@@ -25,7 +24,7 @@ export function CylinderInventoryTable({ inventory }: CylinderInventoryTableProp
         <TableBody>
           {inventory.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+              <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                 No records found
               </TableCell>
             </TableRow>
@@ -38,7 +37,6 @@ export function CylinderInventoryTable({ inventory }: CylinderInventoryTableProp
                     {item.status}
                   </Badge>
                 </TableCell>
-                <TableCell>{item.location}</TableCell>
                 <TableCell>{item.issued_to}</TableCell>
                 <TableCell>{item.since_days}</TableCell>
                 <TableCell>

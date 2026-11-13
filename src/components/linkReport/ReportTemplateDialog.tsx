@@ -203,7 +203,8 @@ export function ReportTemplateDialog({
             <Label htmlFor="report-analyzed-on">Analyzed On</Label>
             <Input
               id="report-analyzed-on"
-              type="date"
+              type="datetime-local"
+              step={60}
               value={analyzedOn}
               onChange={(e) => setAnalyzedOn(e.target.value)}
               disabled={fieldsDisabled}

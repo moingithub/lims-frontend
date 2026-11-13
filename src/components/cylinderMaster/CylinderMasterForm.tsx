@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import {
   cylinderTypes,
   trackInventoryOptions,
-  DEFAULT_CYLINDER_LOCATION,
+  DEFAULT_CYLINDER_STATUS,
 } from "../../services/cylinderMasterService";
 
 export interface CylinderFormData {
@@ -12,7 +12,7 @@ export interface CylinderFormData {
   cylinder_number: string;
   cylinder_type: string;
   track_inventory: string;
-  location: string;
+  status: string;
   active: boolean;
   created_by?: number;
 }
@@ -76,14 +76,14 @@ export function CylinderMasterForm({ formData, onChange }: CylinderMasterFormPro
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="location">Location *</Label>
-          <Select value={DEFAULT_CYLINDER_LOCATION} disabled>
-            <SelectTrigger id="location">
+          <Label htmlFor="cylinder-status">Status</Label>
+          <Select value={formData.status || DEFAULT_CYLINDER_STATUS} disabled>
+            <SelectTrigger id="cylinder-status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={DEFAULT_CYLINDER_LOCATION}>
-                {DEFAULT_CYLINDER_LOCATION}
+              <SelectItem value={formData.status || DEFAULT_CYLINDER_STATUS}>
+                {formData.status || DEFAULT_CYLINDER_STATUS}
               </SelectItem>
             </SelectContent>
           </Select>

@@ -19,7 +19,7 @@ export function CylinderMasterTable({ cylinders, onEdit, onDelete }: CylinderMas
             <TableHead>Cylinder Number</TableHead>
             <TableHead>Cylinder Type</TableHead>
             <TableHead>Track Inventory</TableHead>
-            <TableHead>Location</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Active</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -37,7 +37,7 @@ export function CylinderMasterTable({ cylinders, onEdit, onDelete }: CylinderMas
                 <TableCell>{cylinder.cylinder_number}</TableCell>
                 <TableCell>{cylinder.cylinder_type}</TableCell>
                 <TableCell>{cylinder.track_inventory}</TableCell>
-                <TableCell>{cylinder.location}</TableCell>
+                <TableCell>{cylinder.status}</TableCell>
                 <TableCell>
                   <ActiveBadge active={cylinder.active} />
                 </TableCell>

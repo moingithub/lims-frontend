@@ -3,12 +3,25 @@ import { API_BASE_URL } from "../config/api";
 import { parseApiError } from "../utils/parseApiError";
 import { authService } from "./authService";
 
+export const CYLINDER_STATUS_CLEAN = "Clean Cylinder";
+export const CYLINDER_STATUS_CHECKED_OUT = "Checked Out";
+export const CYLINDER_STATUS_CHECKED_IN = "Checked In";
+export const CYLINDER_STATUS_UNKNOWN = "Unknown";
+
+export const cylinderStatusOptions = [
+  CYLINDER_STATUS_CLEAN,
+  CYLINDER_STATUS_CHECKED_OUT,
+  CYLINDER_STATUS_CHECKED_IN,
+] as const;
+
+export type CylinderStatus = (typeof cylinderStatusOptions)[number];
+
 export interface Cylinder {
   id: number;
   cylinder_number: string;
   cylinder_type: string;
   track_inventory: string;
-  location: string;
+  status: string;
   active: boolean;
   created_by: number;
 }
@@ -18,9 +31,22 @@ type ApiCylinder = {
   cylinder_number: string;
   cylinder_type: string;
   track_inventory: boolean;
-  location: string;
+  status?: string | null;
+  /** @deprecated renamed to status */
+  location?: string | null;
   active: boolean;
   created_by_id: number | null;
+};
+
+const normalizeCylinderStatus = (
+  status: string | null | undefined,
+): string => {
+  const value = status?.trim();
+  if (!value) return CYLINDER_STATUS_UNKNOWN;
+  if ((cylinderStatusOptions as readonly string[]).includes(value)) {
+    return value;
+  }
+  return CYLINDER_STATUS_UNKNOWN;
 };
 
 let cylindersCache: Cylinder[] = [];
@@ -31,7 +57,7 @@ const mapApiCylinder = (cylinder: ApiCylinder): Cylinder => ({
   cylinder_number: cylinder.cylinder_number,
   cylinder_type: cylinder.cylinder_type,
   track_inventory: cylinder.track_inventory ? "True" : "False",
-  location: cylinder.location,
+  status: normalizeCylinderStatus(cylinder.status ?? cylinder.status),
   active: cylinder.active,
   created_by: cylinder.created_by_id ?? 0,
 });
@@ -49,8 +75,11 @@ const buildAuthHeaders = (): HeadersInit => {
 
 export const cylinderTypes = ["Gas", "Liquid"];
 export const trackInventoryOptions = ["True", "False"];
-export const locationOptions = ["Clean Cylinder", "Checked Out", "Checked In"];
-export const DEFAULT_CYLINDER_LOCATION = "Clean Cylinder";
+export const DEFAULT_CYLINDER_STATUS = CYLINDER_STATUS_CLEAN;
+/** @deprecated use DEFAULT_CYLINDER_STATUS */
+export const DEFAULT_CYLINDER_LOCATION = DEFAULT_CYLINDER_STATUS;
+/** @deprecated use cylinderStatusOptions */
+export const locationOptions = [...cylinderStatusOptions];
 
 export const cylinderMasterService = {
   // ========== CRUD Operations ==========
@@ -98,7 +127,7 @@ export const cylinderMasterService = {
         cylinder_number: cylinder.cylinder_number,
         cylinder_type: cylinder.cylinder_type,
         track_inventory: cylinder.track_inventory === "True",
-        location: cylinder.location,
+        status: cylinder.status || DEFAULT_CYLINDER_STATUS,
         active: cylinder.active,
       }),
     });
@@ -131,7 +160,7 @@ export const cylinderMasterService = {
         cylinder_number: updatedCylinder.cylinder_number,
         cylinder_type: updatedCylinder.cylinder_type,
         track_inventory: updatedCylinder.track_inventory === "True",
-        location: updatedCylinder.location,
+        status: updatedCylinder.status,
         active: updatedCylinder.active,
       }),
     });
@@ -168,7 +197,7 @@ export const cylinderMasterService = {
     cylindersLoaded = true;
   },
 
-  // Search cylinders by cylinder number, type, or location
+  // Search cylinders by cylinder number, type, or status
   searchCylinders: (cylinders: Cylinder[], searchTerm: string): Cylinder[] => {
     return cylinders.filter(
       (cylinder) =>
@@ -178,7 +207,7 @@ export const cylinderMasterService = {
         cylinder.cylinder_type
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        cylinder.location.toLowerCase().includes(searchTerm.toLowerCase()),
+        cylinder.status.toLowerCase().includes(searchTerm.toLowerCase()),
     );
   },
 
@@ -195,10 +224,28 @@ export const cylinderMasterService = {
     if (!cylinder.track_inventory) {
       return { valid: false, error: "Track inventory is required" };
     }
-    if (!cylinder.location || cylinder.location.trim() === "") {
-      return { valid: false, error: "Location is required" };
+    if (!cylinder.status || cylinder.status.trim() === "") {
+      return { valid: false, error: "Status is required" };
     }
     return { valid: true };
+  },
+
+  setCylinderStatus: async (
+    cylinderId: number,
+    status: string,
+  ): Promise<Cylinder> => {
+    const existing = cylindersCache.find((c) => c.id === cylinderId);
+    if (!existing) {
+      throw new Error(`Cylinder id ${cylinderId} not found`);
+    }
+    return cylinderMasterService.updateCylinder(cylinderId, {
+      id: cylinderId,
+      cylinder_number: existing.cylinder_number,
+      cylinder_type: existing.cylinder_type,
+      track_inventory: existing.track_inventory,
+      status,
+      active: existing.active,
+    });
   },
 
   // ========== Helper Methods ==========
@@ -234,9 +281,14 @@ export const cylinderMasterService = {
     );
   },
 
-  // Get cylinders by location
-  getCylindersByLocation: (location: string): Cylinder[] => {
-    return cylindersCache.filter((cylinder) => cylinder.location === location);
+  // Get cylinders by status
+  getCylindersByStatus: (status: string): Cylinder[] => {
+    return cylindersCache.filter((cylinder) => cylinder.status === status);
+  },
+
+  /** @deprecated use getCylindersByStatus */
+  getCylindersByLocation: (status: string): Cylinder[] => {
+    return cylinderMasterService.getCylindersByStatus(status);
   },
 
   // Get active cylinders only
@@ -266,40 +318,39 @@ export const cylinderMasterService = {
   // Get cylinders that are checked out
   getCheckedOutCylinders: (): Cylinder[] => {
     return cylindersCache.filter(
-      (cylinder) => cylinder.location === "Checked Out",
+      (cylinder) => cylinder.status === "Checked Out",
     );
   },
 
   // Get cylinders that are checked in
   getCheckedInCylinders: (): Cylinder[] => {
     return cylindersCache.filter(
-      (cylinder) => cylinder.location === "Checked In",
+      (cylinder) => cylinder.status === "Checked In",
     );
   },
 
   // Get clean cylinders (available)
   getCleanCylinders: (): Cylinder[] => {
     return cylindersCache.filter(
-      (cylinder) => cylinder.location === "Clean Cylinder",
+      (cylinder) => cylinder.status === "Clean Cylinder",
     );
   },
 
   // Get available cylinders (clean and active)
   getAvailableCylinders: (): Cylinder[] => {
     return cylindersCache.filter(
-      (cylinder) => cylinder.location === "Clean Cylinder" && cylinder.active,
+      (cylinder) => cylinder.status === "Clean Cylinder" && cylinder.active,
     );
   },
 
-  // Get cylinders by type and location
-  getCylindersByTypeAndLocation: (
+  // Get cylinders by type and status
+  getCylindersByTypeAndStatus: (
     cylinderType: string,
-    location: string,
+    status: string,
   ): Cylinder[] => {
     return cylindersCache.filter(
       (cylinder) =>
-        cylinder.cylinder_type === cylinderType &&
-        cylinder.location === location,
+        cylinder.cylinder_type === cylinderType && cylinder.status === status,
     );
   },
 
@@ -310,11 +361,11 @@ export const cylinderMasterService = {
     );
   },
 
-  // Get tracked cylinders by location
-  getTrackedCylindersByLocation: (location: string): Cylinder[] => {
+  // Get tracked cylinders by status
+  getTrackedCylindersByStatus: (status: string): Cylinder[] => {
     return cylindersCache.filter(
       (cylinder) =>
-        cylinder.location === location && cylinder.track_inventory === "True",
+        cylinder.status === status && cylinder.track_inventory === "True",
     );
   },
 
@@ -325,9 +376,9 @@ export const cylinderMasterService = {
     ).length;
   },
 
-  // Count cylinders by location
-  countCylindersByLocation: (location: string): number => {
-    return cylindersCache.filter((cylinder) => cylinder.location === location)
+  // Count cylinders by status
+  countCylindersByStatus: (status: string): number => {
+    return cylindersCache.filter((cylinder) => cylinder.status === status)
       .length;
   },
 
@@ -351,7 +402,7 @@ export const cylinderMasterService = {
   // Count available cylinders
   countAvailableCylinders: (): number => {
     return cylindersCache.filter(
-      (cylinder) => cylinder.location === "Clean Cylinder" && cylinder.active,
+      (cylinder) => cylinder.status === "Clean Cylinder" && cylinder.active,
     ).length;
   },
 
@@ -361,10 +412,10 @@ export const cylinderMasterService = {
     return Array.from(new Set(types));
   },
 
-  // Get unique locations
-  getUniqueLocations: (): string[] => {
-    const locations = cylindersCache.map((c) => c.location);
-    return Array.from(new Set(locations));
+  // Get unique statuses
+  getUniqueStatuses: (): string[] => {
+    const statuses = cylindersCache.map((c) => c.status);
+    return Array.from(new Set(statuses));
   },
 
   // ========== Inventory Management Methods ==========
@@ -375,7 +426,7 @@ export const cylinderMasterService = {
       (c) => c.cylinder_number === serialNumber,
     );
     return cylinder
-      ? cylinder.location === "Clean Cylinder" && cylinder.active
+      ? cylinder.status === "Clean Cylinder" && cylinder.active
       : false;
   },
 
@@ -384,7 +435,7 @@ export const cylinderMasterService = {
     const cylinder = cylindersCache.find(
       (c) => c.cylinder_number === serialNumber,
     );
-    return cylinder ? cylinder.location === "Checked Out" : false;
+    return cylinder ? cylinder.status === "Checked Out" : false;
   },
 
   // Check if cylinder needs tracking
@@ -402,7 +453,7 @@ export const cylinderMasterService = {
     );
     if (!cylinder) return "Unknown";
     if (!cylinder.active) return "Inactive";
-    return cylinder.location;
+    return cylinder.status;
   },
 
   // ========== Statistics & Reporting Methods ==========
@@ -418,7 +469,7 @@ export const cylinderMasterService = {
     checkedOut: number;
     checkedIn: number;
     byType: { [type: string]: number };
-    byLocation: { [location: string]: number };
+    byStatus: { [status: string]: number };
   } => {
     const stats = {
       total: cylindersCache.length,
@@ -429,21 +480,21 @@ export const cylinderMasterService = {
       untracked: cylindersCache.filter((c) => c.track_inventory === "False")
         .length,
       available: cylindersCache.filter(
-        (c) => c.location === "Clean Cylinder" && c.active,
+        (c) => c.status === "Clean Cylinder" && c.active,
       ).length,
-      checkedOut: cylindersCache.filter((c) => c.location === "Checked Out")
+      checkedOut: cylindersCache.filter((c) => c.status === "Checked Out")
         .length,
-      checkedIn: cylindersCache.filter((c) => c.location === "Checked In")
+      checkedIn: cylindersCache.filter((c) => c.status === "Checked In")
         .length,
       byType: {} as { [type: string]: number },
-      byLocation: {} as { [location: string]: number },
+      byStatus: {} as { [status: string]: number },
     };
 
     cylindersCache.forEach((cylinder) => {
       stats.byType[cylinder.cylinder_type] =
         (stats.byType[cylinder.cylinder_type] || 0) + 1;
-      stats.byLocation[cylinder.location] =
-        (stats.byLocation[cylinder.location] || 0) + 1;
+      stats.byStatus[cylinder.status] =
+        (stats.byStatus[cylinder.status] || 0) + 1;
     });
 
     return stats;
@@ -464,14 +515,14 @@ export const cylinderMasterService = {
       available: cylindersCache.filter(
         (c) =>
           c.cylinder_type === type &&
-          c.location === "Clean Cylinder" &&
+          c.status === "Clean Cylinder" &&
           c.active,
       ).length,
       checkedOut: cylindersCache.filter(
-        (c) => c.cylinder_type === type && c.location === "Checked Out",
+        (c) => c.cylinder_type === type && c.status === "Checked Out",
       ).length,
       checkedIn: cylindersCache.filter(
-        (c) => c.cylinder_type === type && c.location === "Checked In",
+        (c) => c.cylinder_type === type && c.status === "Checked In",
       ).length,
     }));
   },
@@ -491,7 +542,7 @@ export const cylinderMasterService = {
       const available = cylindersCache.filter(
         (c) =>
           c.cylinder_type === type &&
-          c.location === "Clean Cylinder" &&
+          c.status === "Clean Cylinder" &&
           c.active,
       ).length;
 
@@ -521,7 +572,7 @@ export const cylinderMasterService = {
   getAvailableSerialNumbers: (): string[] => {
     return cylindersCache
       .filter(
-        (cylinder) => cylinder.location === "Clean Cylinder" && cylinder.active,
+        (cylinder) => cylinder.status === "Clean Cylinder" && cylinder.active,
       )
       .map((cylinder) => cylinder.cylinder_number);
   },
@@ -530,7 +581,7 @@ export const cylinderMasterService = {
   getCylinderOptions: (): { value: string; label: string }[] => {
     return cylindersCache.map((cylinder) => ({
       value: cylinder.cylinder_number,
-      label: `${cylinder.cylinder_number} (${cylinder.cylinder_type} - ${cylinder.location})`,
+      label: `${cylinder.cylinder_number} (${cylinder.cylinder_type} - ${cylinder.status})`,
     }));
   },
 
@@ -538,7 +589,7 @@ export const cylinderMasterService = {
   getAvailableCylinderOptions: (): { value: string; label: string }[] => {
     return cylindersCache
       .filter(
-        (cylinder) => cylinder.location === "Clean Cylinder" && cylinder.active,
+        (cylinder) => cylinder.status === "Clean Cylinder" && cylinder.active,
       )
       .map((cylinder) => ({
         value: cylinder.cylinder_number,
@@ -546,18 +597,25 @@ export const cylinderMasterService = {
       }));
   },
 
-  // Get location badge styling
-  getLocationBadge: (location: string): string => {
-    switch (location) {
-      case "Clean Cylinder":
+  // Get status badge styling
+  getStatusBadge: (status: string): string => {
+    switch (status) {
+      case CYLINDER_STATUS_CLEAN:
         return "bg-green-100 text-green-800";
-      case "Checked Out":
+      case CYLINDER_STATUS_CHECKED_OUT:
         return "bg-blue-100 text-blue-800";
-      case "Checked In":
+      case CYLINDER_STATUS_CHECKED_IN:
         return "bg-yellow-100 text-yellow-800";
+      case CYLINDER_STATUS_UNKNOWN:
+        return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
+  },
+
+  /** @deprecated use getStatusBadge */
+  getLocationBadge: (status: string): string => {
+    return cylinderMasterService.getStatusBadge(status);
   },
 
   // Format cylinder display
@@ -566,7 +624,7 @@ export const cylinderMasterService = {
       (c) => c.cylinder_number === serialNumber,
     );
     return cylinder
-      ? `${cylinder.cylinder_number} (${cylinder.cylinder_type} - ${cylinder.location})`
+      ? `${cylinder.cylinder_number} (${cylinder.cylinder_type} - ${cylinder.status})`
       : serialNumber;
   },
 
@@ -575,9 +633,14 @@ export const cylinderMasterService = {
     return cylinderTypes;
   },
 
-  // Get location options
+  // Get status options
+  getStatusOptions: (): string[] => {
+    return [...cylinderStatusOptions];
+  },
+
+  /** @deprecated use getStatusOptions */
   getLocationOptions: (): string[] => {
-    return locationOptions;
+    return cylinderMasterService.getStatusOptions();
   },
 
   // Get track inventory options
